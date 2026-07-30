@@ -12,6 +12,8 @@
 /temp/
 # 本机编辑器布局与个人偏好，因人而异
 /local/
+# 编辑器本机运行时配置（场景视图状态等），与 settings/ 不同，不应共享
+/profiles/
 # 构建输出（dist/web、native 产物等）
 /build/
 /dist/

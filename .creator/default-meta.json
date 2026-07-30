@@ -1,0 +1,8 @@
+{
+  "image": {
+    "type": "sprite-frame",
+    "filterMode": "nearest",
+    "premultiplyAlpha": false,
+    "fixAlphaTransparencyArtifacts": false
+  }
+}

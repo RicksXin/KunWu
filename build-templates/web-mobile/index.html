@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!--
+  Web Mobile 构建模板（PRD-10 §2、PRD-09 §2、任务 P0-TECH-001）。
+
+  为何需要覆盖默认模板：竖屏锁定、安全区启用、像素图渲染这三件事只能在
+  HTML/CSS 层表达，引擎配置管不到。
+
+  构建时 Cocos 会把此文件复制到输出目录并替换 <%= %> 占位符。
+  不要删除任何占位符——缺失会导致构建产物无法启动。
+-->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title><%= projectName %></title>
+
+    <!--
+      viewport-fit=cover 是安全区的前提：不加它 env(safe-area-inset-*) 恒为 0，
+      ViewportAdapter 就读不到刘海尺寸（见 readCssSafeAreaInsets）。
+      user-scalable=no 防止双指缩放破坏像素对齐。
+    -->
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+
+    <!-- iOS Safari 全屏与状态栏 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- 竖屏首发（PRD-00 §3）。屏幕方向锁定在 JS 中执行，见文末。 -->
+    <meta name="screen-orientation" content="portrait">
+    <meta name="x5-orientation" content="portrait">
+
+    <meta name="theme-color" content="#0d0b0f">
+
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <%= include('./partial/head.html') %>
+</head>
+<body>
+    <canvas id="GameCanvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+
+    <!--
+      启动失败兜底：Bundle 或 WebGL 初始化失败时，玩家至少看到原因而非黑屏
+      （PRD-10 §8：显示错误码）。引擎启动成功后由 game.on(EVENT_GAME_INITED) 移除。
+    -->
+    <div id="kw-boot-error" hidden>
+        <div class="kw-boot-error__panel">
+            <h1>无法启动</h1>
+            <p id="kw-boot-error__reason"></p>
+            <p class="kw-boot-error__hint">请尝试刷新页面，或更换为最新版 Chrome / Safari。</p>
+        </div>
+    </div>
+
+    <%= include('./partial/body.html') %>
+
+    <script>
+    (function () {
+        'use strict';
+
+        var errorBox = document.getElementById('kw-boot-error');
+        var reasonEl = document.getElementById('kw-boot-error__reason');
+
+        function showBootError(reason) {
+            if (!errorBox || !reasonEl) {
+                return;
+            }
+            reasonEl.textContent = reason;
+            errorBox.hidden = false;
+        }
+
+        /**
+         * WebGL 可用性预检（PRD-10 §1：WebGL 成熟路径，不依赖 WebGPU）。
+         * 在引擎启动前检测，避免玩家只看到黑屏。
+         */
+        function detectWebGL() {
+            try {
+                var probe = document.createElement('canvas');
+                var gl = probe.getContext('webgl2') || probe.getContext('webgl') ||
+                         probe.getContext('experimental-webgl');
+                return !!gl;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        if (!detectWebGL()) {
+            showBootError('浏览器不支持 WebGL（错误码 TECH-001-WEBGL）。');
+            return;
+        }
+
+        // IndexedDB 缺失不阻断启动：存档层会降级到内存后端并提示导出
+        // （PRD-10 §8：IndexedDB 失败保留内存状态并提示导出）。
+        if (typeof indexedDB === 'undefined') {
+            console.warn('[KunWu] IndexedDB 不可用，存档将只保留在内存中');
+        }
+
+        /**
+         * 竖屏锁定。
+         * Screen Orientation API 只在全屏或已安装的 PWA 下生效，
+         * 普通浏览器标签页会被拒绝——故失败只记日志，由 CSS 兜底提示。
+         */
+        function lockPortrait() {
+            var orientation = window.screen && window.screen.orientation;
+            if (!orientation || typeof orientation.lock !== 'function') {
+                return;
+            }
+            var result = orientation.lock('portrait');
+            if (result && typeof result.catch === 'function') {
+                result.catch(function () {
+                    // 非全屏状态下被拒是预期行为，不必打扰玩家
+                });
+            }
+        }
+        document.addEventListener('fullscreenchange', lockPortrait);
+        lockPortrait();
+
+        // 引擎起来后撤掉兜底层
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                if (errorBox && !errorBox.hidden && window.cc && window.cc.game) {
+                    errorBox.hidden = true;
+                }
+            }, 0);
+        });
+
+        window.__kunwuShowBootError = showBootError;
+    })();
+    </script>
+
+    <script src="<%= cocosTemplate.importMap %>" type="<%= cocosTemplate.importMapType %>"></script>
+    <script type="module">
+        import { createApplication } from './application.js';
+
+        createApplication({
+            loadJsListFile: (url) => import(url),
+        }).then((application) => {
+            return application.start();
+        }).catch((error) => {
+            console.error('[KunWu] 启动失败', error);
+            if (window.__kunwuShowBootError) {
+                window.__kunwuShowBootError('引擎启动失败（错误码 TECH-001-BOOT）：' + error);
+            }
+        });
+    </script>
+</body>
+</html>

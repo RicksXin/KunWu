@@ -1,0 +1,124 @@
+/*
+  Web Mobile 样式覆盖（PRD-09 §2、任务 P0-TECH-001）。
+
+  三个目的：
+    1. 消除浏览器默认行为对像素游戏的干扰（滚动、选中、高亮、缩放）
+    2. 启用安全区（配合 index.html 的 viewport-fit=cover）
+    3. 保证像素图缩放不做插值（CLAUDE.md：禁止对 Pixel Art 开线性过滤）
+*/
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* 长按弹出系统菜单会打断长按查看说明（PRD-09 §4） */
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    /* 100dvh 跟随地址栏伸缩，避免 100vh 在移动端把内容顶出可视区 */
+    height: 100dvh;
+    overflow: hidden;
+    background-color: #0d0b0f;
+    /* 禁止橡皮筋滚动与双指缩放：画布自己处理所有手势 */
+    overscroll-behavior: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: system-ui, -apple-system, "Helvetica Neue", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+body {
+    /* 安全区留白由引擎内的 ViewportAdapter 精确处理，
+       这里只保证画布本身不被系统 UI 裁切 */
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+        env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+#GameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+    /*
+      像素图渲染：放大时保持硬边缘。
+      与 .creator/default-meta.json 的 filterMode: nearest 是两层不同的设置——
+      前者管纹理采样，这里管画布本身被 CSS 缩放时的插值。两者都需要。
+    */
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* 启动失败兜底层（PRD-10 §8：显示错误码） */
+#kw-boot-error {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background-color: #0d0b0f;
+    color: #e8e3dc;
+}
+
+#kw-boot-error[hidden] {
+    display: none;
+}
+
+.kw-boot-error__panel {
+    max-width: 32em;
+    text-align: center;
+    line-height: 1.7;
+}
+
+.kw-boot-error__panel h1 {
+    margin-bottom: 0.6em;
+    font-size: 1.35rem;
+    font-weight: 600;
+    /* 不只靠颜色传达信息（PRD-09 §1），故用边框与字号一同区分 */
+    border-bottom: 2px solid #8c3b3b;
+    padding-bottom: 0.4em;
+}
+
+.kw-boot-error__panel p {
+    font-size: 0.95rem;
+    word-break: break-word;
+}
+
+.kw-boot-error__hint {
+    margin-top: 1em;
+    opacity: 0.72;
+    font-size: 0.85rem;
+}
+
+/*
+  横屏提示。竖屏首发（PRD-00 §3），但浏览器标签页里 orientation.lock 会被拒，
+  所以横屏时给出可读提示而非放任布局错乱。
+  用 orientation 而非宽高比：平板竖屏也可能很宽。
+*/
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    #GameCanvas {
+        opacity: 0.15;
+    }
+
+    body::after {
+        content: "请将设备竖持";
+        position: fixed;
+        inset: 0;
+        z-index: 9998;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        letter-spacing: 0.1em;
+        color: #e8e3dc;
+        background-color: rgba(13, 11, 15, 0.94);
+    }
+}

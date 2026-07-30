@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+
+  /* 单测的类型检查配置。
+     不继承 tsconfig.json：那份由 Cocos 注入 target/types，面向引擎运行时；
+     测试跑在 Node 下，需要 node:test 等内置模块类型和显式 .ts 导入。 */
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "moduleResolution": "bundler",
+    /* 含 DOM：被测代码里有浏览器专用类型（BrowserLifecycle 的 HTMLCanvasElement、
+       IndexedDbSaveBackend 的 IDBRequest 等）。测试在 Node 下运行，
+       用替身注入这些全局对象，但类型仍需可解析。 */
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Node 的类型擦除要求相对导入写全 .ts 扩展名（见 tests/resolver.mjs）。 */
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+
+    /* 复刻 Cocos 的 db://assets/* 映射，使测试能按工程约定导入领域层。
+       此处覆盖 paths 是安全的：本配置不参与引擎编译。 */
+    "paths": {
+      "db://assets/*": ["./assets/*"]
+    }
+  },
+
+  "include": ["tests/**/*.ts"],
+  "exclude": ["node_modules"]
+}

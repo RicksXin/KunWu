@@ -1,0 +1,41 @@
+{
+  /* Base configuration. Do not edit this field. */
+  "extends": "./temp/tsconfig.cocos.json",
+
+  /* Add your custom configuration here. */
+  "compilerOptions": {
+    /* 严格模式：领域层大量依赖类型保障（七维字段、职业节点、GridCoord 与像素坐标不可混用），
+       关掉会让这些约束退化成运行时才发现的问题。 */
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Cocos 注入的 target 是 ES2015，默认 lib 缺 Object.entries、String.padStart。
+       Web Mobile 首发面向现代浏览器，这里放宽到 ES2020；
+       DOM 同时提供存档所需的 IndexedDB 类型。 */
+    "lib": ["ES2020", "DOM", "DOM.Iterable"]
+
+    /* 不要在此覆盖 paths：Cocos 在 temp/tsconfig.cocos.json 中注入了
+       db://assets/* 与 db://internal/* 映射，自定义 paths 会整体覆盖它们
+       并破坏引擎解析。跨目录导入统一用 db://assets/scripts/... 前缀。 */
+  },
+
+  /* 必须显式限定范围：Tiled 的 tileset 文件也叫 .tsx（实为 XML），
+     不排除会被 tsc 当成 TypeScript JSX 解析并报大量语法错误。
+     ThirdParty/ 是第三方素材目录，不参与类型检查。
+     tests/ 不在此列：它跑在 Node 而非引擎里，见 tsconfig.tests.json。 */
+  "include": ["assets/**/*.ts"],
+  "exclude": [
+    "**/*.tsx",
+    "ThirdParty",
+    "library",
+    "temp",
+    "local",
+    "build",
+    "profiles",
+    "node_modules"
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "//": "仅作用于 tests/ 目录：声明 ESM 以消除 Node 的模块类型推断开销。不影响 Cocos 对 assets/ 的编译。",
+  "type": "module"
+}

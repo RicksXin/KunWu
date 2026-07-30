@@ -1,0 +1,20 @@
+{
+  "name": "kunwu",
+  "version": "0.1.0",
+  "description": "《昆吾禁地》竖屏 2D 像素修仙：营地经营、方格迷雾探索、四人半即时战斗",
+  "private": true,
+  "scripts": {
+    "test": "node --experimental-strip-types --import ./tests/register.mjs --test \"tests/**/*.test.ts\"",
+    "test:watch": "node --experimental-strip-types --import ./tests/register.mjs --test --watch \"tests/**/*.test.ts\"",
+    "typecheck": "node tools/typecheck.mjs",
+    "check": "npm run typecheck && npm test && npm run validate:data",
+    "validate:data": "node --experimental-strip-types tools/validate-data.mjs"
+  },
+  "creator": {
+    "version": "3.8.7"
+  },
+  "uuid": "f04dc388-0c14-4410-b056-25fd7faaa85c",
+  "devDependencies": {
+    "@types/node": "24.3.0"
+  }
+}
