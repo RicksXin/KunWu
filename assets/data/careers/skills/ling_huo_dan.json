@@ -1,0 +1,14 @@
+{
+  "id": "ling_huo_dan",
+  "nameKey": "skill.ling_huo_dan",
+  "damageKind": "magical",
+  "scalingAttribute": "magic",
+  "targetType": "ENEMY_SINGLE",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 22,
+  "cooldownTicks": 0,
+  "castTicks": 6,
+  "primaryPercent": 120,
+  "secondaryAttribute": "technique",
+  "secondaryPercent": 30
+}

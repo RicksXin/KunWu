@@ -1,0 +1,16 @@
+{
+  "id": "yan_dun",
+  "nameKey": "skill.yan_dun",
+  "damageKind": "none",
+  "targetType": "SELF",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 24,
+  "cooldownTicks": 220,
+  "castTicks": 4,
+  "primaryPercent": 0,
+  "appliesStatus": {
+    "kind": "haste",
+    "durationTicks": 120,
+    "magnitude": 40
+  }
+}

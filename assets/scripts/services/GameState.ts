@@ -9,6 +9,7 @@
 // 而 Attributes 是类型别名，运行期没有对应导出。
 import type { Attributes } from '../domain/Attributes';
 import type { GridCoord } from '../domain/GridCoord';
+import type { HeroGrade } from '../domain/HeroGrowth';
 
 /** 资源一律用整数，乘法在整数域完成（技术方案 §7）。 */
 export interface Wallet {
@@ -34,11 +35,15 @@ export interface CampState {
 export interface HeroInstance {
     readonly instanceId: string;
     readonly definitionId: string;
+    readonly nameKey: string;
     readonly careerId: string;
+    readonly grade: HeroGrade;
     level: number;
     /** 七维当前值，含装备加成前的基础值。 */
     readonly attributes: Attributes;
+    maxHp: number;
     currentHp: number;
+    readonly skillIds: readonly string[];
     /** 阵亡后进入还魂名单。 */
     isDead: boolean;
 }

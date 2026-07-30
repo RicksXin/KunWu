@@ -127,6 +127,53 @@ if (appRootIdx < 0) {
     );
 }
 
+// AppRoot 的全局 UI 必须随持久根跨场景存在。
+// 缺引用时代码仍能运行，但路由加载会没有遮罩，很容易漏过。
+const appRootType = compressUuid(
+    uuidFromMeta(path.join(REPO_ROOT, 'assets/scripts/AppRoot.ts.meta')),
+);
+const appRootComponent = scene.find((entry) => entry.__type__ === appRootType);
+if (!appRootComponent) {
+    problems.push('场景中找不到 AppRoot 组件');
+} else {
+    for (const [property, expectedNodeName] of [
+        ['loadingOverlay', 'LoadingOverlay'],
+        ['feedbackRoot', 'Feedback'],
+    ]) {
+        const target = scene[appRootComponent[property]?.__id__];
+        if (target?.__type__ !== 'cc.Node' || target._name !== expectedNodeName) {
+            problems.push(`AppRoot.${property} 未指向 ${expectedNodeName} 节点`);
+        }
+    }
+    const feedbackLabel = scene[appRootComponent.feedbackLabel?.__id__];
+    if (feedbackLabel?.__type__ !== 'cc.Label') {
+        problems.push('AppRoot.feedbackLabel 未指向 cc.Label 组件');
+    }
+}
+
+const loadingOverlayIdx = scene.findIndex(
+    (entry) => entry.__type__ === 'cc.Node' && entry._name === 'LoadingOverlay',
+);
+if (loadingOverlayIdx < 0) {
+    problems.push('场景缺少 LoadingOverlay');
+} else {
+    const componentTypes = (scene[loadingOverlayIdx]._components ?? []).map(
+        (ref) => scene[ref.__id__]?.__type__,
+    );
+    if (!componentTypes.includes('cc.BlockInputEvents')) {
+        problems.push('LoadingOverlay 缺少 cc.BlockInputEvents，无法拦截重复点击');
+    }
+}
+
+if (appRootIdx >= 0) {
+    const componentTypes = (scene[appRootIdx]._components ?? []).map(
+        (ref) => scene[ref.__id__]?.__type__,
+    );
+    if (!componentTypes.includes('cc.Canvas')) {
+        problems.push('AppRoot 缺少持久 cc.Canvas，全局遮罩不会渲染');
+    }
+}
+
 // 起始场景配置须与场景 meta 的 uuid 一致
 const sceneMeta = readJson('assets/scenes/Boot.scene.meta');
 const builder = readJson('settings/v2/packages/builder.json');

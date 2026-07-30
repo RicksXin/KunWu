@@ -1,0 +1,16 @@
+{
+  "id": "ning_shuang_hu",
+  "nameKey": "skill.ning_shuang_hu",
+  "damageKind": "none",
+  "targetType": "ALLY_LOWEST_HP",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 26,
+  "cooldownTicks": 140,
+  "castTicks": 6,
+  "primaryPercent": 0,
+  "appliesStatus": {
+    "kind": "shield",
+    "durationTicks": 160,
+    "magnitude": 60
+  }
+}

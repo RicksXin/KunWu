@@ -27,6 +27,8 @@ export interface SceneRouterEvents {
     onPageChanged?: (entry: RouteEntry) => void;
     /** 已在栈底还继续返回。调用方决定提示退出还是忽略。 */
     onAtRoot?: () => void;
+    /** 全局遮罩据此显示／隐藏，阻止载入期间重复点击。 */
+    onLoadingChanged?: (loading: boolean) => void;
 }
 
 export class CocosSceneRouter implements SceneRouterApi {
@@ -120,6 +122,7 @@ export class CocosSceneRouter implements SceneRouterApi {
     private async activate(entry: RouteEntry): Promise<void> {
         const sceneName = PAGE_SCENE_NAMES[entry.pageId];
         this.loading = true;
+        this.events.onLoadingChanged?.(true);
         try {
             await new Promise<void>((resolve, reject) => {
                 director.loadScene(sceneName, (error) => {
@@ -135,6 +138,7 @@ export class CocosSceneRouter implements SceneRouterApi {
             // 必须在 finally 里复位：加载失败后若停在 true，
             // 之后所有导航都会被静默忽略
             this.loading = false;
+            this.events.onLoadingChanged?.(false);
         }
     }
 }

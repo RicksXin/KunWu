@@ -1,0 +1,26 @@
+{
+  "id": "yi_xiu",
+  "nameKey": "career.yi_xiu",
+  "tier": 0,
+  "primaryAttribute": "magic",
+  "skillIds": [
+    "hui_chun_shu",
+    "qing_xin_jue",
+    "ling_guang_ji"
+  ],
+  "baseAttributes": {
+    "strength": 4,
+    "magic": 13,
+    "technique": 11,
+    "speed": 9,
+    "constitution": 8,
+    "armor": 5,
+    "resistance": 12
+  },
+  "baseHp": 92,
+  "growth": {
+    "primaryPerLevel": 3,
+    "secondaryPerLevel": 2,
+    "secondaryAttribute": "resistance"
+  }
+}

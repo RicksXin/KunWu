@@ -1,0 +1,14 @@
+{
+  "id": "zhong_quan",
+  "nameKey": "skill.zhong_quan",
+  "damageKind": "physical",
+  "scalingAttribute": "strength",
+  "targetType": "ENEMY_SINGLE",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 22,
+  "cooldownTicks": 0,
+  "castTicks": 6,
+  "primaryPercent": 105,
+  "secondaryAttribute": "constitution",
+  "secondaryPercent": 30
+}

@@ -1,0 +1,26 @@
+{
+  "id": "fa_xiu",
+  "nameKey": "career.fa_xiu",
+  "tier": 0,
+  "primaryAttribute": "magic",
+  "skillIds": [
+    "ling_huo_dan",
+    "ning_shuang_hu",
+    "ling_neng_zhen_dang"
+  ],
+  "baseAttributes": {
+    "strength": 4,
+    "magic": 15,
+    "technique": 10,
+    "speed": 8,
+    "constitution": 7,
+    "armor": 4,
+    "resistance": 11
+  },
+  "baseHp": 84,
+  "growth": {
+    "primaryPerLevel": 3,
+    "secondaryPerLevel": 2,
+    "secondaryAttribute": "technique"
+  }
+}

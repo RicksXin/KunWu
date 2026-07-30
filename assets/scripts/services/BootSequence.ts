@@ -37,6 +37,8 @@ export type BootFailure =
     | { readonly kind: 'bootBundleFailed'; readonly message: string }
     /** 营地包加载失败。 */
     | { readonly kind: 'campBundleFailed'; readonly message: string }
+    /** 存档读取、新档创建或 Profile 结构校验失败。 */
+    | { readonly kind: 'saveFailed'; readonly message: string }
     /** 场景切换失败。 */
     | { readonly kind: 'sceneFailed'; readonly message: string };
 
@@ -99,7 +101,17 @@ export async function runBootSequence(deps: BootDeps): Promise<BootResult> {
     complete('loadingBoot');
 
     enter('loadingSave');
-    const save = await deps.loadSave();
+    let save: SaveLoadResult;
+    try {
+        save = await deps.loadSave();
+    } catch (error) {
+        return {
+            ok: false,
+            save: null,
+            failure: { kind: 'saveFailed', message: messageOf(error) },
+            stagesCompleted,
+        };
+    }
     if (save.diagnostics.length > 0) {
         // 存档回退不阻断启动，但必须告知玩家——否则他会以为进度凭空丢了
         deps.onSaveDiagnostics?.(save.diagnostics);

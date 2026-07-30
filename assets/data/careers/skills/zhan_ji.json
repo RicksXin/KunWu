@@ -1,0 +1,12 @@
+{
+  "id": "zhan_ji",
+  "nameKey": "skill.zhan_ji",
+  "damageKind": "physical",
+  "scalingAttribute": "strength",
+  "targetType": "ENEMY_SINGLE",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 20,
+  "cooldownTicks": 0,
+  "castTicks": 4,
+  "primaryPercent": 110
+}

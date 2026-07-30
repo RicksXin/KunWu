@@ -1,0 +1,121 @@
+{
+  "wallet": {
+    "spiritGrain": 120,
+    "spiritWood": 0,
+    "darkIron": 0,
+    "spiritStone": 0,
+    "gengJing": 0,
+    "soulCrystal": 0,
+    "immortalCoin": 0
+  },
+  "camp": {
+    "buildingLevels": {
+      "yi_shi_dian": 1,
+      "ling_pu": 1,
+      "zhao_xian_tai": 0,
+      "bai_bao_ku": 1,
+      "lian_qi_fang": 0,
+      "jiao_yi_hang": 0,
+      "huan_hun_tan": 0
+    },
+    "workerAssignments": {
+      "spiritGrain": 0,
+      "spiritWood": 0,
+      "darkIron": 0,
+      "spiritStone": 0,
+      "gengJing": 0
+    },
+    "lastSettledAtUtc": 0
+  },
+  "roster": [
+    {
+      "instanceId": "hero_wu_xiu_01",
+      "definitionId": "hero_wu_xiu_01",
+      "nameKey": "hero.shi_yan",
+      "careerId": "wu_xiu",
+      "grade": "C",
+      "level": 1,
+      "attributes": {
+        "strength": 14,
+        "magic": 4,
+        "technique": 7,
+        "speed": 8,
+        "constitution": 13,
+        "armor": 11,
+        "resistance": 6
+      },
+      "maxHp": 224,
+      "currentHp": 224,
+      "skillIds": ["zhan_ji", "tiao_xin", "chong_zhuang"],
+      "isDead": false
+    },
+    {
+      "instanceId": "hero_fa_xiu_01",
+      "definitionId": "hero_fa_xiu_01",
+      "nameKey": "hero.lu_qing",
+      "careerId": "fa_xiu",
+      "grade": "C",
+      "level": 1,
+      "attributes": {
+        "strength": 4,
+        "magic": 15,
+        "technique": 10,
+        "speed": 8,
+        "constitution": 7,
+        "armor": 4,
+        "resistance": 11
+      },
+      "maxHp": 140,
+      "currentHp": 140,
+      "skillIds": ["ling_huo_dan", "ning_shuang_hu", "ling_neng_zhen_dang"],
+      "isDead": false
+    },
+    {
+      "instanceId": "hero_yi_xiu_01",
+      "definitionId": "hero_yi_xiu_01",
+      "nameKey": "hero.bai_ling",
+      "careerId": "yi_xiu",
+      "grade": "C",
+      "level": 1,
+      "attributes": {
+        "strength": 4,
+        "magic": 13,
+        "technique": 11,
+        "speed": 9,
+        "constitution": 8,
+        "armor": 5,
+        "resistance": 12
+      },
+      "maxHp": 156,
+      "currentHp": 156,
+      "skillIds": ["hui_chun_shu", "qing_xin_jue", "ling_guang_ji"],
+      "isDead": false
+    },
+    {
+      "instanceId": "hero_qian_xiu_01",
+      "definitionId": "hero_qian_xiu_01",
+      "nameKey": "hero.mo_yan",
+      "careerId": "qian_xiu",
+      "grade": "D",
+      "level": 1,
+      "attributes": {
+        "strength": 10,
+        "magic": 5,
+        "technique": 14,
+        "speed": 14,
+        "constitution": 8,
+        "armor": 6,
+        "resistance": 6
+      },
+      "maxHp": 160,
+      "currentHp": 160,
+      "skillIds": ["ying_xi", "tou_ren", "yan_dun"],
+      "isDead": false
+    }
+  ],
+  "inventory": {},
+  "storyFlags": {
+    "tutorial_started": false
+  },
+  "expedition": null
+}

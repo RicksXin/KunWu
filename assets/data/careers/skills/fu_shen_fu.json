@@ -1,0 +1,16 @@
+{
+  "id": "fu_shen_fu",
+  "nameKey": "skill.fu_shen_fu",
+  "damageKind": "none",
+  "targetType": "ENEMY_SINGLE",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 26,
+  "cooldownTicks": 160,
+  "castTicks": 8,
+  "primaryPercent": 0,
+  "appliesStatus": {
+    "kind": "entangle",
+    "durationTicks": 30,
+    "magnitude": 0
+  }
+}

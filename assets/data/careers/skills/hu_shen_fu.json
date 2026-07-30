@@ -1,0 +1,16 @@
+{
+  "id": "hu_shen_fu",
+  "nameKey": "skill.hu_shen_fu",
+  "damageKind": "none",
+  "targetType": "ALLY_LOWEST_HP",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 28,
+  "cooldownTicks": 150,
+  "castTicks": 8,
+  "primaryPercent": 0,
+  "appliesStatus": {
+    "kind": "shield",
+    "durationTicks": 140,
+    "magnitude": 45
+  }
+}

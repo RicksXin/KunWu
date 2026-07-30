@@ -93,10 +93,11 @@ describe('本地化表完整性', () => {
         }
     });
 
-    test('三类启动失败均有可读提示', () => {
+    test('四类启动失败均有可读提示', () => {
         for (const key of [
             'boot.error.boot_bundle',
             'boot.error.camp_bundle',
+            'boot.error.save',
             'boot.error.scene',
         ]) {
             assert.ok(has(key), `缺少 ${key}`);

@@ -1,0 +1,12 @@
+{
+  "id": "ling_guang_ji",
+  "nameKey": "skill.ling_guang_ji",
+  "damageKind": "magical",
+  "scalingAttribute": "magic",
+  "targetType": "ENEMY_SINGLE",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 24,
+  "cooldownTicks": 0,
+  "castTicks": 6,
+  "primaryPercent": 85
+}

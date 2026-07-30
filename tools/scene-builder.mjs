@@ -163,17 +163,13 @@ export class SceneBuilder {
     }
 
     /**
-     * 创建 Canvas 与其相机。返回 { canvasIdx, cameraNodeIdx }。
+     * 在已有节点上创建 Canvas 与其相机。
      * 相机组件必须挂到相机节点上——只让 Canvas 的 _cameraComponent 指过去
      * 不够，节点 _components 为空时组件不会实例化。
      */
-    addCanvas() {
-        const canvasIdx = this.addNode({
-            name: 'Canvas',
-            pos: vec3(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2, 0),
-        });
+    addCanvasComponents(canvasIdx, { cameraName = 'Camera', cameraPriority = 0 } = {}) {
         const cameraNodeIdx = this.addNode({
-            name: 'Camera',
+            name: cameraName,
             parent: canvasIdx,
             layer: LAYER_DEFAULT,
         });
@@ -186,7 +182,7 @@ export class SceneBuilder {
             __prefab: null,
             // 0 = 正交。2D 像素游戏必须正交，透视会让像素变形
             _projection: 0,
-            _priority: 0,
+            _priority: cameraPriority,
             _fov: 45,
             _fovAxis: 0,
             _orthoHeight: DESIGN_HEIGHT / 2,
@@ -219,7 +215,16 @@ export class SceneBuilder {
         });
         this.addWidget(canvasIdx);
 
-        return { canvasIdx, cameraNodeIdx };
+        return { canvasIdx, cameraNodeIdx, cameraCompIdx };
+    }
+
+    /** 创建一个位于场景根层级的标准 Canvas。 */
+    addCanvas() {
+        const canvasIdx = this.addNode({
+            name: 'Canvas',
+            pos: vec3(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2, 0),
+        });
+        return this.addCanvasComponents(canvasIdx);
     }
 
     /** 挂自定义脚本组件。scriptUuid 为完整 UUID，内部转压缩形式。 */

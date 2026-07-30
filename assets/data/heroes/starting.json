@@ -1,0 +1,34 @@
+[
+  {
+    "instanceId": "hero_wu_xiu_01",
+    "nameKey": "hero.shi_yan",
+    "careerId": "wu_xiu",
+    "grade": "C",
+    "level": 1,
+    "//role": "承伤与嘲讽。挑衅是队伍唯一的嘲讽来源"
+  },
+  {
+    "instanceId": "hero_fa_xiu_01",
+    "nameKey": "hero.lu_qing",
+    "careerId": "fa_xiu",
+    "grade": "C",
+    "level": 1,
+    "//role": "法术输出与群体清场。灵能震荡是唯一的群体伤害"
+  },
+  {
+    "instanceId": "hero_yi_xiu_01",
+    "nameKey": "hero.bai_ling",
+    "careerId": "yi_xiu",
+    "grade": "C",
+    "level": 1,
+    "//role": "治疗。缺它前期战斗无法持续"
+  },
+  {
+    "instanceId": "hero_qian_xiu_01",
+    "nameKey": "hero.mo_yan",
+    "careerId": "qian_xiu",
+    "grade": "D",
+    "level": 1,
+    "//role": "单体收割。遁速最高，行动最频繁"
+  }
+]

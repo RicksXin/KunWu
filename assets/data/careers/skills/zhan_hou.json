@@ -1,0 +1,16 @@
+{
+  "id": "zhan_hou",
+  "nameKey": "skill.zhan_hou",
+  "damageKind": "none",
+  "targetType": "ALLY_ALL",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 32,
+  "cooldownTicks": 240,
+  "castTicks": 10,
+  "primaryPercent": 0,
+  "appliesStatus": {
+    "kind": "damage_up",
+    "durationTicks": 140,
+    "magnitude": 25
+  }
+}

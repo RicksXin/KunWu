@@ -1,0 +1,16 @@
+{
+  "id": "tiao_xin",
+  "nameKey": "skill.tiao_xin",
+  "damageKind": "none",
+  "targetType": "SELF",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 24,
+  "cooldownTicks": 120,
+  "castTicks": 4,
+  "primaryPercent": 0,
+  "appliesStatus": {
+    "kind": "gather_spirit",
+    "durationTicks": 100,
+    "magnitude": 120
+  }
+}

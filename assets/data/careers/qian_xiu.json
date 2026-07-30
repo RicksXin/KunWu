@@ -1,0 +1,26 @@
+{
+  "id": "qian_xiu",
+  "nameKey": "career.qian_xiu",
+  "tier": 0,
+  "primaryAttribute": "technique",
+  "skillIds": [
+    "ying_xi",
+    "tou_ren",
+    "yan_dun"
+  ],
+  "baseAttributes": {
+    "strength": 10,
+    "magic": 5,
+    "technique": 14,
+    "speed": 14,
+    "constitution": 8,
+    "armor": 6,
+    "resistance": 6
+  },
+  "baseHp": 96,
+  "growth": {
+    "primaryPerLevel": 3,
+    "secondaryPerLevel": 2,
+    "secondaryAttribute": "speed"
+  }
+}

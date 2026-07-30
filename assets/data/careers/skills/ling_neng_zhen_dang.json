@@ -1,0 +1,12 @@
+{
+  "id": "ling_neng_zhen_dang",
+  "nameKey": "skill.ling_neng_zhen_dang",
+  "damageKind": "magical",
+  "scalingAttribute": "magic",
+  "targetType": "ENEMY_ALL",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 34,
+  "cooldownTicks": 200,
+  "castTicks": 12,
+  "primaryPercent": 70
+}

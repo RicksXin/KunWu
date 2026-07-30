@@ -1,0 +1,26 @@
+{
+  "id": "wu_xiu",
+  "nameKey": "career.wu_xiu",
+  "tier": 0,
+  "primaryAttribute": "strength",
+  "skillIds": [
+    "zhan_ji",
+    "tiao_xin",
+    "chong_zhuang"
+  ],
+  "baseAttributes": {
+    "strength": 14,
+    "magic": 4,
+    "technique": 7,
+    "speed": 8,
+    "constitution": 13,
+    "armor": 11,
+    "resistance": 6
+  },
+  "baseHp": 120,
+  "growth": {
+    "primaryPerLevel": 3,
+    "secondaryPerLevel": 2,
+    "secondaryAttribute": "constitution"
+  }
+}

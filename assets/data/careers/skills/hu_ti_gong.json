@@ -1,0 +1,16 @@
+{
+  "id": "hu_ti_gong",
+  "nameKey": "skill.hu_ti_gong",
+  "damageKind": "none",
+  "targetType": "SELF",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 26,
+  "cooldownTicks": 170,
+  "castTicks": 6,
+  "primaryPercent": 0,
+  "appliesStatus": {
+    "kind": "shield",
+    "durationTicks": 180,
+    "magnitude": 80
+  }
+}

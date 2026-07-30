@@ -22,6 +22,9 @@ register('../tests/resolver.mjs', import.meta.url);
 const { validateDataBundle } = await import(
     pathToFileURL(path.join(REPO_ROOT, 'assets/scripts/domain/DataValidator.ts')).href
 );
+const { createDefaultProfile } = await import(
+    pathToFileURL(path.join(REPO_ROOT, 'assets/scripts/services/ProfileCodec.ts')).href
+);
 
 function readJsonDir(dir) {
     const full = path.join(DATA_ROOT, dir);
@@ -75,4 +78,22 @@ if (isEmpty) {
 
 const report = validateDataBundle(bundle);
 console.log(report.format());
-process.exit(report.hasErrors ? 1 : 0);
+
+let defaultProfileError = null;
+const defaultProfilePath = path.join(
+    REPO_ROOT,
+    'assets',
+    'bundles',
+    'shared',
+    'default_profile.json',
+);
+try {
+    const seed = JSON.parse(readFileSync(defaultProfilePath, 'utf8'));
+    createDefaultProfile(seed, 1);
+    console.log('新档 Profile 数据种子校验通过');
+} catch (error) {
+    defaultProfileError = error;
+    console.error(`新档 Profile 数据种子校验失败：${error.message}`);
+}
+
+process.exit(report.hasErrors || defaultProfileError ? 1 : 0);

@@ -1,4 +1,4 @@
-import { _decorator, Component, Label, Node, director } from 'cc';
+import { _decorator, assetManager, Component, JsonAsset, Label, Node } from 'cc';
 import { AppRoot } from '../AppRoot';
 import { BundleLoader } from '../services/BundleLoader';
 import { CocosBundleHost } from './CocosBundleHost';
@@ -7,6 +7,12 @@ import type { BootStage, BootFailure } from '../services/BootSequence';
 import { MemorySaveBackend } from '../services/MemorySaveBackend';
 import { IndexedDbSaveBackend } from '../services/IndexedDbSaveBackend';
 import { SaveRepository } from '../services/SaveRepository';
+import type { SaveLoadResult } from '../services/SaveRepository';
+import {
+    createDefaultProfile,
+    deserializeProfile,
+    serializeProfile,
+} from '../services/ProfileCodec';
 
 const { ccclass, property } = _decorator;
 
@@ -28,9 +34,6 @@ export class GameBootstrap extends Component {
     @property(Node)
     splashRoot: Node | null = null;
 
-    /** 营地场景名。与 CocosSceneRouter 的 PAGE_SCENE_NAMES 保持一致。 */
-    private static readonly CAMP_SCENE = 'Camp';
-
     protected override onLoad(): void {
         // 延后一帧启动：让 AppRoot 的 onLoad 先跑完，否则 AppRoot.instance 会抛错
         this.scheduleOnce(() => void this.boot(), 0);
@@ -43,13 +46,14 @@ export class GameBootstrap extends Component {
             onEvent: (event) => app.events.emit(`bundle.${event.kind}`, event),
         });
         const saves = await this.createSaveRepository();
+        app.installSaveRepository(saves);
 
         const result = await runBootSequence({
             loadBootBundles: () => loader.loadBootBundles(),
             loadBundle: (name) => loader.load(name),
             preloadFor: (id) => loader.preloadFor(id),
-            loadSave: () => saves.load(),
-            enterCamp: () => this.loadScene(GameBootstrap.CAMP_SCENE),
+            loadSave: () => this.loadAndPrepareProfile(saves),
+            enterCamp: () => app.router.replaceRoot({ pageId: 'camp' }),
             onStage: (stage) => this.showStage(stage),
             onSaveDiagnostics: (diagnostics) => {
                 // 坏档不阻断启动，但要留痕——玩家可据此决定是否导出备份
@@ -91,14 +95,54 @@ export class GameBootstrap extends Component {
         return new SaveRepository(new MemorySaveBackend(), options);
     }
 
-    private loadScene(sceneName: string): Promise<void> {
+    /**
+     * 在切入 Camp 之前就把 Profile 放进 GameState。
+     * CampPresenter.onLoad 因此能立即读到真实 Wallet，不会闪过场景默认的 0。
+     */
+    private async loadAndPrepareProfile(saves: SaveRepository): Promise<SaveLoadResult> {
+        const app = AppRoot.instance;
+        const loaded = await saves.load();
+
+        let profile;
+        let result = loaded;
+        if (loaded.envelope) {
+            profile = deserializeProfile(loaded.envelope.payload);
+        } else {
+            const seed = await this.loadDefaultProfileSeed();
+            profile = createDefaultProfile(seed, app.time.nowUtcSeconds());
+            const envelope = await saves.save(serializeProfile(profile));
+            result = {
+                status: 'ok',
+                envelope,
+                // “主档不存在”对首次启动是正常情况，不当作坏档诊断。
+                diagnostics: loaded.diagnostics.filter((line) => line !== '主档不存在'),
+            };
+        }
+
+        app.state.load(profile);
+        app.events.emit('profile.loaded', { source: loaded.status });
+        app.events.emit('wallet.changed', { wallet: profile.wallet });
+        return result;
+    }
+
+    /** shared Bundle 内的数据种子是新档数值的唯一来源。 */
+    private loadDefaultProfileSeed(): Promise<unknown> {
+        const bundle = assetManager.getBundle('shared');
+        if (!bundle) {
+            return Promise.reject(new Error('shared Bundle 尚未加载'));
+        }
+
         return new Promise((resolve, reject) => {
-            director.loadScene(sceneName, (error) => {
+            bundle.load('default_profile', JsonAsset, (error, asset) => {
                 if (error) {
                     reject(error);
                     return;
                 }
-                resolve();
+                if (!asset?.json) {
+                    reject(new Error('新档数据种子 default_profile 为空'));
+                    return;
+                }
+                resolve(asset.json);
             });
         });
     }
@@ -137,5 +181,6 @@ const FALLBACK_STAGE_TEXT: Readonly<Record<BootStage, string>> = {
 const FALLBACK_FAILURE_TEXT: Readonly<Record<BootFailure['kind'], string>> = {
     bootBundleFailed: '核心资源加载失败，请检查网络后刷新页面',
     campBundleFailed: '营地资源加载失败，请刷新页面重试',
+    saveFailed: '存档准备失败，请刷新页面重试',
     sceneFailed: '场景载入失败，请刷新页面重试',
 };

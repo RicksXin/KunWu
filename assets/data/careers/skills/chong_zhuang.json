@@ -1,0 +1,17 @@
+{
+  "id": "chong_zhuang",
+  "nameKey": "skill.chong_zhuang",
+  "damageKind": "physical",
+  "scalingAttribute": "strength",
+  "targetType": "ENEMY_SINGLE",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 28,
+  "cooldownTicks": 80,
+  "castTicks": 8,
+  "primaryPercent": 90,
+  "appliesStatus": {
+    "kind": "stun",
+    "durationTicks": 20,
+    "magnitude": 0
+  }
+}

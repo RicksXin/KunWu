@@ -131,6 +131,20 @@ describe('启动失败处理（PRD-10 §8）', () => {
         assert.equal(result.save?.status, 'ok');
     });
 
+    test('存档准备失败时不进入营地', async () => {
+        const { deps, calls } = makeDeps({
+            loadSave: async () => {
+                throw new Error('新档数据种子损坏');
+            },
+        });
+        const result = await runBootSequence(deps);
+
+        assert.equal(result.ok, false);
+        assert.equal(result.failure?.kind, 'saveFailed');
+        assert.match(result.failure?.message ?? '', /数据种子/);
+        assert.equal(calls.includes('enterCamp'), false);
+    });
+
     test('场景切换失败时报 sceneFailed', async () => {
         const { deps, calls } = makeDeps({
             enterCamp: async () => {

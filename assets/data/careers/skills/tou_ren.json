@@ -1,0 +1,12 @@
+{
+  "id": "tou_ren",
+  "nameKey": "skill.tou_ren",
+  "damageKind": "physical",
+  "scalingAttribute": "technique",
+  "targetType": "ENEMY_RANDOM_MULTI",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 26,
+  "cooldownTicks": 100,
+  "castTicks": 6,
+  "primaryPercent": 65
+}

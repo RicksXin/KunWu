@@ -1,0 +1,12 @@
+{
+  "id": "fei_fu",
+  "nameKey": "skill.fei_fu",
+  "damageKind": "magical",
+  "scalingAttribute": "technique",
+  "targetType": "ENEMY_SINGLE",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 22,
+  "cooldownTicks": 0,
+  "castTicks": 6,
+  "primaryPercent": 110
+}

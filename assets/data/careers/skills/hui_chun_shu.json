@@ -1,0 +1,12 @@
+{
+  "id": "hui_chun_shu",
+  "nameKey": "skill.hui_chun_shu",
+  "damageKind": "none",
+  "scalingAttribute": "magic",
+  "targetType": "ALLY_LOWEST_HP",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 24,
+  "cooldownTicks": 0,
+  "castTicks": 6,
+  "primaryPercent": 130
+}

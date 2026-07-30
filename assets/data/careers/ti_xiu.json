@@ -1,0 +1,26 @@
+{
+  "id": "ti_xiu",
+  "nameKey": "career.ti_xiu",
+  "tier": 0,
+  "primaryAttribute": "constitution",
+  "skillIds": [
+    "zhong_quan",
+    "hu_ti_gong",
+    "zhan_hou"
+  ],
+  "baseAttributes": {
+    "strength": 12,
+    "magic": 3,
+    "technique": 6,
+    "speed": 7,
+    "constitution": 16,
+    "armor": 13,
+    "resistance": 8
+  },
+  "baseHp": 140,
+  "growth": {
+    "primaryPerLevel": 3,
+    "secondaryPerLevel": 2,
+    "secondaryAttribute": "armor"
+  }
+}

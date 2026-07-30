@@ -13,7 +13,13 @@
 
 import path from 'node:path';
 import { existsSync } from 'node:fs';
-import { SceneBuilder, validateScene, vec3 } from './scene-builder.mjs';
+import {
+    SceneBuilder,
+    validateScene,
+    vec3,
+    DESIGN_WIDTH,
+    DESIGN_HEIGHT,
+} from './scene-builder.mjs';
 import { uuidFromMeta } from './uuid-compress.mjs';
 import { writeScene } from './write-scene.mjs';
 
@@ -131,12 +137,60 @@ function build() {
     });
 
     // AppRoot 与 Canvas 同为根层级——addPersistRootNode 的硬性要求
-    const appRootIdx = scene.addNode({ name: 'AppRoot' });
+    const appRootIdx = scene.addNode({
+        name: 'AppRoot',
+        pos: vec3(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2, 0),
+    });
+    // 独立的高优先级 Canvas 随 AppRoot 跨场景常驻，
+    // 用于加载遮罩与轻提示。
+    scene.addCanvasComponents(appRootIdx, {
+        cameraName: 'GlobalCamera',
+        cameraPriority: 100,
+    });
     const safeAreaIdx = scene.addNode({ name: 'SafeArea', parent: appRootIdx });
 
     // SafeArea 需要 UITransform 才能被 Widget 布局
     scene.addUITransform(safeAreaIdx);
     scene.addWidget(safeAreaIdx);
+
+    // 场景加载遮罩：覆盖全画布，BlockInputEvents 阻止重复点击。
+    const loadingOverlayIdx = scene.addNode({ name: 'LoadingOverlay', parent: appRootIdx });
+    scene.addUITransform(loadingOverlayIdx);
+    scene.addWidget(loadingOverlayIdx);
+    scene.attach(loadingOverlayIdx, {
+        __type__: 'cc.BlockInputEvents',
+        _name: '',
+        _objFlags: 0,
+        _enabled: true,
+        __prefab: null,
+        _id: '',
+    });
+    addSplashLabel(scene, loadingOverlayIdx, {
+        name: 'LoadingText',
+        text: '正在前往……',
+        fontSize: 36,
+        y: 0,
+        color: [232, 227, 220],
+        font,
+    });
+    scene.entries[loadingOverlayIdx]._active = false;
+
+    // 未开放功能等轻提示，位于安全区下部。
+    const feedbackRootIdx = scene.addNode({
+        name: 'Feedback',
+        parent: safeAreaIdx,
+        pos: vec3(0, -640, 0),
+    });
+    scene.addUITransform(feedbackRootIdx, 900, 96);
+    const feedbackLabelCompIdx = addSplashLabel(scene, feedbackRootIdx, {
+        name: 'Message',
+        text: '',
+        fontSize: 28,
+        y: 0,
+        color: [232, 227, 220],
+        font,
+    });
+    scene.entries[feedbackRootIdx]._active = false;
 
     // 启动流程组件挂在 Splash 上，持有状态文字与整层引用。
     // 缺 .meta 时跳过并提示——脚本 UUID 只能由编辑器分配，
@@ -157,8 +211,15 @@ function build() {
         );
     }
 
-    scene.addUITransform(appRootIdx);
-    scene.addScript(appRootIdx, uuidFromMeta(path.join(REPO_ROOT, 'assets/scripts/AppRoot.ts')));
+    scene.addScript(
+        appRootIdx,
+        uuidFromMeta(path.join(REPO_ROOT, 'assets/scripts/AppRoot.ts')),
+        {
+            loadingOverlay: { __id__: loadingOverlayIdx },
+            feedbackRoot: { __id__: feedbackRootIdx },
+            feedbackLabel: { __id__: feedbackLabelCompIdx },
+        },
+    );
     scene.addScript(
         appRootIdx,
         uuidFromMeta(path.join(REPO_ROOT, 'assets/scripts/presentation/ViewportAdapter.ts')),

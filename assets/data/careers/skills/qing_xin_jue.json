@@ -1,0 +1,16 @@
+{
+  "id": "qing_xin_jue",
+  "nameKey": "skill.qing_xin_jue",
+  "damageKind": "none",
+  "targetType": "ALLY_ALL",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 30,
+  "cooldownTicks": 180,
+  "castTicks": 8,
+  "primaryPercent": 0,
+  "appliesStatus": {
+    "kind": "purify",
+    "durationTicks": 20,
+    "magnitude": 1
+  }
+}

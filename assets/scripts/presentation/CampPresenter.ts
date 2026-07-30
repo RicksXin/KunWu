@@ -50,6 +50,7 @@ export class CampPresenter extends Component {
         );
 
         this.renderWallet();
+        this.bindButtons();
         this.warnUndersizedTouchTargets();
     }
 
@@ -102,8 +103,44 @@ export class CampPresenter extends Component {
         if (!item) {
             return null;
         }
-        AppRoot.instance.events.emit('nav.selected', { item });
+        const app = AppRoot.instance;
+        app.events.emit('nav.selected', { item });
+        app.showFeedback(NAV_FEEDBACK[item]);
         return item;
+    }
+
+    /** 七座建筑点击。页面未接入前也必须给出反馈。 */
+    onBuildingClicked(index: number): BuildingId | null {
+        const buildingId = BUILDING_IDS[index];
+        if (!buildingId) {
+            return null;
+        }
+        const app = AppRoot.instance;
+        app.events.emit('building.selected', { buildingId });
+        app.showFeedback(`${BUILDING_NAMES[buildingId]}尚未开放`);
+        return buildingId;
+    }
+
+    /**
+     * 场景生成器只需维护节点引用，点击在运行时统一绑定。
+     * 这样新增入口不会因为漏配 Component.EventHandler 而“点了没反应”。
+     */
+    private bindButtons(): void {
+        this.buildingNodes.forEach((node, index) => {
+            const handler = (): void => {
+                this.onBuildingClicked(index);
+            };
+            node.on(Button.EventType.CLICK, handler, this);
+            this.disposers.push(() => node.off(Button.EventType.CLICK, handler, this));
+        });
+
+        this.bottomNavNodes.forEach((node, index) => {
+            const handler = (): void => {
+                this.onNavClicked(index);
+            };
+            node.on(Button.EventType.CLICK, handler, this);
+            this.disposers.push(() => node.off(Button.EventType.CLICK, handler, this));
+        });
     }
 
     /**
@@ -131,3 +168,21 @@ export class CampPresenter extends Component {
         this.buildingNodes.forEach((node, index) => check(node, `建筑按钮 ${index}`));
     }
 }
+
+const BUILDING_NAMES: Readonly<Record<BuildingId, string>> = {
+    yi_shi_dian: '议事殿',
+    ling_pu: '灵圃',
+    zhao_xian_tai: '招贤台',
+    bai_bao_ku: '百宝库',
+    lian_qi_fang: '炼器坊',
+    jiao_yi_hang: '交易行',
+    huan_hun_tan: '还魂坛',
+};
+
+const NAV_FEEDBACK: Readonly<Record<BottomNavItem, string>> = {
+    camp: '已在营地',
+    heroes: '修士页面尚未开放',
+    inventory: '背包页面尚未开放',
+    quests: '任务页面尚未开放',
+    expedition: '出征准备尚未开放',
+};

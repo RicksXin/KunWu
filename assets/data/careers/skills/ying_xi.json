@@ -1,0 +1,14 @@
+{
+  "id": "ying_xi",
+  "nameKey": "skill.ying_xi",
+  "damageKind": "physical",
+  "scalingAttribute": "technique",
+  "targetType": "ENEMY_LOWEST_HP",
+  "ignoreTaunt": false,
+  "baseIntervalTicks": 18,
+  "cooldownTicks": 0,
+  "castTicks": 4,
+  "primaryPercent": 115,
+  "secondaryAttribute": "speed",
+  "secondaryPercent": 25
+}
