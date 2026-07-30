@@ -5,5 +5,15 @@
   "uuid": "b3f45a39-3b60-4080-8ae0-f804e9ac4418",
   "files": [],
   "subMetas": {},
-  "userData": {}
+  "userData": {
+    "isBundle": true,
+    "bundleName": "camp",
+    "priority": 5,
+    "compressionType": {
+      "web-mobile": "merge_all_json"
+    },
+    "isRemoteBundle": {
+      "web-mobile": false
+    }
+  }
 }

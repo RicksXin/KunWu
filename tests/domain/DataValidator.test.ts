@@ -468,6 +468,58 @@ describe('技能与职业树附加约束', () => {
         );
     });
 
+    test('未知目标类型被拒', () => {
+        const bundle = makeValidBundle();
+        assertSingleError(
+            {
+                ...bundle,
+                skills: [
+                    makeSkill('slash', { targetType: 'ENEMY_EVERYWHERE' as never }),
+                    ...bundle.skills.slice(1),
+                ],
+            },
+            /未知目标类型/,
+        );
+    });
+
+    test('不受嘲讽的目标类型标 ignoreTaunt 给警告', () => {
+        const bundle = makeValidBundle();
+        const report = validateDataBundle({
+            ...bundle,
+            skills: [
+                // ENEMY_ALL 本就不受嘲讽，再标 ignoreTaunt 是冗余
+                makeSkill('slash', { targetType: 'ENEMY_ALL', ignoreTaunt: true }),
+                ...bundle.skills.slice(1),
+            ],
+        });
+        assert.equal(report.hasErrors, false);
+        assert.ok(report.warnings.some((issue) => /冗余配置/.test(issue.message)));
+    });
+
+    test('敌方单体标 ignoreTaunt 不给警告（合法用法）', () => {
+        const bundle = makeValidBundle();
+        const report = validateDataBundle({
+            ...bundle,
+            skills: [
+                makeSkill('slash', { targetType: 'ENEMY_SINGLE', ignoreTaunt: true }),
+                ...bundle.skills.slice(1),
+            ],
+        });
+        assert.deepEqual(report.warnings, []);
+    });
+
+    test('伤害技能指向友方给警告', () => {
+        const bundle = makeValidBundle();
+        const report = validateDataBundle({
+            ...bundle,
+            skills: [
+                makeSkill('slash', { damageKind: 'physical', targetType: 'ALLY_ALL' }),
+                ...bundle.skills.slice(1),
+            ],
+        });
+        assert.ok(report.warnings.some((issue) => /请确认是否为吸血/.test(issue.message)));
+    });
+
     test('未被引用的技能给警告', () => {
         const bundle = makeValidBundle();
         const orphan = makeSkill('orphan_skill');

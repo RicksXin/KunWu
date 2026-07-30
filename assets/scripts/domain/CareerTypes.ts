@@ -7,6 +7,7 @@
 
 import type { AttributeKey } from './Attributes';
 import type { DamageKind } from './CombatTypes';
+import type { SkillTargetType } from './SkillTargeting';
 
 /** 每个职业节点的主动技能数量。已冻结，改动等于重做战斗数值。 */
 export const SKILLS_PER_CAREER = 3;
@@ -27,7 +28,13 @@ export interface SkillDefinition {
      * damageKind 为 none 时可省略。
      */
     readonly scalingAttribute?: AttributeKey;
-    readonly isSingleTarget: boolean;
+    /**
+     * 目标类型（PRD-04 §4 的九种）。
+     * 是否受嘲讽由此推导，见 SkillTargeting.isTauntable——
+     * 不再单独存 isSingleTarget，避免两处表达同一件事而互相矛盾。
+     */
+    readonly targetType: SkillTargetType;
+    /** 显式无视嘲讽。仅对可嘲讽的目标类型有意义。 */
     readonly ignoreTaunt: boolean;
     /** 冷却与前摇均以模拟 tick 计，避免帧率影响结算。 */
     readonly cooldownTicks: number;

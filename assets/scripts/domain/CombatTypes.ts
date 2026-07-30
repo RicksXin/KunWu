@@ -30,12 +30,8 @@ export interface CombatEvent {
  */
 export type DamageKind = 'physical' | 'magical' | 'none';
 
-export interface SkillTargetRule {
-    /** 是否无视嘲讽（技术方案 §11.1）。群体与随机多段技能通常为 true。 */
-    readonly ignoreTaunt: boolean;
-    /** 单体技能才受嘲讽约束；群体技能不受影响。 */
-    readonly isSingleTarget: boolean;
-}
+// 目标规则与嘲讽判定见 SkillTargeting.ts：
+// 目标类型是 SkillDefinition 的字段，是否受嘲讽由类型推导，不另设接口。
 
 /** 敌人轻量状态机（技术方案 §11）。Boss 另用阶段脚本，不做通用行为树。 */
 export type EnemyAiState =

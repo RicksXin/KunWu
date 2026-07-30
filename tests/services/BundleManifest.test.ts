@@ -20,7 +20,6 @@ describe('Bundle 清单自洽', () => {
     test('包含 PRD-10 §3 列出的全部包', () => {
         // 清单缺包会导致运行期才报「找不到 Bundle」
         for (const expected of [
-            'start-scene',
             'shared',
             'camp',
             'career_base',
@@ -44,8 +43,10 @@ describe('Bundle 清单自洽', () => {
 });
 
 describe('首屏包', () => {
-    test('只含启动与 shared（PRD-10 §3）', () => {
-        assert.deepEqual([...BOOT_BUNDLES], ['start-scene', 'shared']);
+    test('只含 shared（PRD-10 §3）', () => {
+        // 启动场景不在 Bundle 内：Cocos 禁止初始场景位于 Asset Bundle，
+        // 故 Boot.scene 随主包发布，首屏只需拉 shared
+        assert.deepEqual([...BOOT_BUNDLES], ['shared']);
     });
 
     test('不含任何地图包', () => {
@@ -53,6 +54,14 @@ describe('首屏包', () => {
         for (const bundle of BOOT_BUNDLES) {
             assert.equal(isMapBundle(bundle), false, `${bundle} 不该在首屏`);
         }
+    });
+
+    test('不含 start-scene（引擎保留名）', () => {
+        assert.equal(
+            (BUNDLE_NAMES as readonly string[]).includes('start-scene'),
+            false,
+            'start-scene 是引擎保留的内置包名，不应出现在工程清单里',
+        );
     });
 
     test('不含营地或职业包', () => {

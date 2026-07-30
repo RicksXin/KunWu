@@ -89,3 +89,8 @@ desktop.ini
 *.tmp
 # Tiled 会话状态，非地图数据
 *.tiled-session
+.playwright-mcp/
+
+# 本工程用 pnpm，不应出现 npm/yarn 锁文件
+package-lock.json
+yarn.lock

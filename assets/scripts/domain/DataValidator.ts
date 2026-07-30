@@ -14,6 +14,7 @@ import type { AttributeCheck } from './Attributes';
 import { SKILLS_PER_CAREER } from './CareerTypes';
 import type { CareerDefinition, SkillDefinition } from './CareerTypes';
 import { MAP_OBJECT_KINDS, MAP_OBJECT_STATES } from './MapTypes';
+import { SKILL_TARGET_TYPES, isTauntable, isEnemyTarget } from './SkillTargeting';
 import type { MapDefinition, MapObjectDefinition } from './MapTypes';
 
 /** ID 命名规范：英文小写蛇形（CLAUDE.md）。 */
@@ -106,9 +107,27 @@ function validateSkills(
             report.error('skills', skill.id, `未知属性: ${skill.scalingAttribute}`, 'scalingAttribute');
         }
 
-        // 群体技能不受嘲讽约束，标记 ignoreTaunt=false 是矛盾配置（技术方案 §11.1）
-        if (!skill.isSingleTarget && !skill.ignoreTaunt) {
-            report.warn('skills', skill.id, '群体技能不受嘲讽约束，ignoreTaunt 应为 true', 'ignoreTaunt');
+        if (!SKILL_TARGET_TYPES.includes(skill.targetType)) {
+            report.error('skills', skill.id, `未知目标类型: ${skill.targetType}`, 'targetType');
+        } else if (!isTauntable(skill.targetType) && skill.ignoreTaunt) {
+            // 本就不受嘲讽的目标类型再标 ignoreTaunt 是冗余配置，
+            // 容易让人误以为「去掉它就会受嘲讽」（技术方案 §11.1）
+            report.warn(
+                'skills',
+                skill.id,
+                `${skill.targetType} 本就不受嘲讽约束，ignoreTaunt 是冗余配置`,
+                'ignoreTaunt',
+            );
+        }
+
+        // 治疗类技能不该指向敌方，反之伤害技能不该指向友方
+        if (skill.damageKind !== 'none' && !isEnemyTarget(skill.targetType) && skill.targetType !== 'SELF') {
+            report.warn(
+                'skills',
+                skill.id,
+                `damageKind 为 ${skill.damageKind} 但目标为 ${skill.targetType}，请确认是否为吸血/反伤类技能`,
+                'targetType',
+            );
         }
 
         for (const [field, value] of [

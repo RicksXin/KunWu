@@ -6,9 +6,15 @@
  * 因此「首屏包不该包含地图资源」这类约束能在 CI 拦住而非等打包后人工查。
  */
 
-/** Bundle 名称。与 assets/bundles/ 下的目录名一致（PRD-10 §3）。 */
+/**
+ * Bundle 名称。与 assets/bundles/ 下的目录名一致（PRD-10 §3）。
+ *
+ * 不含 start-scene：Cocos 禁止初始场景位于 Asset Bundle 内
+ * （构建报「当前初始场景不存在或在 Bundle 中」），
+ * 且 start-scene 是引擎保留的内置包名。
+ * Boot.scene 放在 assets/scenes/，随主包发布，无需显式加载。
+ */
 export const BUNDLE_NAMES = [
-    'start-scene',
     'shared',
     'camp',
     'career_base',
@@ -23,9 +29,11 @@ export type BundleName = (typeof BUNDLE_NAMES)[number];
 
 /**
  * 首屏包。PRD-10 §3：首屏只加载启动和 shared 最小资源。
+ *
+ * 启动场景随主包发布（见 BUNDLE_NAMES 注释），故这里只有 shared。
  * 加入新包前请确认它真的首屏就要——首屏体积预算 < 25MB（PRD-10 §7）。
  */
-export const BOOT_BUNDLES: readonly BundleName[] = ['start-scene', 'shared'];
+export const BOOT_BUNDLES: readonly BundleName[] = ['shared'];
 
 /**
  * 预载规则：进入某个场景后应在后台预载哪些包。

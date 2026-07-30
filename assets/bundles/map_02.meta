@@ -5,5 +5,15 @@
   "uuid": "ec5670ff-b112-43ad-80f8-eefadda72cba",
   "files": [],
   "subMetas": {},
-  "userData": {}
+  "userData": {
+    "isBundle": true,
+    "bundleName": "map_02",
+    "priority": 3,
+    "compressionType": {
+      "web-mobile": "merge_all_json"
+    },
+    "isRemoteBundle": {
+      "web-mobile": false
+    }
+  }
 }

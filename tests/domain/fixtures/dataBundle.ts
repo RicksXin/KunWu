@@ -15,7 +15,7 @@ export function makeSkill(id: string, overrides: Partial<SkillDefinition> = {}):
         nameKey: `skill.${id}`,
         damageKind: 'physical',
         scalingAttribute: 'strength',
-        isSingleTarget: true,
+        targetType: 'ENEMY_SINGLE',
         ignoreTaunt: false,
         cooldownTicks: 20,
         castTicks: 4,
@@ -56,11 +56,29 @@ export function makeMap(id: string, overrides: Partial<MapDefinition> = {}): Map
 export function makeValidBundle(): DataBundle {
     const skills = [
         makeSkill('slash'),
-        makeSkill('taunt', { damageKind: 'none', scalingAttribute: undefined }),
+        // 挑衅：无伤害的自身增益，不指向敌方
+        makeSkill('taunt', {
+            damageKind: 'none',
+            scalingAttribute: undefined,
+            targetType: 'SELF',
+        }),
         makeSkill('charge'),
-        makeSkill('guard_stance'),
-        makeSkill('shield_wall', { isSingleTarget: false, ignoreTaunt: true }),
-        makeSkill('iron_body', { damageKind: 'none', scalingAttribute: undefined }),
+        makeSkill('guard_stance', {
+            damageKind: 'none',
+            scalingAttribute: undefined,
+            targetType: 'SELF',
+        }),
+        // 群体技能：目标类型已表明不受嘲讽，故不再标 ignoreTaunt
+        makeSkill('shield_wall', {
+            damageKind: 'none',
+            scalingAttribute: undefined,
+            targetType: 'ALLY_ALL',
+        }),
+        makeSkill('iron_body', {
+            damageKind: 'none',
+            scalingAttribute: undefined,
+            targetType: 'SELF',
+        }),
     ];
 
     const careers = [

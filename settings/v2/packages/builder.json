@@ -1,3 +1,32 @@
 {
-  "__version__": "1.3.9"
+  "__version__": "1.3.9",
+  "taskMap": {
+    "web-mobile": {
+      "taskName": "web-mobile",
+      "platform": "web-mobile",
+      "options": {
+        "platform": "web-mobile",
+        "name": "kunwu",
+        "buildPath": "project://build",
+        "startScene": "00555f7d-77f2-405c-8696-4cd3b4e4262e",
+        "debug": false,
+        "sourceMaps": false,
+        "md5Cache": true,
+        "mainBundleIsRemote": false,
+        "startSceneAssetBundle": false,
+        "useBuiltinServer": false,
+        "experimentalEraseModules": false,
+        "bundleCommonChunk": true,
+        "packages": {
+          "web-mobile": {
+            "embedWebDebugger": false,
+            "orientation": "portrait",
+            "polyfills": {
+              "asyncFunctions": true
+            }
+          }
+        }
+      }
+    }
+  }
 }

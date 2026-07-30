@@ -7,19 +7,32 @@
 
 ## 命令
 
+**包管理器用 pnpm**，不要用 npm/yarn（`packageManager` 字段已锁定版本）。
+
 ```bash
-npm run check      # typecheck + 单测，提交前跑这个
-npm test           # 领域层单测（Node 原生 runner，不依赖引擎）
-npm run test:watch
-npm run typecheck  # 用 Cocos 自带 tsc 检查 assets/ 与 tests/
-npm run validate:data  # 构建前数据表校验（PRD-10 §6 七条规则）
+pnpm check          # typecheck + 单测 + 数据校验 + 场景校验，提交前跑这个
+pnpm test           # 领域层单测（Node 原生 runner，不依赖引擎）
+pnpm test:watch
+pnpm typecheck      # 用 Cocos 自带 tsc 检查 assets/ 与 tests/
+pnpm validate:data  # 构建前数据表校验（PRD-10 §6 七条规则）
 ```
+
+### 跑起来看
+
+```bash
+pnpm build:web   # 命令行构建 Web Mobile（**必须先关闭编辑器**，它持有工程锁）
+pnpm serve       # 本地预览产物，同时打印手机可访问的局域网地址
+pnpm verify:gate # 门禁自动化验证（体积、安全区、分包、错误码等 11 项）
+```
+
+或用编辑器预览（`http://127.0.0.1:7456/`）——但**改了场景文件后必须先 `Cmd+R`
+刷新资源**，否则编辑器会用缓存的旧版本，表现为"明明改了却看不到"。
 
 **新增脚本后必须用编辑器导入一次**生成 `.meta`（`assets/**/*.meta` 必须提交，
 丢失会导致全项目引用断裂）。不要手写或用脚本伪造 `.meta`——
 UUID 由编辑器分配，伪造的 UUID 与编辑器后续分配的不一致，会造成引用错乱。
 
-工程不装 `typescript` 依赖，`npm run typecheck` 调用 Cocos 自带的那份以保证版本一致；
+工程不装 `typescript` 依赖，`pnpm typecheck` 调用 Cocos 自带的那份以保证版本一致；
 Cocos 装在非默认位置时用 `COCOS_APP` 环境变量指定。引擎自身的 `.d.ts` 不满足 `strict`，
 会产生上百条无关报错，`tools/typecheck.mjs` 按路径过滤，只对本工程代码判定失败。
 
@@ -76,6 +89,11 @@ Node 单测认不了 `db://` 协议，也不接受省略扩展名的相对导入
 
 **只作类型使用的导入必须写 `import type`。** 类型擦除不移除值导入，
 对类型别名（如 `Attributes`）会在运行期报「does not provide an export named」。
+
+**不要用构造函数参数属性**（`constructor(readonly width: number)`）。
+Node 的 strip-only 模式不支持——那需要生成赋值代码而非仅删类型，
+会报 `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`。改为显式声明字段并在构造函数体内赋值。
+同理不要用 `enum`（用 `as const` 数组 + 联合类型）和 `namespace`。
 
 ## 像素规格
 
