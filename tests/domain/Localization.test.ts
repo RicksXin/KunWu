@@ -74,6 +74,11 @@ describe('本地化表完整性', () => {
         }
     });
 
+    test('顶部灵晶与灵石币种显示名不串用', () => {
+        assert.equal(table['resource.spirit_stone'], '灵晶');
+        assert.equal(table['resource.immortal_coin'], '灵石');
+    });
+
     test('启动画面文案齐备', () => {
         for (const key of [
             'splash.title',

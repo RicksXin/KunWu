@@ -78,6 +78,33 @@ export function isBuildingUsable(state: BuildingState): boolean {
     return state === 'UNLOCKED' || state === 'UPGRADABLE' || state === 'MAX_LEVEL';
 }
 
+/** 零级建筑满足剧情条件后进入 AVAILABLE，否则为 LOCKED。 */
+const BUILDING_UNLOCK_FLAGS: Partial<Record<BuildingId, string>> = {
+    zhao_xian_tai: 'unlock_zhao_xian_tai',
+    lian_qi_fang: 'unlock_lian_qi_fang',
+    jiao_yi_hang: 'unlock_jiao_yi_hang',
+    huan_hun_tan: 'unlock_huan_hun_tan',
+};
+
+/**
+ * 根据存档等级和剧情 Flag 解析七建筑状态。
+ * UI 不推断章节名，只消费稳定 ID。
+ */
+export function resolveBuildingStates(
+    buildingLevels: Readonly<Record<string, number>>,
+    storyFlags: Readonly<Record<string, boolean>>,
+): Readonly<Record<BuildingId, BuildingState>> {
+    return Object.fromEntries(
+        BUILDING_IDS.map((buildingId) => {
+            if ((buildingLevels[buildingId] ?? 0) > 0) {
+                return [buildingId, 'UNLOCKED'];
+            }
+            const unlockFlag = BUILDING_UNLOCK_FLAGS[buildingId];
+            return [buildingId, unlockFlag && storyFlags[unlockFlag] ? 'AVAILABLE' : 'LOCKED'];
+        }),
+    ) as unknown as Readonly<Record<BuildingId, BuildingState>>;
+}
+
 /**
  * 计算红点分布。
  *

@@ -15,6 +15,7 @@ import { compressUuid, uuidFromMeta } from './uuid-compress.mjs';
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 /** 初始场景不能位于 Asset Bundle 内，故放在 assets/scenes/。 */
 const SCENE_PATH = path.join(REPO_ROOT, 'assets/scenes/Boot.scene');
+const CAMP_SCENE_PATH = path.join(REPO_ROOT, 'assets/bundles/camp/Camp.scene');
 
 const problems = [];
 const notes = [];
@@ -204,6 +205,324 @@ if (existsSync(path.join(REPO_ROOT, 'assets/bundles/start-scene'))) {
         'assets/bundles/start-scene 不应存在：start-scene 是引擎保留的内置 Bundle 名，' +
             '且初始场景不能放在 Bundle 内',
     );
+}
+
+// ── Camp 三层大厅骨架（任务 1.2.1–1.2.2）
+if (!existsSync(CAMP_SCENE_PATH)) {
+    problems.push('找不到 Camp.scene，请先运行 pnpm gen:scene:camp --force');
+} else {
+    const camp = JSON.parse(readFileSync(CAMP_SCENE_PATH, 'utf8'));
+
+    const campCustomTypes = new Set(
+        camp
+            .map((entry) => entry.__type__)
+            .filter((type) => typeof type === 'string' && !type.startsWith('cc.')),
+    );
+    for (const compressed of campCustomTypes) {
+        if (!scriptIndex.has(compressed)) {
+            problems.push(`Camp.scene 引用了未知脚本组件 ${compressed}`);
+        }
+    }
+
+    // Camp 组件也必须与节点双向配对，生成器增删节点后最容易漏这条。
+    camp.forEach((entry, index) => {
+        const nodeRef = entry?.node?.__id__;
+        if (typeof nodeRef !== 'number') {
+            return;
+        }
+        const node = camp[nodeRef];
+        if (!node || node.__type__ !== 'cc.Node') {
+            problems.push(`Camp.scene [${index}] 的 node 未指向 cc.Node`);
+            return;
+        }
+        if (!(node._components ?? []).some((ref) => ref.__id__ === index)) {
+            problems.push(
+                `Camp.scene [${index}] ${entry.__type__} 未被节点 ${node._name} 登记`,
+            );
+        }
+    });
+
+    const findNodeIdx = (name) =>
+        camp.findIndex((entry) => entry.__type__ === 'cc.Node' && entry._name === name);
+    const expectNode = (name) => {
+        const idx = findNodeIdx(name);
+        if (idx < 0) {
+            problems.push(`Camp.scene 缺少 ${name} 节点`);
+        }
+        return idx;
+    };
+    const expectParent = (childName, parentName) => {
+        const childIdx = expectNode(childName);
+        const parentIdx = expectNode(parentName);
+        if (childIdx >= 0 && parentIdx >= 0 && camp[childIdx]._parent?.__id__ !== parentIdx) {
+            problems.push(`Camp.scene ${childName} 必须直属 ${parentName}`);
+        }
+        return { childIdx, parentIdx };
+    };
+
+    expectParent('WorldViewport', 'Canvas');
+    expectParent('SceneFallback', 'WorldViewport');
+    expectParent('PanoramaContent', 'WorldViewport');
+    expectParent('BackgroundLayer', 'PanoramaContent');
+    expectParent('BuildingLayer', 'PanoramaContent');
+    expectParent('ForegroundLayer', 'PanoramaContent');
+    expectParent('SafeAreaRoot', 'Canvas');
+    expectParent('TopHUD', 'SafeAreaRoot');
+    expectParent('BottomHUD', 'SafeAreaRoot');
+    expectParent('ResourceBar', 'TopHUD');
+    expectParent('AvatarButton', 'TopHUD');
+    expectParent('MainTaskButton', 'TopHUD');
+    expectParent('ExpeditionEntry', 'BuildingLayer');
+    for (const anchorName of [
+        'ArenaAnchor',
+        'RelicAnchor',
+        'SacredSiteAnchor',
+        'ChurchAnchor',
+    ]) {
+        expectParent(anchorName, 'BuildingLayer');
+    }
+    expectParent('BottomLeftSlots', 'BottomHUD');
+    expectParent('BottomRightCurrency', 'BottomHUD');
+    expectParent('NpcListPanel', 'SafeAreaRoot');
+    expectParent('NpcDialogPanel', 'SafeAreaRoot');
+
+    if (findNodeIdx('BottomNav') >= 0) {
+        problems.push('Camp.scene 仍包含旧 BottomNav，1.2.1 要求删除五主导航布局');
+    }
+    if (findNodeIdx('Expanded') >= 0) {
+        problems.push('Camp.scene 仍包含顶部旧货币展开区，灵石/魂晶不应混入五资源');
+    }
+
+    const fallbackIdx = findNodeIdx('SceneFallback');
+    if (fallbackIdx >= 0 && camp[fallbackIdx]._active !== true) {
+        problems.push('Camp.scene SceneFallback 默认必须可见，避免正式全景未加载时露空白');
+    }
+
+    const viewportType = compressUuid(
+        uuidFromMeta(
+            path.join(REPO_ROOT, 'assets/scripts/presentation/ViewportAdapter.ts.meta'),
+        ),
+    );
+    const viewportComponent = camp.find((entry) => entry.__type__ === viewportType);
+    const safeAreaRootIdx = findNodeIdx('SafeAreaRoot');
+    if (!viewportComponent) {
+        problems.push('Camp.scene 未挂载 ViewportAdapter，顶部/底部 HUD 无法进入安全区');
+    } else if (viewportComponent.safeAreaRoot?.__id__ !== safeAreaRootIdx) {
+        problems.push('Camp.scene ViewportAdapter.safeAreaRoot 未指向 SafeAreaRoot');
+    }
+
+    const presenterType = compressUuid(
+        uuidFromMeta(
+            path.join(REPO_ROOT, 'assets/scripts/presentation/CampPresenter.ts.meta'),
+        ),
+    );
+    const presenter = camp.find((entry) => entry.__type__ === presenterType);
+    if (!presenter) {
+        problems.push('Camp.scene 未挂载 CampPresenter');
+    } else {
+        if ((presenter.buildingNodes ?? []).length !== 7) {
+            problems.push('CampPresenter.buildingNodes 必须保留七座成长建筑引用');
+        }
+        if ((presenter.badgeNodes ?? []).length !== 7) {
+            problems.push('CampPresenter.badgeNodes 必须与七座建筑一一对应');
+        }
+        if ((presenter.buildingStateLabels ?? []).length !== 7) {
+            problems.push('CampPresenter.buildingStateLabels 必须与七座建筑一一对应');
+        } else {
+            for (const ref of presenter.buildingStateLabels) {
+                if (camp[ref?.__id__]?.__type__ !== 'cc.Label') {
+                    problems.push('CampPresenter.buildingStateLabels 必须全部指向 cc.Label');
+                    break;
+                }
+            }
+        }
+        if ((presenter.bottomNavNodes ?? []).length !== 0) {
+            problems.push('CampPresenter.bottomNavNodes 应为空，旧五导航不得继续接线');
+        }
+        for (const [property, expectedName] of [
+            ['avatarButton', 'AvatarButton'],
+            ['mainTaskButton', 'MainTaskButton'],
+            ['panoramaViewport', 'WorldViewport'],
+            ['panoramaContent', 'PanoramaContent'],
+            ['expeditionButton', 'ExpeditionEntry'],
+            ['npcListPanel', 'NpcListPanel'],
+            ['npcDialogPanel', 'NpcDialogPanel'],
+            ['cenShouyiButton', 'CenShouyiButton'],
+            ['npcListBackButton', 'NpcListBackButton'],
+            ['npcDialogBackButton', 'NpcDialogBackButton'],
+            ['npcDialogNextButton', 'NpcDialogNextButton'],
+        ]) {
+            const target = camp[presenter[property]?.__id__];
+            if (target?.__type__ !== 'cc.Node' || target._name !== expectedName) {
+                problems.push(`CampPresenter.${property} 未指向 ${expectedName}`);
+            }
+        }
+        const mainTaskLabel = camp[presenter.mainTaskLabel?.__id__];
+        if (mainTaskLabel?.__type__ !== 'cc.Label') {
+            problems.push('CampPresenter.mainTaskLabel 未指向 cc.Label');
+        }
+        for (const property of [
+            'npcNameLabel',
+            'npcRoleLabel',
+            'npcStatusLabel',
+            'npcDialogTextLabel',
+            'npcDialogNextLabel',
+        ]) {
+            if (camp[presenter[property]?.__id__]?.__type__ !== 'cc.Label') {
+                problems.push(`CampPresenter.${property} 未指向 cc.Label`);
+            }
+        }
+    }
+
+    const nodeTransform = (nodeIdx) =>
+        (camp[nodeIdx]?._components ?? [])
+            .map((ref) => camp[ref.__id__])
+            .find((component) => component?.__type__ === 'cc.UITransform');
+    const componentTypesForNode = (nodeIdx) =>
+        (camp[nodeIdx]?._components ?? []).map((ref) => camp[ref.__id__]?.__type__);
+    const contentTransform = nodeTransform(findNodeIdx('PanoramaContent'));
+    const viewportTransform = nodeTransform(findNodeIdx('WorldViewport'));
+    if (!componentTypesForNode(findNodeIdx('WorldViewport')).includes('cc.Mask')) {
+        problems.push('Camp.scene WorldViewport 缺少 cc.Mask，2.8 屏全景会泄露到可视区外');
+    }
+    if (
+        !contentTransform ||
+        !viewportTransform ||
+        contentTransform._contentSize.width <= viewportTransform._contentSize.width
+    ) {
+        problems.push('Camp.scene PanoramaContent 必须比 WorldViewport 宽，否则无法横滑');
+    }
+    if (contentTransform?._contentSize.width !== 3024) {
+        problems.push('Camp.scene PanoramaContent 宽度必须为设计屏宽的 2.8 倍（3024）');
+    }
+
+    for (const layerName of ['BackgroundLayer', 'BuildingLayer', 'ForegroundLayer']) {
+        const transform = nodeTransform(findNodeIdx(layerName));
+        if (transform?._contentSize.width !== contentTransform?._contentSize.width) {
+            problems.push(`Camp.scene ${layerName} 宽度必须与 PanoramaContent 一致`);
+        }
+    }
+
+    const expectedPanoramaPositions = {
+        SacredSiteAnchor: [-1350, 260],
+        ChurchAnchor: [-1350, -220],
+        huan_hun_tan: [-950, -580],
+        bai_bao_ku: [-650, -330],
+        zhao_xian_tai: [-350, -80],
+        yi_shi_dian: [0, 450],
+        ExpeditionEntry: [0, -320],
+        jiao_yi_hang: [350, -80],
+        lian_qi_fang: [650, -330],
+        ArenaAnchor: [650, 250],
+        ling_pu: [950, -580],
+        RelicAnchor: [1350, -220],
+    };
+    for (const [nodeName, [expectedX, expectedY]] of Object.entries(
+        expectedPanoramaPositions,
+    )) {
+        const node = camp[findNodeIdx(nodeName)];
+        if (node?._lpos?.x !== expectedX || node?._lpos?.y !== expectedY) {
+            problems.push(
+                `Camp.scene ${nodeName} 的位置应为 (${expectedX}, ${expectedY})`,
+            );
+        }
+    }
+
+    for (const buildingName of [
+        'yi_shi_dian',
+        'ling_pu',
+        'zhao_xian_tai',
+        'bai_bao_ku',
+        'lian_qi_fang',
+        'jiao_yi_hang',
+        'huan_hun_tan',
+        'ArenaAnchor',
+        'RelicAnchor',
+        'SacredSiteAnchor',
+        'ChurchAnchor',
+    ]) {
+        const size = nodeTransform(findNodeIdx(buildingName))?._contentSize;
+        if (size?.width !== 320 || size?.height !== 240) {
+            problems.push(`Camp.scene ${buildingName} 尺寸必须为 320×240`);
+        }
+    }
+    const expeditionSize = nodeTransform(findNodeIdx('ExpeditionEntry'))?._contentSize;
+    if (expeditionSize?.width !== 360 || expeditionSize?.height !== 190) {
+        problems.push('Camp.scene ExpeditionEntry 尺寸必须为 360×190');
+    }
+
+    for (const anchorName of [
+        'ArenaAnchor',
+        'RelicAnchor',
+        'SacredSiteAnchor',
+        'ChurchAnchor',
+    ]) {
+        const anchorIdx = findNodeIdx(anchorName);
+        const componentTypes = componentTypesForNode(anchorIdx);
+        if (componentTypes.includes('cc.Button')) {
+            problems.push(`Camp.scene ${anchorName} 是未开放锚点，不得挂载 cc.Button`);
+        }
+        const childNames = (camp[anchorIdx]?._children ?? []).map(
+            (ref) => camp[ref.__id__]?._name,
+        );
+        if (childNames.includes('Badge')) {
+            problems.push(`Camp.scene ${anchorName} 是未开放锚点，不得创建 Badge`);
+        }
+    }
+
+    if (!componentTypesForNode(findNodeIdx('ExpeditionEntry')).includes('cc.Button')) {
+        problems.push('Camp.scene ExpeditionEntry 必须有可点击入口');
+    }
+
+    for (const panelName of ['NpcListPanel', 'NpcDialogPanel']) {
+        const panelIdx = findNodeIdx(panelName);
+        if (camp[panelIdx]?._active !== false) {
+            problems.push(`Camp.scene ${panelName} 默认必须隐藏`);
+        }
+        if (!componentTypesForNode(panelIdx).includes('cc.BlockInputEvents')) {
+            problems.push(`Camp.scene ${panelName} 缺少 cc.BlockInputEvents，点击会穿透大厅`);
+        }
+    }
+
+    const resourceDisplayNames = {
+        spiritGrain: '灵粮',
+        spiritWood: '灵木',
+        darkIron: '玄铁',
+        spiritStone: '灵晶',
+        gengJing: '庚精',
+    };
+    for (const [resourceNodeName, displayName] of Object.entries(resourceDisplayNames)) {
+        const resourceIdx = findNodeIdx(resourceNodeName);
+        const childIds = camp[resourceIdx]?._children?.map((ref) => ref.__id__) ?? [];
+        const nameNode = childIds.map((idx) => camp[idx]).find((node) => node?._name === 'Name');
+        const valueNode = childIds.map((idx) => camp[idx]).find((node) => node?._name === 'Value');
+        const nameLabel = (nameNode?._components ?? [])
+            .map((ref) => camp[ref.__id__])
+            .find((component) => component?.__type__ === 'cc.Label');
+        const valueLabel = (valueNode?._components ?? [])
+            .map((ref) => camp[ref.__id__])
+            .find((component) => component?.__type__ === 'cc.Label');
+        if (nameLabel?._string !== displayName) {
+            problems.push(`Camp.scene ${resourceNodeName} 显示名应为${displayName}`);
+        }
+        if (valueLabel?._string !== '--') {
+            problems.push(`Camp.scene ${resourceNodeName} 默认值应为 --，不得写假数值`);
+        }
+    }
+
+    // 所有可点击入口都必须满足 48×48dp。
+    for (const button of camp.filter((entry) => entry.__type__ === 'cc.Button')) {
+        const node = camp[button.node?.__id__];
+        const transform = nodeTransform(button.node?.__id__);
+        const size = transform?._contentSize;
+        if (!size || size.width < 48 || size.height < 48) {
+            problems.push(
+                `Camp.scene 可点击节点 ${node?._name ?? '(未知)'} 的触控区小于 48×48dp`,
+            );
+        }
+    }
+
+    notes.push(`Camp.scene 三层骨架 ${camp.length} 条目`);
 }
 
 if (problems.length > 0) {

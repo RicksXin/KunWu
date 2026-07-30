@@ -6,6 +6,7 @@ import {
     MAX_PRIMARY_BADGES,
     isBuildingInteractive,
     isBuildingUsable,
+    resolveBuildingStates,
     computeBadges,
     requiresRevivalBadge,
 } from 'db://assets/scripts/domain/HallBadges';
@@ -66,6 +67,46 @@ describe('建筑可交互性（PRD-01 §5）', () => {
         for (const state of ['UNLOCKED', 'UPGRADABLE', 'MAX_LEVEL'] as const) {
             assert.equal(isBuildingUsable(state), true, `${state} 应可使用`);
         }
+    });
+});
+
+describe('新手建筑状态解析', () => {
+    test('新档三座初始建筑已解锁，其余锁定', () => {
+        const states = resolveBuildingStates(
+            {
+                yi_shi_dian: 1,
+                ling_pu: 1,
+                zhao_xian_tai: 0,
+                bai_bao_ku: 1,
+                lian_qi_fang: 0,
+                jiao_yi_hang: 0,
+                huan_hun_tan: 0,
+            },
+            {},
+        );
+        assert.equal(states.yi_shi_dian, 'UNLOCKED');
+        assert.equal(states.ling_pu, 'UNLOCKED');
+        assert.equal(states.bai_bao_ku, 'UNLOCKED');
+        assert.equal(states.zhao_xian_tai, 'LOCKED');
+        assert.equal(states.lian_qi_fang, 'LOCKED');
+        assert.equal(states.jiao_yi_hang, 'LOCKED');
+        assert.equal(states.huan_hun_tan, 'LOCKED');
+    });
+
+    test('剧情 Flag 满足但尚未建造时为 AVAILABLE', () => {
+        const states = resolveBuildingStates(
+            { zhao_xian_tai: 0 },
+            { unlock_zhao_xian_tai: true },
+        );
+        assert.equal(states.zhao_xian_tai, 'AVAILABLE');
+    });
+
+    test('建筑等级优先于解锁 Flag', () => {
+        const states = resolveBuildingStates(
+            { lian_qi_fang: 1 },
+            { unlock_lian_qi_fang: false },
+        );
+        assert.equal(states.lian_qi_fang, 'UNLOCKED');
     });
 });
 

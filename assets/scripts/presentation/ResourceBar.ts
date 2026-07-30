@@ -1,4 +1,4 @@
-import { _decorator, Component, Label, Node } from 'cc';
+import { _decorator, Component, Label } from 'cc';
 import type { Wallet } from '../services/GameState';
 
 const { ccclass, property } = _decorator;
@@ -9,8 +9,8 @@ const { ccclass, property } = _decorator;
  * 职责边界：只把 Wallet 的数值显示出来，不做生产结算也不改数据。
  * 数值来源是 GameState，变更经 EventBus 通知——本组件不主动轮询。
  *
- * 常驻显示五种：灵粮、灵木、玄铁、灵石、庚精。
- * 仙铢与魂晶通过展开按钮显示（PRD-01 §2），故不在常驻区。
+ * 常驻顺序为灵粮、灵木、玄铁、灵晶、庚精。
+ * 底部灵石（Wallet.immortalCoin）由 1.2.6 的独立组件负责。
  */
 @ccclass('ResourceBar')
 export class ResourceBar extends Component {
@@ -29,20 +29,8 @@ export class ResourceBar extends Component {
     @property(Label)
     gengJingLabel: Label | null = null;
 
-    /** 展开后显示仙铢与魂晶的容器。 */
-    @property(Node)
-    expandedGroup: Node | null = null;
-
-    @property(Label)
-    immortalCoinLabel: Label | null = null;
-
-    @property(Label)
-    soulCrystalLabel: Label | null = null;
-
-    private expanded = false;
-
     protected override onLoad(): void {
-        this.applyExpanded();
+        this.renderPlaceholder();
     }
 
     /** 刷新显示。由 Presenter 在 Wallet 变更时调用。 */
@@ -52,19 +40,20 @@ export class ResourceBar extends Component {
         setLabel(this.darkIronLabel, wallet.darkIron);
         setLabel(this.spiritStoneLabel, wallet.spiritStone);
         setLabel(this.gengJingLabel, wallet.gengJing);
-        setLabel(this.immortalCoinLabel, wallet.immortalCoin);
-        setLabel(this.soulCrystalLabel, wallet.soulCrystal);
     }
 
-    /** 切换仙铢／魂晶的展开状态。 */
-    toggleExpanded(): void {
-        this.expanded = !this.expanded;
-        this.applyExpanded();
-    }
-
-    private applyExpanded(): void {
-        if (this.expandedGroup) {
-            this.expandedGroup.active = this.expanded;
+    /** 存档未就绪时显示占位符，禁止闪过场景假数值。 */
+    renderPlaceholder(): void {
+        for (const label of [
+            this.spiritGrainLabel,
+            this.spiritWoodLabel,
+            this.darkIronLabel,
+            this.spiritStoneLabel,
+            this.gengJingLabel,
+        ]) {
+            if (label) {
+                label.string = '--';
+            }
         }
     }
 }
