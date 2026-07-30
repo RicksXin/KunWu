@@ -1,4 +1,91 @@
+# ==============================================================================
+# 《昆吾禁地》.gitattributes
+# 依据 Docs/01_技术实现方案.md §17
+#
+# LFS 策略：只把「大、二进制、不需要看 diff」的文件放进 LFS。
+# 像素美术成品 PNG 通常只有几 KB 且需要频繁比对，保持普通 blob。
+# 【每位协作者 clone 后必须先执行一次】
+#     git lfs install
+# 未执行就提交 .aseprite / .ttf / .zip 等文件，会写入损坏内容。
+# 【当前状态】本文件提交时，历史中已有的 3 个 .aseprite、7 个 .ttf 和
+# 10 个 .zip 仍是普通 blob（约 22 MB）。规则从新提交起生效；
+# 若要将历史文件迁入 LFS，需执行 git lfs migrate import 重写历史，
+# 该操作会改变全部 commit 哈希，必须全员同步后进行。
+
+# ------------------------------------------------------------------------------
+# 行尾规范
+* text=auto eol=lf
+*.sh   text eol=lf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+# 文本类型标注（保证 diff 可读、避免被当成二进制）
+*.md    text diff=markdown
+*.ts    text diff=typescript
+*.js    text
+*.json  text
+*.csv   text
+*.yml   text
+*.yaml  text
+*.svg   text
+*.txt   text
+# Cocos Creator 资源元数据：文本，必须提交，冲突需人工处理
+*.meta       text
+*.scene      text
+*.prefab     text
+*.anim       text
+*.mtl        text
+*.effect     text
+# Tiled 地图源文件：文本，需要 review 坐标变更
+*.tmj   text diff=json
+*.tmx   text
+*.tsj   text diff=json
+# 注意：Tiled 图块集也用 .tsx 扩展名（XML），本项目不使用 React，
+# 因此 .tsx 一律按 Tiled XML 处理，不标记为 TypeScript
+*.tsx   text
+# Git LFS：美术与音频源文件
 *.aseprite filter=lfs diff=lfs merge=lfs -text
+*.ase      filter=lfs diff=lfs merge=lfs -text
+*.psd      filter=lfs diff=lfs merge=lfs -text
+*.psb      filter=lfs diff=lfs merge=lfs -text
+*.xcf      filter=lfs diff=lfs merge=lfs -text
+*.clip     filter=lfs diff=lfs merge=lfs -text
+*.pdn      filter=lfs diff=lfs merge=lfs -text
+*.tga      filter=lfs diff=lfs merge=lfs -text
+# Git LFS：音频
+*.wav  filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+*.mp3  filter=lfs diff=lfs merge=lfs -text
+*.ogg  filter=lfs diff=lfs merge=lfs -text
+*.m4a  filter=lfs diff=lfs merge=lfs -text
+# Git LFS：字体（Ark Pixel 单个 TTF 约 4.9 MB）
+*.ttf  filter=lfs diff=lfs merge=lfs -text
+*.otf  filter=lfs diff=lfs merge=lfs -text
+*.woff filter=lfs diff=lfs merge=lfs -text
+*.woff2 filter=lfs diff=lfs merge=lfs -text
+# Git LFS：第三方原始素材包与授权快照归档
+ThirdParty/**/_archives/** filter=lfs diff=lfs merge=lfs -text
+*.zip  filter=lfs diff=lfs merge=lfs -text
+*.7z   filter=lfs diff=lfs merge=lfs -text
+*.rar  filter=lfs diff=lfs merge=lfs -text
+# Git LFS：视频与骨骼动画（剧情演出、Spine/DragonBones 若后续引入）
+*.mp4  filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+*.skel filter=lfs diff=lfs merge=lfs -text
+*.dbbin filter=lfs diff=lfs merge=lfs -text
+# 二进制但不入 LFS
+# 像素成品图通常 <100 KB，保留普通 blob 以便快速 clone 和图像 diff
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+# Flash 遗留素材（第三方包内附带）
+*.swf binary
+# 语言统计：排除第三方与文档，让 GitHub 正确识别项目语言
+ThirdParty/** linguist-vendored
+Docs/**       linguist-documentation
 *.ase filter=lfs diff=lfs merge=lfs -text
 *.psd filter=lfs diff=lfs merge=lfs -text
 *.psb filter=lfs diff=lfs merge=lfs -text
@@ -7,19 +94,12 @@
 *.pdn filter=lfs diff=lfs merge=lfs -text
 *.tga filter=lfs diff=lfs merge=lfs -text
 *.wav filter=lfs diff=lfs merge=lfs -text
-*.aiff filter=lfs diff=lfs merge=lfs -text
-*.flac filter=lfs diff=lfs merge=lfs -text
 *.mp3 filter=lfs diff=lfs merge=lfs -text
 *.ogg filter=lfs diff=lfs merge=lfs -text
 *.m4a filter=lfs diff=lfs merge=lfs -text
 *.ttf filter=lfs diff=lfs merge=lfs -text
 *.otf filter=lfs diff=lfs merge=lfs -text
-*.woff filter=lfs diff=lfs merge=lfs -text
-*.woff2 filter=lfs diff=lfs merge=lfs -text
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.7z filter=lfs diff=lfs merge=lfs -text
 *.rar filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
-*.webm filter=lfs diff=lfs merge=lfs -text
-*.skel filter=lfs diff=lfs merge=lfs -text
-*.dbbin filter=lfs diff=lfs merge=lfs -text
