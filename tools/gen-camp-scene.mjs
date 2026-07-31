@@ -1,5 +1,5 @@
 /**
- * 生成营地场景 Camp.scene（任务 P1-HALL-012/013 / 1.2.1–1.2.4）。
+ * 营地场景的历史初始化脚本（任务 P1-HALL-012/013 / 1.2.1–1.2.4）。
  *
  * 节点树对应 PRD-01 §2 的三层信息架构：
  *   顶部固定 HUD / 中央分层全景 / 底部固定 HUD
@@ -8,7 +8,10 @@
  * Sprite 与 Label 的图片、字体需在编辑器中指定——那些引用需要资源 UUID，
  * 而资源本身还不存在。
  *
- * 用法：node tools/gen-camp-scene.mjs [--force]
+ * 正式 Camp.scene 与后续 Prefab 以 Cocos Creator 保存结果为唯一事实源。
+ * 本脚本只保留给“场景文件完全不存在”时的灰盒恢复，不得覆盖现有场景。
+ *
+ * 用法：node tools/gen-camp-scene.mjs
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -29,18 +32,28 @@ import { writeScene } from './write-scene.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
+if (process.argv.includes('--force')) {
+    console.error(
+        '禁止整体覆盖 Camp.scene：正式场景由 Cocos Creator 与 Prefab 维护。' +
+            '如需恢复，请从 Git 还原场景。',
+    );
+    process.exit(1);
+}
+
 /** UI 贴图目录。第三方 CC0 素材隔离在此（PRD-11 §135）。 */
 const UI_DIR = 'assets/third_party/kenney_pixel_ui';
 /** Ark Pixel 字体。 */
 const FONT_META = 'assets/fonts/ark-pixel-12px-proportional-zh_cn.ttf.meta';
+/** 营地正式横向背景，随 camp Bundle 加载。 */
+const CAMP_BACKGROUND_META = 'assets/bundles/camp/env_camp_panorama_bg.png.meta';
 
 /**
  * SpriteFrame 引用。png 的 .meta 里 subMetas 有个 sprite-frame 子资源，
  * 引用格式为 `<uuid>@<子资源ID>`——只用主 uuid 会拿到 ImageAsset，
  * Sprite 组件不认，表现为图不显示但不报错。
  */
-function spriteFrameRef(name) {
-    const metaPath = path.join(REPO_ROOT, UI_DIR, `${name}.png.meta`);
+function spriteFrameRefFromMeta(relativeMetaPath) {
+    const metaPath = path.join(REPO_ROOT, relativeMetaPath);
     if (!existsSync(metaPath)) {
         return null;
     }
@@ -52,6 +65,10 @@ function spriteFrameRef(name) {
         return null;
     }
     return { __uuid__: `${meta.uuid}@${subId}`, __expectedType__: 'cc.SpriteFrame' };
+}
+
+function spriteFrameRef(name) {
+    return spriteFrameRefFromMeta(path.join(UI_DIR, `${name}.png.meta`));
 }
 
 function fontRef() {
@@ -143,7 +160,11 @@ const RESOURCE_BAR_HEIGHT = 148;
 const BOTTOM_HUD_HEIGHT = 120;
 /** 左/中/右连续空间总宽为 2.8 屏，默认 x=0 停在中部。 */
 const PANORAMA_WIDTH = DESIGN_WIDTH * 2.8;
-const PANORAMA_HEIGHT = 1500;
+/** 375×817 UI 稿按 1080 设计宽等比换算后的全高。 */
+const PANORAMA_HEIGHT = 2353;
+/** 1152×896 交付背景包含安全出血；中央 1050×817 才是有效内容区。 */
+const PANORAMA_ART_WIDTH = 3318;
+const PANORAMA_ART_HEIGHT = 2580;
 
 /**
  * 1.2.4 先把七座现有建筑放进左/中/右逻辑空间。
@@ -200,14 +221,11 @@ function build(uuids) {
     const scene = new SceneBuilder('Camp');
     const { canvasIdx } = scene.addCanvas();
 
-    // ── 中央营地全景。全景可以延伸到 HUD 背后，但建筑交互层放在
-    // WorldViewport 的中部安全范围内，避免被固定 HUD 遮挡。
+    // ── 营地全景铺满画布并延伸到 HUD 背后。建筑坐标仍放在中部安全范围，
+    // 顶部/底部 HUD 是后绘制的兄弟节点，不会随横滑移动。
     const worldViewportIdx = scene.addNode({ name: 'WorldViewport', parent: canvasIdx });
     scene.addUITransform(worldViewportIdx);
-    scene.addWidget(worldViewportIdx, ALIGN_ALL, {
-        top: TOP_HUD_HEIGHT,
-        bottom: BOTTOM_HUD_HEIGHT,
-    });
+    scene.addWidget(worldViewportIdx, ALIGN_ALL);
     // 全景内容宽 2.8 屏，必须裁剪到中央可视区；否则宽屏设备会同时漏出
     // 左、中、右三段，玩家无需横滑就能看到全部建筑。
     scene.attach(worldViewportIdx, makeRectMask());
@@ -233,6 +251,16 @@ function build(uuids) {
 
     const backgroundLayerIdx = scene.addNode({ name: 'BackgroundLayer', parent: panoramaContentIdx });
     scene.addUITransform(backgroundLayerIdx, PANORAMA_WIDTH, PANORAMA_HEIGHT);
+
+    const campBackgroundFrame = spriteFrameRefFromMeta(CAMP_BACKGROUND_META);
+    if (campBackgroundFrame) {
+        const backgroundArtworkIdx = scene.addNode({
+            name: 'PanoramaBackground',
+            parent: backgroundLayerIdx,
+        });
+        scene.addUITransform(backgroundArtworkIdx, PANORAMA_ART_WIDTH, PANORAMA_ART_HEIGHT);
+        scene.attach(backgroundArtworkIdx, makeSprite(campBackgroundFrame, { sliced: false }));
+    }
 
     const buildingLayerIdx = scene.addNode({ name: 'BuildingLayer', parent: panoramaContentIdx });
     scene.addUITransform(buildingLayerIdx, PANORAMA_WIDTH, PANORAMA_HEIGHT);
@@ -795,5 +823,5 @@ writeScene({
     entries,
     scenePath: path.join(REPO_ROOT, 'assets/bundles/camp/Camp.scene'),
     repoRoot: REPO_ROOT,
-    force: process.argv.includes('--force'),
+    force: false,
 });

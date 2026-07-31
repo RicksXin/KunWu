@@ -1,0 +1,158 @@
+# 《昆吾禁地》Codex 项目记忆
+
+本文件是 Codex 在本仓库中的长期工程约定，依据根目录 `CLAUDE.md` 建立。
+适用于整个仓库。若本文件与产品或技术文档冲突，以对应事实源为准；若
+`CLAUDE.md` 的工程约定发生变化，应同步更新本文件。
+
+## 项目与事实源
+
+- 项目：竖屏 2D 像素修仙游戏。
+- 技术栈：Cocos Creator 3.8.7、TypeScript、WebGL，Web Mobile 首发。
+- 产品需求以 `Docs/PRD/` 为准；唯一事实源表见
+  `Docs/07_分阶段产品需求文档_PRD.md` §3。
+- 实现方式以 `Docs/01_技术实现方案.md` 为准。
+- `CLAUDE.md` 与本文件只记录容易踩错的工程约定，不替代 PRD。
+
+## 常用命令
+
+包管理器只使用 pnpm，不使用 npm 或 yarn；版本由 `packageManager` 锁定。
+
+```bash
+pnpm check          # typecheck + 单测 + 数据校验 + 场景校验；提交前运行
+pnpm test           # 领域层单测，Node 原生 runner，不依赖引擎
+pnpm test:watch
+pnpm typecheck      # 使用 Cocos 自带 tsc 检查 assets/ 与 tests/
+pnpm validate:data  # 构建前数据表校验
+pnpm build:web      # 命令行构建 Web Mobile
+pnpm serve          # 本地预览构建产物
+pnpm verify:gate    # 门禁自动化验证
+```
+
+- 执行 `pnpm build:web` 前必须先关闭 Cocos Creator，避免工程锁冲突。
+- 编辑器预览地址通常为 `http://127.0.0.1:7456/`。
+- 修改场景文件后，必须先在编辑器中按 `Cmd+R` 刷新资源，避免继续使用旧缓存。
+- Cocos 安装在非默认路径时，通过 `COCOS_APP` 环境变量指定。
+- 工程不安装独立 `typescript` 依赖。`pnpm typecheck` 使用 Cocos 自带版本；
+  `tools/typecheck.mjs` 会过滤引擎 `.d.ts` 中与本项目无关的 strict 报错。
+- 打开工程可用 Cocos Dashboard 添加本目录，或运行：
+  `/Applications/Cocos/Creator/3.8.7/CocosCreator.app/Contents/MacOS/CocosCreator --project .`
+
+## Cocos 资源规则
+
+- 新增脚本后必须让 Cocos Creator 导入一次，由编辑器生成 `.meta`。
+- `assets/**/*.meta` 必须提交；缺失会导致资源引用断裂。
+- 禁止手写或用脚本伪造 `.meta`。UUID 必须由编辑器分配，否则后续导入可能
+  造成 UUID 不一致和引用错乱。
+- `library/`、`temp/`、`local/`、`profiles/`、`build/` 是生成目录，不应提交。
+
+### Camp 场景唯一事实源
+
+- `assets/bundles/camp/Camp.scene` 以及后续拆出的 `.prefab` 文件，以 Cocos Creator
+  保存结果为唯一事实源。
+- `tools/gen-camp-scene.mjs` 只是历史灰盒初始化脚本，不属于日常开发流程；禁止使用
+  `--force` 或其他方式整体覆盖正式 `Camp.scene`。
+- `tools/patch-camp-*.mjs` 一类一次性补丁不作为正式场景维护方式。迁移完成后应退出
+  使用，不得与编辑器同时修改场景。
+- 视觉节点、坐标和层级在编辑器/Prefab 中维护；校验脚本只检查关键结构、引用和产品
+  约束，不应成为另一份布局事实源。
+
+## 不可违反的架构约束
+
+### 战斗数据单向流
+
+严格保持：
+
+```text
+CombatCommand → 结算器 → CombatEvent → 表现层
+```
+
+表现层只消费事件，不得反向决定伤害。否则会破坏加速战斗、跳过动画、
+战斗回放和自动化测试。
+
+### 七维字段名冻结
+
+以下字段名不可直接改名：
+
+```text
+strength magic technique speed constitution armor resistance
+```
+
+数据表、存档、技能定义和探索检定依赖这些键。任何改名都必须按全量数据与
+存档迁移处理，不能作为普通文案修改。
+
+### 坐标边界
+
+- 领域层只使用 `GridCoord`。
+- 格子坐标与像素坐标不得混用。
+- 像素换算只由表现层负责。
+
+### 数据与标识
+
+- 数值一律从数据表读取，不在业务代码中硬编码。
+- 每个职业节点必须恰好拥有 3 个主动技能，由 Schema 校验保证。
+- 逻辑 ID 使用英文小写蛇形命名。
+- 禁止用显示名做逻辑判断。
+- 授权名与原创名通过本地化表切换，不能改变存档 ID。
+
+## 目录职责
+
+```text
+assets/scripts/
+├─ domain/        无引擎依赖的纯 TypeScript，可直接单测
+├─ services/      持久服务
+├─ repositories/  数据表加载与存档读写
+└─ presentation/  Cocos Component、Presenter、ViewModel
+tests/            单测；位于 assets/ 外，避免进入 Web 构建产物
+```
+
+新增代码应遵守上述分层，领域逻辑不得反向依赖 Cocos 表现层。
+
+## 导入与 TypeScript 限制
+
+跨目录导入使用 Cocos 原生 `db://` 前缀，不在 `tsconfig.json` 中自定义
+`paths`：
+
+```ts
+import { GridCoord } from 'db://assets/scripts/domain/GridCoord';
+```
+
+- `temp/tsconfig.cocos.json` 会注入 `db://assets/*` 映射，自定义 `paths` 会覆盖它。
+- Node 测试通过 `tests/resolver.mjs` 兼容 `db://` 与省略扩展名；不要为了迁就
+  Node 修改 `assets/` 内的导入风格。
+- 测试类型检查使用 `tsconfig.tests.json`，不继承根配置，因为测试运行在 Node。
+- 仅用于类型的导入必须写 `import type`，避免类型擦除后产生无效的运行时导入。
+- 不使用构造函数参数属性，例如 `constructor(readonly width: number)`；改为显式
+  声明字段并在构造函数体赋值。
+- 不使用 TypeScript `enum` 或 `namespace`。枚举语义用 `as const` 数组和联合类型。
+- 上述语法限制来自 Node strip-only 模式，违反时会出现
+  `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`。
+
+## 像素规格
+
+- 设计画布：1080×1920（9:16）。
+- 像素内部参考：360×640，以整数 3 倍放大。
+- 世界 Tile：16×16 源像素，对应 48×48 屏幕像素。
+- `.creator/default-meta.json` 已将图片默认 `filterMode` 设为 `nearest`。
+- 禁止对 Pixel Art 使用线性过滤；缩放必须保持像素清晰。
+
+## 第三方素材
+
+- `ThirdParty/DemoAssets/` 中只允许 CC0 或 OFL 素材，并保留来源、许可快照和
+  SHA-256。
+- 第三方素材不得混入 `assets/` 原创素材目录。
+- 发布 Ark Pixel 字体时必须随附 `OFL.txt`。
+- 大文件使用 Git LFS；首次 clone 后先执行 `git lfs install`。
+
+## 修改与验证原则
+
+- 开始修改前先阅读相关 PRD 和技术方案，不凭页面现状猜测产品规则。
+- 保留工作区中已有且与当前任务无关的用户或其他代理改动。
+- 修改范围应与用户请求一致，不顺带重构无关模块。
+- 日常代码、页面或场景迭代不执行完整 Web 构建。改完后在 Cocos Creator 中
+  按 `Cmd+R` 刷新资源，再点击运行预览即可。
+- 新增脚本时仍须先让 Cocos Creator 导入并生成 `.meta`，再运行预览。
+- 完成一个功能模块后运行 `pnpm check`，检查类型、单测、数据和场景。
+- 只有修改构建模板、Bundle 分包或发布资源，或者进行阶段验收、提交前最终验证时，
+  才运行 `pnpm build:web` 和 `pnpm verify:gate`。
+- 不要在每次代码修改后重复执行“完整构建 + Web 预览 + 门禁验证”。验证强度应与
+  修改风险和当前交付阶段相匹配。

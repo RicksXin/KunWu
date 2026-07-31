@@ -16,6 +16,10 @@ const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 /** 初始场景不能位于 Asset Bundle 内，故放在 assets/scenes/。 */
 const SCENE_PATH = path.join(REPO_ROOT, 'assets/scenes/Boot.scene');
 const CAMP_SCENE_PATH = path.join(REPO_ROOT, 'assets/bundles/camp/Camp.scene');
+const CAMP_BACKGROUND_META_PATH = path.join(
+    REPO_ROOT,
+    'assets/bundles/camp/env_camp_panorama_bg.png.meta',
+);
 
 const problems = [];
 const notes = [];
@@ -209,7 +213,10 @@ if (existsSync(path.join(REPO_ROOT, 'assets/bundles/start-scene'))) {
 
 // ── Camp 三层大厅骨架（任务 1.2.1–1.2.2）
 if (!existsSync(CAMP_SCENE_PATH)) {
-    problems.push('找不到 Camp.scene，请先运行 pnpm gen:scene:camp --force');
+    problems.push(
+        '找不到 Camp.scene：正式营地场景以 Cocos Creator 保存结果为准，请从 Git 还原，' +
+            '不要用生成器整体覆盖',
+    );
 } else {
     const camp = JSON.parse(readFileSync(CAMP_SCENE_PATH, 'utf8'));
 
@@ -264,6 +271,7 @@ if (!existsSync(CAMP_SCENE_PATH)) {
     expectParent('SceneFallback', 'WorldViewport');
     expectParent('PanoramaContent', 'WorldViewport');
     expectParent('BackgroundLayer', 'PanoramaContent');
+    expectParent('PanoramaBackground', 'BackgroundLayer');
     expectParent('BuildingLayer', 'PanoramaContent');
     expectParent('ForegroundLayer', 'PanoramaContent');
     expectParent('SafeAreaRoot', 'Canvas');
@@ -405,6 +413,10 @@ if (!existsSync(CAMP_SCENE_PATH)) {
             .find((component) => component?.__type__ === 'cc.UITransform');
     const componentTypesForNode = (nodeIdx) =>
         (camp[nodeIdx]?._components ?? []).map((ref) => camp[ref.__id__]?.__type__);
+    const componentForNode = (nodeIdx, type) =>
+        (camp[nodeIdx]?._components ?? [])
+            .map((ref) => camp[ref.__id__])
+            .find((component) => component?.__type__ === type);
     const contentTransform = nodeTransform(findNodeIdx('PanoramaContent'));
     const viewportTransform = nodeTransform(findNodeIdx('WorldViewport'));
     if (!componentTypesForNode(findNodeIdx('WorldViewport')).includes('cc.Mask')) {
@@ -420,11 +432,48 @@ if (!existsSync(CAMP_SCENE_PATH)) {
     if (contentTransform?._contentSize.width !== 3024) {
         problems.push('Camp.scene PanoramaContent 宽度必须为设计屏宽的 2.8 倍（3024）');
     }
+    if (contentTransform?._contentSize.height !== 2353) {
+        problems.push('Camp.scene PanoramaContent 高度必须匹配 375×817 设计稿（2353）');
+    }
+
+    const viewportWidget = componentForNode(findNodeIdx('WorldViewport'), 'cc.Widget');
+    if (viewportWidget?._top !== 0 || viewportWidget?._bottom !== 0) {
+        problems.push('Camp.scene WorldViewport 必须铺满画布，让背景延伸到固定 HUD 后方');
+    }
 
     for (const layerName of ['BackgroundLayer', 'BuildingLayer', 'ForegroundLayer']) {
         const transform = nodeTransform(findNodeIdx(layerName));
         if (transform?._contentSize.width !== contentTransform?._contentSize.width) {
             problems.push(`Camp.scene ${layerName} 宽度必须与 PanoramaContent 一致`);
+        }
+        if (transform?._contentSize.height !== contentTransform?._contentSize.height) {
+            problems.push(`Camp.scene ${layerName} 高度必须与 PanoramaContent 一致`);
+        }
+    }
+
+    const backgroundIdx = findNodeIdx('PanoramaBackground');
+    const backgroundTransform = nodeTransform(backgroundIdx);
+    const backgroundSprite = componentForNode(backgroundIdx, 'cc.Sprite');
+    if (
+        backgroundTransform?._contentSize.width !== 3318 ||
+        backgroundTransform?._contentSize.height !== 2580
+    ) {
+        problems.push('Camp.scene PanoramaBackground 必须按 1152×896 出血画布等比显示为 3318×2580');
+    }
+    if (!backgroundSprite || backgroundSprite._type !== 0) {
+        problems.push('Camp.scene PanoramaBackground 必须使用 SIMPLE Sprite，不能九宫格拉伸');
+    } else if (!existsSync(CAMP_BACKGROUND_META_PATH)) {
+        problems.push('Camp 正式背景缺少 .meta');
+    } else {
+        const backgroundMeta = JSON.parse(readFileSync(CAMP_BACKGROUND_META_PATH, 'utf8'));
+        const spriteSubId = Object.entries(backgroundMeta.subMetas ?? {}).find(
+            ([, value]) => value.importer === 'sprite-frame',
+        )?.[0];
+        const expectedFrameUuid = spriteSubId
+            ? `${backgroundMeta.uuid}@${spriteSubId}`
+            : null;
+        if (!expectedFrameUuid || backgroundSprite._spriteFrame?.__uuid__ !== expectedFrameUuid) {
+            problems.push('Camp.scene PanoramaBackground 未引用正式背景 SpriteFrame');
         }
     }
 

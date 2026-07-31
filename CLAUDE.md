@@ -72,6 +72,14 @@ tests/            单测，故意放在 assets/ 外，避免被打进 Web 产物
 `library/` `temp/` `local/` `profiles/` `build/` 是生成目录，已在 `.gitignore`。
 `assets/**/*.meta` 必须提交——丢失会导致全项目引用断裂。
 
+### Camp 场景唯一事实源
+
+`assets/bundles/camp/Camp.scene` 以及后续拆出的 `.prefab`，以 Cocos Creator 保存结果
+为唯一事实源。`tools/gen-camp-scene.mjs` 仅保留为场景完全缺失时的历史灰盒初始化脚本，
+禁止用 `--force` 整体覆盖正式场景。`tools/patch-camp-*.mjs` 一类一次性补丁不作为日常
+维护方式；视觉节点、坐标和层级在编辑器/Prefab 中维护，校验脚本只检查关键结构、
+引用和产品约束。
+
 ## 跨目录导入
 
 用 Cocos 原生前缀，不要在 `tsconfig.json` 自定义 `paths`：
