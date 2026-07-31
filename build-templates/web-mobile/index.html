@@ -50,8 +50,13 @@
     <link rel="stylesheet" type="text/css" href="style.css"/>
 </head>
 <body>
-    <!-- 这三层容器的 id 与属性被引擎的适配代码依赖，不要改名或去掉 -->
-    <div id="GameDiv" cc_exact_fit_screen="true">
+    <!--
+      这三层容器的 id 被引擎依赖，不要改名或去掉。
+      exact_fit_screen=false 让 Cocos 读取 GameDiv 的实际尺寸。
+      PC 与 H5 都由 CSS 约束为 375:817 的设计稿视窗；该视窗只负责裁定
+      “玩家能看到多大区域”，不会把大厅全景内容缩成一屏。
+    -->
+    <div id="GameDiv" cc_exact_fit_screen="false">
         <div id="Cocos3dGameContainer">
             <canvas id="GameCanvas" oncontextmenu="event.preventDefault()" tabindex="99"></canvas>
         </div>

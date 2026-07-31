@@ -24,6 +24,12 @@ import {
     dialogueForCampNpc,
 } from '../domain/CampNpcs';
 import type { CampNpcId } from '../domain/CampNpcs';
+import {
+    CAMP_SYSTEM_ENTRY_FEEDBACK,
+    CAMP_SYSTEM_ENTRY_IDS,
+    campCurrencyBalances,
+} from '../domain/CampBottomHud';
+import type { CampSystemEntryId } from '../domain/CampBottomHud';
 
 const { ccclass, property } = _decorator;
 
@@ -113,6 +119,21 @@ export class CampPresenter extends Component {
 
     @property(Label)
     npcDialogNextLabel: Label | null = null;
+
+    /** 1.2.6 底部左侧五入口，顺序与 CAMP_SYSTEM_ENTRY_IDS 一致。 */
+    @property([Node])
+    systemEntryNodes: Node[] = [];
+
+    /** 设置页使用当前场景内的全屏页面壳，避免未完成设置功能阻塞大厅。 */
+    @property(Node)
+    settingsPanel: Node | null = null;
+
+    @property(Node)
+    settingsBackButton: Node | null = null;
+
+    /** 右下角灵石余额；只允许读取 Wallet.immortalCoin。 */
+    @property(Label)
+    immortalCoinLabel: Label | null = null;
 
     private disposers: (() => void)[] = [];
     private readonly activationGate = new EntryActivationGate();
@@ -216,9 +237,17 @@ export class CampPresenter extends Component {
         const app = AppRoot.instance;
         if (!app.state.isLoaded) {
             this.resourceBar?.renderPlaceholder();
+            if (this.immortalCoinLabel) {
+                this.immortalCoinLabel.string = '--';
+            }
             return;
         }
-        this.resourceBar?.render(app.state.require().wallet);
+        const wallet = app.state.require().wallet;
+        this.resourceBar?.render(wallet);
+        const balances = campCurrencyBalances(wallet);
+        if (this.immortalCoinLabel) {
+            this.immortalCoinLabel.string = String(Math.trunc(balances.bottomSpiritStone));
+        }
     }
 
     private renderMainTask(): void {
@@ -422,6 +451,32 @@ export class CampPresenter extends Component {
         }
     }
 
+    onSystemEntryClicked(index: number): CampSystemEntryId | null {
+        const entryId = CAMP_SYSTEM_ENTRY_IDS[index];
+        if (!entryId || !this.activationGate.tryActivate(`system_${entryId}`, Date.now())) {
+            return null;
+        }
+        if (entryId === 'settings') {
+            this.openSettings();
+            return entryId;
+        }
+        AppRoot.instance.showFeedback(CAMP_SYSTEM_ENTRY_FEEDBACK[entryId]);
+        return entryId;
+    }
+
+    openSettings(): void {
+        this.panoramaVelocity = 0;
+        if (this.settingsPanel) {
+            this.settingsPanel.active = true;
+        }
+    }
+
+    closeSettings(): void {
+        if (this.settingsPanel) {
+            this.settingsPanel.active = false;
+        }
+    }
+
     /**
      * 场景生成器只需维护节点引用，点击在运行时统一绑定。
      * 这样新增入口不会因为漏配 Component.EventHandler 而“点了没反应”。
@@ -460,6 +515,10 @@ export class CampPresenter extends Component {
         this.bindButton(this.npcListBackButton, () => this.closeNpcList());
         this.bindButton(this.npcDialogBackButton, () => this.backToNpcList());
         this.bindButton(this.npcDialogNextButton, () => this.onNpcDialogNext());
+        this.systemEntryNodes.forEach((node, index) => {
+            this.bindButton(node, () => this.onSystemEntryClicked(index));
+        });
+        this.bindButton(this.settingsBackButton, () => this.closeSettings());
     }
 
     private bindButton(node: Node | null, handler: () => void): void {
@@ -608,6 +667,10 @@ export class CampPresenter extends Component {
         check(this.npcListBackButton, '人物列表返回');
         check(this.npcDialogBackButton, '对话返回');
         check(this.npcDialogNextButton, '对话继续');
+        this.systemEntryNodes.forEach((node, index) =>
+            check(node, `底部系统入口 ${CAMP_SYSTEM_ENTRY_IDS[index] ?? index}`),
+        );
+        check(this.settingsBackButton, '设置页返回');
     }
 }
 

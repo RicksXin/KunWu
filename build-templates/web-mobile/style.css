@@ -1,13 +1,14 @@
 /*
   Web Mobile 样式（PRD-09 §2、任务 P0-TECH-001）。
 
-  以 Cocos 默认模板为基础，增加三项：
+  以 Cocos 默认模板为基础，增加四项：
     1. 像素图缩放不做插值（CLAUDE.md：禁止对 Pixel Art 开线性过滤）
     2. 深色背景，与游戏基调一致（默认是 #333 灰）
     3. 启动失败兜底层与横屏提示
+    4. PC 与 H5 都使用居中的 375:817 设计稿视窗，视窗外留黑
 
-  #GameDiv / #Cocos3dGameContainer / #GameCanvas 三层的尺寸规则来自默认模板，
-  引擎适配代码依赖它们，不要改动。
+  #GameDiv / #Cocos3dGameContainer / #GameCanvas 的 id 与嵌套关系来自默认模板，
+  引擎适配代码依赖它们；尺寸允许由下方媒体查询控制。
 */
 
 html {
@@ -45,8 +46,8 @@ body {
 
   cursor: default;
   color: #e8e3dc;
-  /* 深色底：像素美术在浅灰上会显得发白 */
-  background-color: #0d0b0f;
+  /* 视窗之外使用纯黑；游戏自身仍使用内部场景背景。 */
+  background-color: #000;
 
   text-align: center;
   font-family: system-ui, -apple-system, "Helvetica Neue", "PingFang SC",
@@ -54,6 +55,8 @@ body {
 
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
 
   /* 禁止橡皮筋滚动与双指缩放：画布自己处理所有手势 */
   overscroll-behavior: none;
@@ -70,6 +73,25 @@ canvas {
   height: 100%;
 }
 
+#GameDiv {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+
+  /*
+    375×817 是 UI 设计稿的可视窗口，不是大厅全景内容尺寸。
+    高度能占满时由高度推导宽度；高度受限或设备更窄时由宽度推导高度。
+    因而 PC、H5 和移动设备始终保持同一比例，内部 PanoramaContent
+    继续保留原宽度并通过横滑查看，绝不缩放成一屏。
+  */
+  width: min(100vw, calc(100vh * 375 / 817)) !important;
+  height: min(100vh, calc(100vw * 817 / 375)) !important;
+  max-width: 100vw;
+  max-height: 100vh;
+  aspect-ratio: 375 / 817;
+  margin: auto;
+}
+
 #GameCanvas {
   /*
     像素图渲染：放大时保持硬边缘。
@@ -79,6 +101,15 @@ canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* 移动浏览器地址栏伸缩时优先使用动态视口高度。 */
+@supports (height: 100dvh) {
+  #GameDiv {
+    width: min(100vw, calc(100dvh * 375 / 817)) !important;
+    height: min(100dvh, calc(100vw * 817 / 375)) !important;
+    max-height: 100dvh;
+  }
 }
 
 :root {
@@ -136,7 +167,7 @@ canvas {
   故横屏时给出可读提示而非放任布局错乱。
   用 orientation 而非宽高比：平板竖屏也可能很宽。
 */
-@media screen and (orientation: landscape) and (max-height: 500px) {
+@media screen and (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
   #GameDiv {
     opacity: 0.15;
   }

@@ -128,10 +128,18 @@ const RESOURCE_NAMES = {
     gengJing: '庚精',
 };
 
+const SYSTEM_ENTRIES = [
+    ['SettingsButton', '设置'],
+    ['AchievementsButton', '成就'],
+    ['LeaderboardButton', '排行'],
+    ['MailButton', '邮件'],
+    ['DailyProgressButton', '日常'],
+];
+
 /** 顶部 HUD 同时容纳头像、五资源和主线。 */
 const TOP_HUD_HEIGHT = 300;
 const RESOURCE_BAR_HEIGHT = 148;
-/** 底部固定 HUD 高度。实际入口在 1.2.6 接入。 */
+/** 底部固定 HUD 高度。 */
 const BOTTOM_HUD_HEIGHT = 120;
 /** 左/中/右连续空间总宽为 2.8 屏，默认 x=0 停在中部。 */
 const PANORAMA_WIDTH = DESIGN_WIDTH * 2.8;
@@ -142,13 +150,13 @@ const PANORAMA_HEIGHT = 1500;
  * 1.2.5 再根据正式美术稿细化坐标、锚点和入口状态。
  */
 const BUILDING_POSITIONS = {
-    yi_shi_dian: [0, 450],
-    ling_pu: [950, -580],
-    zhao_xian_tai: [-350, -80],
-    bai_bao_ku: [-650, -330],
-    lian_qi_fang: [650, -330],
-    jiao_yi_hang: [350, -80],
-    huan_hun_tan: [-950, -580],
+    yi_shi_dian: [0, 300],
+    ling_pu: [1050, 80],
+    zhao_xian_tai: [-350, 0],
+    bai_bao_ku: [-1050, 260],
+    lian_qi_fang: [552, -250],
+    jiao_yi_hang: [350, 0],
+    huan_hun_tan: [-1050, -220],
 };
 
 const REQUIRED_SCRIPTS = {
@@ -245,8 +253,7 @@ function build(uuids) {
             parent: buildingLayerIdx,
             pos: vec3(x, y, 0),
         });
-        // 主建筑灰盒放大到 320×240，兼顾辨识度与 48dp 触控下限。
-        scene.addUITransform(nodeIdx, 320, 240);
+        scene.addUITransform(nodeIdx, 240, 180);
         if (buildingFrame) {
             scene.attach(nodeIdx, makeSprite(buildingFrame));
         }
@@ -257,13 +264,13 @@ function build(uuids) {
 
         // 建筑名。文案 Key 见 localization/zh_cn.json 的 building.*
         const labelNodeIdx = scene.addNode({ name: 'Name', parent: nodeIdx });
-        scene.addUITransform(labelNodeIdx, 288, 48);
+        scene.addUITransform(labelNodeIdx, 216, 48);
         scene.attach(labelNodeIdx, makeLabel(BUILDING_NAMES[buildingId], 28, font));
 
         const stateNodeIdx = scene.addNode({
             name: 'State',
             parent: nodeIdx,
-            pos: vec3(0, -86, 0),
+            pos: vec3(0, -64, 0),
         });
         scene.addUITransform(stateNodeIdx, 260, 36);
         buildingStateLabels.push(
@@ -275,7 +282,7 @@ function build(uuids) {
             name: 'Badge',
             parent: nodeIdx,
             // 右上角
-            pos: vec3(140, 100, 0),
+            pos: vec3(100, 70, 0),
         });
         scene.addUITransform(badgeIdx, 28, 28);
         // 默认隐藏，由 CampPresenter.renderBadges 控制
@@ -287,15 +294,15 @@ function build(uuids) {
     const expeditionIdx = scene.addNode({
         name: 'ExpeditionEntry',
         parent: buildingLayerIdx,
-        pos: vec3(0, -320, 0),
+        pos: vec3(0, -330, 0),
     });
-    scene.addUITransform(expeditionIdx, 360, 190);
+    scene.addUITransform(expeditionIdx, 280, 150);
     if (buildingFrame) {
         scene.attach(expeditionIdx, makeSprite(buildingFrame));
     }
     scene.attach(expeditionIdx, makeButton());
     const expeditionLabelIdx = scene.addNode({ name: 'Name', parent: expeditionIdx });
-    scene.addUITransform(expeditionLabelIdx, 320, 56);
+    scene.addUITransform(expeditionLabelIdx, 250, 56);
     scene.attach(expeditionLabelIdx, makeLabel('传送阵', 32, font));
 
     // 竞技场、遗迹、圣迹、教会只是场景锚点：无 Button、无 Badge。
@@ -305,21 +312,21 @@ function build(uuids) {
             parent: buildingLayerIdx,
             pos: vec3(x, y, 0),
         });
-        scene.addUITransform(nodeIdx, 320, 240);
+        scene.addUITransform(nodeIdx, 240, 180);
         if (fallbackFrame) {
             scene.attach(nodeIdx, makeSprite(fallbackFrame, { color: [150, 145, 140] }));
         }
         const labelIdx = scene.addNode({ name: 'Name', parent: nodeIdx });
-        scene.addUITransform(labelIdx, 288, 64);
+        scene.addUITransform(labelIdx, 216, 64);
         scene.attach(labelIdx, makeLabel(`${label}·未开放`, 24, font, [125, 118, 112]));
         return nodeIdx;
     };
-    addClosedAnchor('ArenaAnchor', '竞技场', 650, 250);
+    addClosedAnchor('ArenaAnchor', '竞技场', 552, 300);
     // 2.8 屏总宽在 1080 设计宽下为 3024，边界为 ±1512。
     // 最外侧 320 宽锚点放在 ±1350，滑到边界时仍保留 2dp 余量。
-    addClosedAnchor('RelicAnchor', '遗迹', 1350, -220);
-    addClosedAnchor('SacredSiteAnchor', '圣迹', -1350, 260);
-    addClosedAnchor('ChurchAnchor', '教会', -1350, -220);
+    addClosedAnchor('RelicAnchor', '遗迹', 1390, -220);
+    addClosedAnchor('SacredSiteAnchor', '圣迹', -1390, 260);
+    addClosedAnchor('ChurchAnchor', '教会', -1390, -220);
 
     // ── 安全区根。Camp 是独立场景，不能引用 Boot 场景中 AppRoot 的
     // SafeArea 节点，因此复用 ViewportAdapter 为本场景根单独应用 Insets。
@@ -422,8 +429,7 @@ function build(uuids) {
         makeLabel('主线：--', 24, font),
     );
 
-    // ── 常驻底部 HUD。旧 BottomNav 五主导航已删除；左右内容容器先搭骨架，
-    // 设置/成就等入口和灵石展示由 1.2.6 接入。
+    // ── 常驻底部 HUD：左五入口、右侧独立灵石余额。
     const bottomHudIdx = scene.addNode({ name: 'BottomHUD', parent: safeAreaRootIdx });
     scene.addUITransform(bottomHudIdx, DESIGN_WIDTH, BOTTOM_HUD_HEIGHT);
     scene.addWidget(bottomHudIdx, ALIGN_BOTTOM | ALIGN_LEFT | ALIGN_RIGHT);
@@ -435,16 +441,81 @@ function build(uuids) {
     const bottomLeftIdx = scene.addNode({ name: 'BottomLeftSlots', parent: bottomHudIdx });
     scene.addUITransform(bottomLeftIdx, 640, BOTTOM_HUD_HEIGHT);
     scene.addWidget(bottomLeftIdx, ALIGN_TOP | ALIGN_BOTTOM | ALIGN_LEFT);
-    const bottomLeftLabelIdx = scene.addNode({ name: 'Placeholder', parent: bottomLeftIdx });
-    scene.addUITransform(bottomLeftLabelIdx, 360, 48);
-    scene.attach(bottomLeftLabelIdx, makeLabel('系统入口区', 20, font, [120, 112, 104]));
+    const systemEntryNodes = [];
+    SYSTEM_ENTRIES.forEach(([nodeName, label], index) => {
+        const entryIdx = scene.addNode({
+            name: nodeName,
+            parent: bottomLeftIdx,
+            pos: vec3(-260 + index * 130, 0, 0),
+        });
+        scene.addUITransform(entryIdx, 112, 96);
+        if (buildingFrame) {
+            scene.attach(entryIdx, makeSprite(buildingFrame));
+        }
+        scene.attach(entryIdx, makeButton());
+        const labelIdx = scene.addNode({ name: 'Label', parent: entryIdx });
+        scene.addUITransform(labelIdx, 100, 40);
+        scene.attach(labelIdx, makeLabel(label, 20, font));
+        systemEntryNodes.push(entryIdx);
+    });
 
     const bottomRightIdx = scene.addNode({ name: 'BottomRightCurrency', parent: bottomHudIdx });
     scene.addUITransform(bottomRightIdx, 320, BOTTOM_HUD_HEIGHT);
     scene.addWidget(bottomRightIdx, ALIGN_TOP | ALIGN_BOTTOM | ALIGN_RIGHT);
-    const bottomRightLabelIdx = scene.addNode({ name: 'Placeholder', parent: bottomRightIdx });
-    scene.addUITransform(bottomRightLabelIdx, 240, 48);
-    scene.attach(bottomRightLabelIdx, makeLabel('灵石区', 20, font, [120, 112, 104]));
+    const currencyIconIdx = scene.addNode({
+        name: 'ImmortalCoinIcon',
+        parent: bottomRightIdx,
+        pos: vec3(-90, 0, 0),
+    });
+    scene.addUITransform(currencyIconIdx, 64, 64);
+    scene.attach(currencyIconIdx, makeLabel('石', 28, font, [218, 188, 96]));
+    const currencyValueIdx = scene.addNode({
+        name: 'ImmortalCoinValue',
+        parent: bottomRightIdx,
+        pos: vec3(45, 0, 0),
+    });
+    scene.addUITransform(currencyValueIdx, 180, 48);
+    const immortalCoinLabelIdx = scene.attach(currencyValueIdx, makeLabel('--', 28, font));
+
+    // 设置页页面壳；详细音频、画面和存档控制属于后续设置任务。
+    const settingsPanelIdx = scene.addNode({ name: 'SettingsPanel', parent: safeAreaRootIdx });
+    scene.addUITransform(settingsPanelIdx);
+    scene.addWidget(settingsPanelIdx, ALIGN_ALL);
+    scene.entries[settingsPanelIdx]._active = false;
+    if (fallbackFrame) {
+        scene.attach(settingsPanelIdx, makeSprite(fallbackFrame, { color: [92, 90, 94] }));
+    }
+    scene.attach(settingsPanelIdx, makeBlockInputEvents());
+    const settingsTitleIdx = scene.addNode({
+        name: 'Title',
+        parent: settingsPanelIdx,
+        pos: vec3(0, 700, 0),
+    });
+    scene.addUITransform(settingsTitleIdx, 600, 72);
+    scene.attach(settingsTitleIdx, makeLabel('设置', 36, font));
+    const settingsHintIdx = scene.addNode({
+        name: 'Hint',
+        parent: settingsPanelIdx,
+        pos: vec3(0, 300, 0),
+    });
+    scene.addUITransform(settingsHintIdx, 760, 300);
+    scene.attach(
+        settingsHintIdx,
+        makeWrappedLabel('音频设置\n画面设置\n语言设置\n存档导入与导出\n\n详细选项将在后续版本开放', 24, font),
+    );
+    const settingsBackIdx = scene.addNode({
+        name: 'SettingsBackButton',
+        parent: settingsPanelIdx,
+        pos: vec3(-420, 780, 0),
+    });
+    scene.addUITransform(settingsBackIdx, 160, 72);
+    if (buildingFrame) {
+        scene.attach(settingsBackIdx, makeSprite(buildingFrame));
+    }
+    scene.attach(settingsBackIdx, makeButton());
+    const settingsBackLabelIdx = scene.addNode({ name: 'Label', parent: settingsBackIdx });
+    scene.addUITransform(settingsBackLabelIdx, 140, 40);
+    scene.attach(settingsBackLabelIdx, makeLabel('返回', 24, font));
 
     // ── 议事殿营地人物列表。当前新档只显示岑守一。
     const npcListPanelIdx = scene.addNode({ name: 'NpcListPanel', parent: safeAreaRootIdx });
@@ -580,6 +651,10 @@ function build(uuids) {
         npcStatusLabel: { __id__: npcStatusLabelIdx },
         npcDialogTextLabel: { __id__: npcDialogTextLabelIdx },
         npcDialogNextLabel: { __id__: npcDialogNextLabelIdx },
+        systemEntryNodes: systemEntryNodes.map((idx) => ({ __id__: idx })),
+        settingsPanel: { __id__: settingsPanelIdx },
+        settingsBackButton: { __id__: settingsBackIdx },
+        immortalCoinLabel: { __id__: immortalCoinLabelIdx },
     });
     scene.addScript(canvasIdx, uuids.viewportAdapter, {
         safeAreaRoot: { __id__: safeAreaRootIdx },

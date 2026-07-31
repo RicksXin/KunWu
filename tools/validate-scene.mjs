@@ -283,6 +283,8 @@ if (!existsSync(CAMP_SCENE_PATH)) {
     }
     expectParent('BottomLeftSlots', 'BottomHUD');
     expectParent('BottomRightCurrency', 'BottomHUD');
+    expectParent('SettingsPanel', 'SafeAreaRoot');
+    expectParent('SettingsBackButton', 'SettingsPanel');
     expectParent('NpcListPanel', 'SafeAreaRoot');
     expectParent('NpcDialogPanel', 'SafeAreaRoot');
 
@@ -351,6 +353,8 @@ if (!existsSync(CAMP_SCENE_PATH)) {
             ['npcListBackButton', 'NpcListBackButton'],
             ['npcDialogBackButton', 'NpcDialogBackButton'],
             ['npcDialogNextButton', 'NpcDialogNextButton'],
+            ['settingsPanel', 'SettingsPanel'],
+            ['settingsBackButton', 'SettingsBackButton'],
         ]) {
             const target = camp[presenter[property]?.__id__];
             if (target?.__type__ !== 'cc.Node' || target._name !== expectedName) {
@@ -371,6 +375,27 @@ if (!existsSync(CAMP_SCENE_PATH)) {
             if (camp[presenter[property]?.__id__]?.__type__ !== 'cc.Label') {
                 problems.push(`CampPresenter.${property} 未指向 cc.Label`);
             }
+        }
+        const expectedSystemEntries = [
+            'SettingsButton',
+            'AchievementsButton',
+            'LeaderboardButton',
+            'MailButton',
+            'DailyProgressButton',
+        ];
+        if ((presenter.systemEntryNodes ?? []).length !== expectedSystemEntries.length) {
+            problems.push('CampPresenter.systemEntryNodes 必须按顺序接线五个底部系统入口');
+        } else {
+            presenter.systemEntryNodes.forEach((ref, index) => {
+                if (camp[ref?.__id__]?._name !== expectedSystemEntries[index]) {
+                    problems.push(
+                        `CampPresenter.systemEntryNodes[${index}] 应指向 ${expectedSystemEntries[index]}`,
+                    );
+                }
+            });
+        }
+        if (camp[presenter.immortalCoinLabel?.__id__]?.__type__ !== 'cc.Label') {
+            problems.push('CampPresenter.immortalCoinLabel 必须指向右下灵石余额 Label');
         }
     }
 
@@ -404,18 +429,18 @@ if (!existsSync(CAMP_SCENE_PATH)) {
     }
 
     const expectedPanoramaPositions = {
-        SacredSiteAnchor: [-1350, 260],
-        ChurchAnchor: [-1350, -220],
-        huan_hun_tan: [-950, -580],
-        bai_bao_ku: [-650, -330],
-        zhao_xian_tai: [-350, -80],
-        yi_shi_dian: [0, 450],
-        ExpeditionEntry: [0, -320],
-        jiao_yi_hang: [350, -80],
-        lian_qi_fang: [650, -330],
-        ArenaAnchor: [650, 250],
-        ling_pu: [950, -580],
-        RelicAnchor: [1350, -220],
+        SacredSiteAnchor: [-1390, 260],
+        ChurchAnchor: [-1390, -220],
+        huan_hun_tan: [-1050, -220],
+        bai_bao_ku: [-1050, 260],
+        zhao_xian_tai: [-350, 0],
+        yi_shi_dian: [0, 300],
+        ExpeditionEntry: [0, -330],
+        jiao_yi_hang: [350, 0],
+        lian_qi_fang: [552, -250],
+        ArenaAnchor: [552, 300],
+        ling_pu: [1050, 80],
+        RelicAnchor: [1390, -220],
     };
     for (const [nodeName, [expectedX, expectedY]] of Object.entries(
         expectedPanoramaPositions,
@@ -442,13 +467,13 @@ if (!existsSync(CAMP_SCENE_PATH)) {
         'ChurchAnchor',
     ]) {
         const size = nodeTransform(findNodeIdx(buildingName))?._contentSize;
-        if (size?.width !== 320 || size?.height !== 240) {
-            problems.push(`Camp.scene ${buildingName} 尺寸必须为 320×240`);
+        if (size?.width !== 240 || size?.height !== 180) {
+            problems.push(`Camp.scene ${buildingName} 尺寸必须为 240×180`);
         }
     }
     const expeditionSize = nodeTransform(findNodeIdx('ExpeditionEntry'))?._contentSize;
-    if (expeditionSize?.width !== 360 || expeditionSize?.height !== 190) {
-        problems.push('Camp.scene ExpeditionEntry 尺寸必须为 360×190');
+    if (expeditionSize?.width !== 280 || expeditionSize?.height !== 150) {
+        problems.push('Camp.scene ExpeditionEntry 尺寸必须为 280×150');
     }
 
     for (const anchorName of [
@@ -481,6 +506,74 @@ if (!existsSync(CAMP_SCENE_PATH)) {
         }
         if (!componentTypesForNode(panelIdx).includes('cc.BlockInputEvents')) {
             problems.push(`Camp.scene ${panelName} 缺少 cc.BlockInputEvents，点击会穿透大厅`);
+        }
+    }
+
+    const bottomLeftIdx = findNodeIdx('BottomLeftSlots');
+    const expectedBottomEntries = [
+        ['SettingsButton', -260],
+        ['AchievementsButton', -130],
+        ['LeaderboardButton', 0],
+        ['MailButton', 130],
+        ['DailyProgressButton', 260],
+    ];
+    const bottomEntryNames = (camp[bottomLeftIdx]?._children ?? []).map(
+        (ref) => camp[ref.__id__]?._name,
+    );
+    if (
+        JSON.stringify(bottomEntryNames) !==
+        JSON.stringify(expectedBottomEntries.map(([name]) => name))
+    ) {
+        problems.push('Camp.scene 底部左侧入口顺序必须为设置、成就、排行榜、邮件、日常进度');
+    }
+    for (const [name, expectedX] of expectedBottomEntries) {
+        const idx = findNodeIdx(name);
+        if (camp[idx]?._parent?.__id__ !== bottomLeftIdx || camp[idx]?._lpos?.x !== expectedX) {
+            problems.push(`Camp.scene ${name} 底部位置不正确`);
+        }
+        if (!componentTypesForNode(idx).includes('cc.Button')) {
+            problems.push(`Camp.scene ${name} 必须可点击`);
+        }
+        const childNames = (camp[idx]?._children ?? []).map((ref) => camp[ref.__id__]?._name);
+        if (childNames.includes('Badge')) {
+            problems.push(`Camp.scene ${name} 不得产生红点`);
+        }
+    }
+
+    const bottomRightIdx = findNodeIdx('BottomRightCurrency');
+    const bottomRightChildren = (camp[bottomRightIdx]?._children ?? []).map(
+        (ref) => camp[ref.__id__]?._name,
+    );
+    if (
+        bottomRightChildren.length !== 2 ||
+        !bottomRightChildren.includes('ImmortalCoinIcon') ||
+        !bottomRightChildren.includes('ImmortalCoinValue')
+    ) {
+        problems.push('Camp.scene 底部右侧只能显示灵石图标和余额');
+    }
+    const immortalCoinValueIdx = findNodeIdx('ImmortalCoinValue');
+    const immortalCoinValueLabel = (camp[immortalCoinValueIdx]?._components ?? [])
+        .map((ref) => camp[ref.__id__])
+        .find((entry) => entry?.__type__ === 'cc.Label');
+    if (immortalCoinValueLabel?._string !== '--') {
+        problems.push('Camp.scene 灵石余额默认必须为 --，不得写假数值');
+    }
+
+    const settingsPanelIdx = findNodeIdx('SettingsPanel');
+    if (camp[settingsPanelIdx]?._active !== false) {
+        problems.push('Camp.scene SettingsPanel 默认必须隐藏');
+    }
+    if (!componentTypesForNode(settingsPanelIdx).includes('cc.BlockInputEvents')) {
+        problems.push('Camp.scene SettingsPanel 缺少 cc.BlockInputEvents，点击会穿透大厅');
+    }
+
+    const forbiddenPaymentLabels = new Set(['宝石', '充值', '礼包', '商店']);
+    for (const entry of camp) {
+        if (
+            (entry.__type__ === 'cc.Node' && forbiddenPaymentLabels.has(entry._name)) ||
+            (entry.__type__ === 'cc.Label' && forbiddenPaymentLabels.has(entry._string))
+        ) {
+            problems.push(`Camp.scene 不得显示付费入口：${entry._name || entry._string}`);
         }
     }
 

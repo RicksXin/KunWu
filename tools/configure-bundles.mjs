@@ -49,10 +49,32 @@ let changed = 0;
 for (const { dir, priority, note } of BUNDLE_CONFIG) {
     const dirPath = path.join(BUNDLES_ROOT, dir);
     const metaPath = `${dirPath}.meta`;
+    const placeholderPath = path.join(dirPath, 'bundle_manifest.json');
 
     if (!existsSync(dirPath)) {
         mkdirSync(dirPath, { recursive: true });
         console.log(`已创建目录 assets/bundles/${dir}`);
+    }
+
+    // Git 不保存空目录。地图内容尚未制作时也必须保留一个可导入资源，
+    // 否则新设备检出仓库后只剩 map_XX.meta，Cocos 不会生成 Bundle，
+    // 运行期 assetManager.loadBundle() 将请求不存在的 index.js 并返回 404。
+    if (!existsSync(placeholderPath) && dir.startsWith('map_')) {
+        writeFileSync(
+            placeholderPath,
+            `${JSON.stringify(
+                {
+                    bundleId: dir,
+                    schemaVersion: 1,
+                    status: 'placeholder',
+                },
+                null,
+                2,
+            )}\n`,
+            'utf8',
+        );
+        console.log(`已创建占位资源 assets/bundles/${dir}/bundle_manifest.json`);
+        changed += 1;
     }
 
     let meta;

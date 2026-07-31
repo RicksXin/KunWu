@@ -105,6 +105,13 @@ check(
 check('竖屏 meta 声明', () => indexHtml.includes('portrait') || '缺少竖屏声明');
 
 check(
+    '使用 GameDiv 子视口而非把全景铺满窗口',
+    () =>
+        indexHtml.includes('cc_exact_fit_screen="false"') ||
+        'GameDiv 必须设置 cc_exact_fit_screen=false，才能让 Cocos 读取 375:817 容器尺寸',
+);
+
+check(
     '禁止用户缩放（保护像素对齐）',
     () => indexHtml.includes('user-scalable=no') || '未禁止缩放',
 );
@@ -131,6 +138,16 @@ check(
 );
 
 check('横屏提示', () => styleCss.includes('请将设备竖持') || '缺少横屏提示');
+
+check(
+    'PC/H5 居中 375:817 视窗与黑色留边',
+    () =>
+        (styleCss.includes('calc(100vh * 375 / 817)') &&
+            styleCss.includes('calc(100vw * 817 / 375)') &&
+            styleCss.includes('aspect-ratio: 375 / 817') &&
+            styleCss.includes('background-color: #000')) ||
+        '缺少 375:817 GameDiv 尺寸约束或黑色页面背景',
+);
 
 check(
     '模板占位符已全部替换',

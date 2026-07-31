@@ -10,7 +10,8 @@ const { ccclass, property } = _decorator;
  * 数值来源是 GameState，变更经 EventBus 通知——本组件不主动轮询。
  *
  * 常驻顺序为灵粮、灵木、玄铁、灵晶、庚精。
- * 底部灵石（Wallet.immortalCoin）由 1.2.6 的独立组件负责。
+ * 底部灵石（Wallet.immortalCoin）由 CampPresenter 独立接线，
+ * 不进入本组件，避免和顶部灵晶串用余额。
  */
 @ccclass('ResourceBar')
 export class ResourceBar extends Component {

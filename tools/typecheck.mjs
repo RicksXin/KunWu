@@ -14,15 +14,34 @@ import path from 'node:path';
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
 /** Cocos 安装目录可通过环境变量覆盖，便于不同机器和 CI。 */
-const COCOS_APP = process.env.COCOS_APP ?? '/Applications/Cocos/Creator/3.8.7/CocosCreator.app';
-const TSC = path.join(
-    COCOS_APP,
-    'Contents/Resources/app.asar.unpacked/node_modules/typescript/bin/tsc',
-);
+const defaultCocosRoot =
+    process.platform === 'win32'
+        ? 'C:/ProgramData/cocos/editors/Creator/3.8.7'
+        : '/Applications/Cocos/Creator/3.8.7/CocosCreator.app';
+const cocosRoot = process.env.COCOS_APP ?? defaultCocosRoot;
+const tscCandidates =
+    process.platform === 'win32'
+        ? [
+              path.join(
+                  cocosRoot,
+                  'resources/app.asar.unpacked/node_modules/typescript/bin/tsc',
+              ),
+              path.join(
+                  path.dirname(cocosRoot),
+                  'resources/app.asar.unpacked/node_modules/typescript/bin/tsc',
+              ),
+          ]
+        : [
+              path.join(
+                  cocosRoot,
+                  'Contents/Resources/app.asar.unpacked/node_modules/typescript/bin/tsc',
+              ),
+          ];
+const TSC = tscCandidates.find((candidate) => existsSync(candidate));
 
-if (!existsSync(TSC)) {
-    console.error(`找不到 Cocos 自带的 tsc: ${TSC}`);
-    console.error('可设置 COCOS_APP 环境变量指向 CocosCreator.app');
+if (!TSC) {
+    console.error(`找不到 Cocos 自带的 tsc，已检查：\n${tscCandidates.join('\n')}`);
+    console.error('可设置 COCOS_APP 环境变量指向 Cocos Creator 安装目录');
     process.exit(1);
 }
 
