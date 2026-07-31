@@ -7,6 +7,10 @@ import {
     resolveBuildingStates,
 } from 'db://assets/scripts/domain/HallBadges';
 import type { BuildingId, BuildingState, PendingAction } from 'db://assets/scripts/domain/HallBadges';
+import {
+    CAMP_BUILDING_PATHS,
+    campBuildingPath,
+} from 'db://assets/scripts/domain/CampSceneContract';
 import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
 import { CampPanoramaController } from './CampPanoramaController';
 import {
@@ -42,11 +46,11 @@ export class CampBuildingPresenter extends Component {
         );
 
         BUILDING_IDS.forEach((buildingId, index) => {
-            const node = campNode(this.node, buildingId);
+            const node = campNode(this.node, campBuildingPath(buildingId));
             bindCampButton(this, node, () => this.activateBuilding(index), this.disposers);
             warnCampTouchTarget(node, `建筑 ${buildingId}`);
         });
-        const expedition = campNode(this.node, 'ExpeditionEntry');
+        const expedition = campNode(this.node, CAMP_BUILDING_PATHS.expedition);
         bindCampButton(this, expedition, () => this.activateExpedition(), this.disposers);
         warnCampTouchTarget(expedition, '出征入口');
     }
@@ -65,7 +69,7 @@ export class CampBuildingPresenter extends Component {
     ): void {
         const shown = new Set(computeBadges(actions, acknowledgedBatches).primaryBadges);
         for (const buildingId of BUILDING_IDS) {
-            const badge = campNode(this.node, `${buildingId}/Badge`);
+            const badge = campNode(this.node, campBuildingPath(buildingId, 'Badge'));
             badge && (badge.active = shown.has(buildingId));
         }
     }
@@ -81,10 +85,10 @@ export class CampBuildingPresenter extends Component {
             profile.storyFlags,
         );
         for (const buildingId of BUILDING_IDS) {
-            const node = campNode(this.node, buildingId);
+            const node = campNode(this.node, campBuildingPath(buildingId));
             const button = node?.getComponent(Button);
             button && (button.interactable = true);
-            const label = campLabel(this.node, `${buildingId}/State`);
+            const label = campLabel(this.node, campBuildingPath(buildingId, 'State'));
             label && (label.string = BUILDING_STATE_NAMES[this.buildingStates[buildingId]]);
         }
     }

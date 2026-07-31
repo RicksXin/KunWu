@@ -97,7 +97,8 @@ export class GameBootstrap extends Component {
 
     /**
      * 在切入 Camp 之前就把 Profile 放进 GameState。
-     * CampPresenter.onLoad 因此能立即读到真实 Wallet，不会闪过场景默认的 0。
+     * 营地各 Presenter 的 onLoad 因此能立即读到真实 Wallet，
+     * 不会闪过场景默认的 0。
      */
     private async loadAndPrepareProfile(saves: SaveRepository): Promise<SaveLoadResult> {
         const app = AppRoot.instance;

@@ -6,6 +6,10 @@ import {
     campCurrencyBalances,
 } from 'db://assets/scripts/domain/CampBottomHud';
 import type { CampSystemEntryId } from 'db://assets/scripts/domain/CampBottomHud';
+import {
+    CAMP_BOTTOM_HUD_PATHS,
+    campSystemEntryPath,
+} from 'db://assets/scripts/domain/CampSceneContract';
 import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
 import {
     bindCampButton,
@@ -16,14 +20,6 @@ import {
 } from './CampViewUtils';
 
 const { ccclass } = _decorator;
-
-const SYSTEM_BUTTON_NAMES = [
-    'SettingsButton',
-    'AchievementsButton',
-    'LeaderboardButton',
-    'MailButton',
-    'DailyProgressButton',
-] as const;
 
 /** 底部 HUD：系统快捷入口与右下灵石余额。 */
 @ccclass('CampBottomHudPresenter')
@@ -43,11 +39,12 @@ export class CampBottomHudPresenter extends Component {
             }),
         );
 
-        SYSTEM_BUTTON_NAMES.forEach((buttonName, index) => {
-            const node = campNode(this.node, `BottomLeftSlots/${buttonName}`);
-            bindCampButton(this, node, () => this.activateEntry(index), this.disposers);
-            warnCampTouchTarget(node, `底部系统入口 ${buttonName}`);
-        });
+        // 按 id 而非下标绑定：两份平行数组一旦顺序不一致，点「成就」会打开设置。
+        for (const entryId of CAMP_SYSTEM_ENTRY_IDS) {
+            const node = campNode(this.node, campSystemEntryPath(entryId));
+            bindCampButton(this, node, () => this.activateEntry(entryId), this.disposers);
+            warnCampTouchTarget(node, `底部系统入口 ${entryId}`);
+        }
     }
 
     protected override start(): void {
@@ -58,9 +55,8 @@ export class CampBottomHudPresenter extends Component {
         disposeCampBindings(this.disposers);
     }
 
-    private activateEntry(index: number): CampSystemEntryId | null {
-        const entryId = CAMP_SYSTEM_ENTRY_IDS[index];
-        if (!entryId || !this.activationGate.tryActivate(`system_${entryId}`, Date.now())) {
+    private activateEntry(entryId: CampSystemEntryId): CampSystemEntryId | null {
+        if (!this.activationGate.tryActivate(`system_${entryId}`, Date.now())) {
             return null;
         }
         const app = AppRoot.instance;
@@ -73,7 +69,7 @@ export class CampBottomHudPresenter extends Component {
     }
 
     private renderWallet(): void {
-        const label = campLabel(this.node, 'BottomRightCurrency/ImmortalCoinValue');
+        const label = campLabel(this.node, CAMP_BOTTOM_HUD_PATHS.immortalCoinValue);
         if (!label) {
             return;
         }

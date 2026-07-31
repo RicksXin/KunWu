@@ -11,7 +11,10 @@
  * 正式 Camp.scene 与后续 Prefab 以 Cocos Creator 保存结果为唯一事实源。
  * 本脚本只保留给“场景文件完全不存在”时的灰盒恢复，不得覆盖现有场景。
  *
- * 用法：node tools/gen-camp-scene.mjs
+ * 逻辑 id 与节点名从 domain/CampSceneContract 读取，坐标尺寸从
+ * camp-layout-config 读取，本脚本自身不再持有第二份 id 列表。
+ *
+ * 用法：node --experimental-strip-types tools/gen-camp-scene.mjs
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -30,12 +33,21 @@ import {
 import { uuidFromMeta } from './uuid-compress.mjs';
 import { writeScene } from './write-scene.mjs';
 import {
-    CAMP_BUILDINGS,
-    CAMP_CLOSED_ANCHORS,
+    CAMP_BUILDING_LAYOUT,
+    CAMP_CLOSED_ANCHOR_LAYOUT,
     CAMP_LAYOUT,
-    CAMP_SYSTEM_ENTRIES,
-    CAMP_TOP_RESOURCES,
+    CAMP_RESOURCE_LABELS,
+    CAMP_SYSTEM_ENTRY_LAYOUT,
 } from './camp-layout-config.mjs';
+import {
+    BUILDING_IDS,
+    CAMP_CLOSED_ANCHOR_NAMES,
+    CAMP_MODULES,
+    CAMP_RESOURCE_NODE_NAMES,
+    CAMP_SYSTEM_ENTRY_IDS,
+    CAMP_SYSTEM_ENTRY_NAMES,
+    CAMP_SYSTEM_ENTRY_NODE_NAMES,
+} from './camp-domain-contract.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -114,23 +126,18 @@ function makeSprite(frame, { sliced = true, color = [255, 255, 255] } = {}) {
 }
 
 
-/** 七座建筑（PRD-01 §2），顺序须与 domain/HallBadges 的 BUILDING_IDS 一致。 */
-const BUILDING_IDS = CAMP_BUILDINGS.map(({ id }) => id);
-
 /** 常驻顶部显示的五种资源（PRD-01 §2）。仙铢与魂晶在展开区。 */
-const TOP_RESOURCES = CAMP_TOP_RESOURCES.map(({ id }) => id);
-
+const TOP_RESOURCES = CAMP_RESOURCE_NODE_NAMES;
 
 /**
- * 显示名。灰盒阶段直接内联，与 localization/zh_cn.json 的
- * building.* / nav.* / resource.* 保持一致。
- * 接入本地化服务后应改为运行时查表（P2）。
+ * 显示名。灰盒阶段与 localization/zh_cn.json 的
+ * building.* / resource.* 保持一致；接入本地化服务后改为运行时查表（P2）。
  */
-const BUILDING_NAMES = Object.fromEntries(CAMP_BUILDINGS.map(({ id, label }) => [id, label]));
+const BUILDING_NAMES = Object.fromEntries(
+    BUILDING_IDS.map((id) => [id, CAMP_BUILDING_LAYOUT[id].label]),
+);
 
-const RESOURCE_NAMES = Object.fromEntries(CAMP_TOP_RESOURCES.map(({ id, label }) => [id, label]));
-
-const SYSTEM_ENTRIES = CAMP_SYSTEM_ENTRIES.map(({ nodeName, label }) => [nodeName, label]);
+const RESOURCE_NAMES = CAMP_RESOURCE_LABELS;
 
 /** 顶部 HUD 同时容纳头像、五资源和主线。 */
 const TOP_HUD_HEIGHT = CAMP_LAYOUT.sizes.topHud.height;
@@ -150,13 +157,20 @@ const PANORAMA_ART_HEIGHT = CAMP_LAYOUT.sizes.panoramaArtwork.height;
  * 1.2.5 再根据正式美术稿细化坐标、锚点和入口状态。
  */
 const BUILDING_POSITIONS = Object.fromEntries(
-    CAMP_BUILDINGS.map(({ id, position }) => [id, [position.x, position.y]]),
+    BUILDING_IDS.map((id) => {
+        const { position } = CAMP_BUILDING_LAYOUT[id];
+        return [id, [position.x, position.y]];
+    }),
 );
 
+/**
+ * 需要 UUID 的脚本。六个营地 Presenter 的路径来自契约，
+ * 键即模块 id，避免这里再抄一份文件名。
+ */
 const REQUIRED_SCRIPTS = {
-    campPresenter: 'assets/scripts/presentation/CampPresenter.ts',
     resourceBar: 'assets/scripts/presentation/ResourceBar.ts',
     viewportAdapter: 'assets/scripts/presentation/ViewportAdapter.ts',
+    ...Object.fromEntries(CAMP_MODULES.map((module) => [module.id, module.presenter])),
 };
 
 /**
@@ -241,9 +255,6 @@ function build(uuids) {
     const foregroundLayerIdx = scene.addNode({ name: 'ForegroundLayer', parent: panoramaContentIdx });
     scene.addUITransform(foregroundLayerIdx, PANORAMA_WIDTH, PANORAMA_HEIGHT);
 
-    const buildingNodes = [];
-    const badgeNodes = [];
-    const buildingStateLabels = [];
     const buildingFrame = spriteFrameRef('brown');
 
     BUILDING_IDS.forEach((buildingId, index) => {
@@ -262,10 +273,9 @@ function build(uuids) {
         if (buildingFrame) {
             scene.attach(nodeIdx, makeSprite(buildingFrame));
         }
-        // Button 是必需的：CampPresenter.applyBuildingStates 通过它的
-        // interactable 实现 LOCKED/DISABLED 不可点（PRD-01 §5）
+        // Button 是必需的：CampBuildingPresenter 通过它的 interactable
+        // 实现 LOCKED/DISABLED 不可点（PRD-01 §5）
         scene.attach(nodeIdx, makeButton());
-        buildingNodes.push(nodeIdx);
 
         // 建筑名。文案 Key 见 localization/zh_cn.json 的 building.*
         const labelNodeIdx = scene.addNode({ name: 'Name', parent: nodeIdx });
@@ -278,9 +288,7 @@ function build(uuids) {
             pos: vec3(0, -64, 0),
         });
         scene.addUITransform(stateNodeIdx, 260, 36);
-        buildingStateLabels.push(
-            scene.attach(stateNodeIdx, makeLabel('未加载', 20, font, [125, 118, 112])),
-        );
+        scene.attach(stateNodeIdx, makeLabel('未加载', 20, font, [125, 118, 112]));
 
         // 红点。同一建筑只显示一个总红点（PRD-01 §7）
         const badgeIdx = scene.addNode({
@@ -290,9 +298,8 @@ function build(uuids) {
             pos: vec3(100, 70, 0),
         });
         scene.addUITransform(badgeIdx, 28, 28);
-        // 默认隐藏，由 CampPresenter.renderBadges 控制
+        // 默认隐藏，由 CampBuildingPresenter.renderBadges 控制
         scene.entries[badgeIdx]._active = false;
-        badgeNodes.push(badgeIdx);
     });
 
     // 中部出征入口。准备页未完成前仍必须给出明确反馈。
@@ -334,9 +341,10 @@ function build(uuids) {
         scene.attach(labelIdx, makeLabel(`${label}·未开放`, 24, font, [125, 118, 112]));
         return nodeIdx;
     };
-    CAMP_CLOSED_ANCHORS.forEach(({ name, label, position }) =>
-        addClosedAnchor(name, label, position.x, position.y),
-    );
+    CAMP_CLOSED_ANCHOR_NAMES.forEach((name) => {
+        const { label, position } = CAMP_CLOSED_ANCHOR_LAYOUT[name];
+        addClosedAnchor(name, label, position.x, position.y);
+    });
 
     // ── 安全区根。Camp 是独立场景，不能引用 Boot 场景中 AppRoot 的
     // SafeArea 节点，因此复用 ViewportAdapter 为本场景根单独应用 Insets。
@@ -348,9 +356,7 @@ function build(uuids) {
     const topHudIdx = scene.addNode({ name: 'TopHUD', parent: safeAreaRootIdx });
     scene.addUITransform(topHudIdx, DESIGN_WIDTH, TOP_HUD_HEIGHT);
     scene.addWidget(topHudIdx, ALIGN_TOP | ALIGN_LEFT | ALIGN_RIGHT);
-    if (fallbackFrame) {
-        scene.attach(topHudIdx, makeSprite(fallbackFrame));
-    }
+    // 不加底图：正式背景到位后灰盒底板会挡住全景顶部（2026-07-31 用户决定）。
 
     const avatarIdx = scene.addNode({
         name: 'AvatarButton',
@@ -374,11 +380,7 @@ function build(uuids) {
     const resourceBarWidth = CAMP_LAYOUT.sizes.resourceBar.width;
     scene.addUITransform(resourceBarIdx, resourceBarWidth, RESOURCE_BAR_HEIGHT);
 
-    // 资源栏底图
-    const barFrame = spriteFrameRef('grey_inlay');
-    if (barFrame) {
-        scene.attach(resourceBarIdx, makeSprite(barFrame));
-    }
+    // 资源栏不加底图，同 TopHUD。
 
     // 五种资源横向均分。之前全部叠在原点，界面上只看到一个数字
     const resourceLabels = {};
@@ -411,7 +413,7 @@ function build(uuids) {
         resourceLabels[resource] = scene.attach(labelNodeIdx, makeLabel('--', 28, font));
     });
 
-    const resourceBarCompIdx = scene.addScript(resourceBarIdx, uuids.resourceBar, {
+    scene.addScript(resourceBarIdx, uuids.resourceBar, {
         spiritGrainLabel: { __id__: resourceLabels.spiritGrain },
         spiritWoodLabel: { __id__: resourceLabels.spiritWood },
         darkIronLabel: { __id__: resourceLabels.darkIron },
@@ -434,19 +436,13 @@ function build(uuids) {
     scene.attach(taskIconIdx, makeLabel('任', 28, font));
     const mainTaskLabelIdx = scene.addNode({ name: 'Objective', parent: mainTaskIdx, pos: vec3(25, 0, 0) });
     scene.addUITransform(mainTaskLabelIdx, 610, 48);
-    const mainTaskLabelCompIdx = scene.attach(
-        mainTaskLabelIdx,
-        makeLabel('主线：--', 24, font),
-    );
+    scene.attach(mainTaskLabelIdx, makeLabel('主线：--', 24, font));
 
     // ── 常驻底部 HUD：左五入口、右侧独立灵石余额。
     const bottomHudIdx = scene.addNode({ name: 'BottomHUD', parent: safeAreaRootIdx });
     scene.addUITransform(bottomHudIdx, DESIGN_WIDTH, BOTTOM_HUD_HEIGHT);
     scene.addWidget(bottomHudIdx, ALIGN_BOTTOM | ALIGN_LEFT | ALIGN_RIGHT);
-    const bottomFrame = spriteFrameRef('grey_inlay');
-    if (bottomFrame) {
-        scene.attach(bottomHudIdx, makeSprite(bottomFrame));
-    }
+    // 底部 HUD 同样不加底图。
 
     const bottomLeftIdx = scene.addNode({ name: 'BottomLeftSlots', parent: bottomHudIdx });
     scene.addUITransform(
@@ -455,13 +451,14 @@ function build(uuids) {
         CAMP_LAYOUT.sizes.bottomLeftSlots.height,
     );
     scene.addWidget(bottomLeftIdx, ALIGN_TOP | ALIGN_BOTTOM | ALIGN_LEFT);
-    const systemEntryNodes = [];
-    SYSTEM_ENTRIES.forEach(([nodeName, label], index) => {
-        const entryConfig = CAMP_SYSTEM_ENTRIES[index];
+    CAMP_SYSTEM_ENTRY_IDS.forEach((entryId) => {
+        const nodeName = CAMP_SYSTEM_ENTRY_NODE_NAMES[entryId];
+        const label = CAMP_SYSTEM_ENTRY_NAMES[entryId];
+        const { position } = CAMP_SYSTEM_ENTRY_LAYOUT[entryId];
         const entryIdx = scene.addNode({
             name: nodeName,
             parent: bottomLeftIdx,
-            pos: vec3(entryConfig.position.x, entryConfig.position.y, 0),
+            pos: vec3(position.x, position.y, 0),
         });
         scene.addUITransform(
             entryIdx,
@@ -475,7 +472,6 @@ function build(uuids) {
         const labelIdx = scene.addNode({ name: 'Label', parent: entryIdx });
         scene.addUITransform(labelIdx, 100, 40);
         scene.attach(labelIdx, makeLabel(label, 20, font));
-        systemEntryNodes.push(entryIdx);
     });
 
     const bottomRightIdx = scene.addNode({ name: 'BottomRightCurrency', parent: bottomHudIdx });
@@ -514,10 +510,16 @@ function build(uuids) {
         CAMP_LAYOUT.sizes.immortalCoinValue.width,
         CAMP_LAYOUT.sizes.immortalCoinValue.height,
     );
-    const immortalCoinLabelIdx = scene.attach(currencyValueIdx, makeLabel('--', 28, font));
+    scene.attach(currencyValueIdx, makeLabel('--', 28, font));
+
+    // SettingsPage 是始终激活的页面壳，Presenter 挂在它上面。
+    // 面板自身 active=false，组件挂在面板上时 onLoad 不会执行。
+    const settingsPageIdx = scene.addNode({ name: 'SettingsPage', parent: safeAreaRootIdx });
+    scene.addUITransform(settingsPageIdx);
+    scene.addWidget(settingsPageIdx, ALIGN_ALL);
 
     // 设置页页面壳；详细音频、画面和存档控制属于后续设置任务。
-    const settingsPanelIdx = scene.addNode({ name: 'SettingsPanel', parent: safeAreaRootIdx });
+    const settingsPanelIdx = scene.addNode({ name: 'SettingsPanel', parent: settingsPageIdx });
     scene.addUITransform(settingsPanelIdx);
     scene.addWidget(settingsPanelIdx, ALIGN_ALL);
     scene.entries[settingsPanelIdx]._active = false;
@@ -557,7 +559,12 @@ function build(uuids) {
     scene.attach(settingsBackLabelIdx, makeLabel('返回', 24, font));
 
     // ── 议事殿营地人物列表。当前新档只显示岑守一。
-    const npcListPanelIdx = scene.addNode({ name: 'NpcListPanel', parent: safeAreaRootIdx });
+    // NpcPage 同为始终激活的页面壳，承载列表与对话两个面板。
+    const npcPageIdx = scene.addNode({ name: 'NpcPage', parent: safeAreaRootIdx });
+    scene.addUITransform(npcPageIdx);
+    scene.addWidget(npcPageIdx, ALIGN_ALL);
+
+    const npcListPanelIdx = scene.addNode({ name: 'NpcListPanel', parent: npcPageIdx });
     scene.addUITransform(npcListPanelIdx);
     scene.addWidget(npcListPanelIdx, ALIGN_ALL);
     scene.entries[npcListPanelIdx]._active = false;
@@ -602,16 +609,16 @@ function build(uuids) {
 
     const npcNameIdx = scene.addNode({ name: 'NpcName', parent: cenButtonIdx, pos: vec3(-140, 40, 0) });
     scene.addUITransform(npcNameIdx, 260, 44);
-    const npcNameLabelIdx = scene.attach(npcNameIdx, makeLabel('岑守一', 28, font));
+    scene.attach(npcNameIdx, makeLabel('岑守一', 28, font));
     const npcRoleIdx = scene.addNode({ name: 'NpcRole', parent: cenButtonIdx, pos: vec3(-60, -30, 0) });
     scene.addUITransform(npcRoleIdx, 440, 40);
-    const npcRoleLabelIdx = scene.attach(npcRoleIdx, makeLabel('留守管事·旧阵簿保管人', 20, font, [150, 140, 130]));
+    scene.attach(npcRoleIdx, makeLabel('留守管事·旧阵簿保管人', 20, font, [150, 140, 130]));
     const npcStatusIdx = scene.addNode({ name: 'NpcStatus', parent: cenButtonIdx, pos: vec3(310, 0, 0) });
     scene.addUITransform(npcStatusIdx, 150, 48);
-    const npcStatusLabelIdx = scene.attach(npcStatusIdx, makeLabel('有任务', 20, font));
+    scene.attach(npcStatusIdx, makeLabel('有任务', 20, font));
 
     // ── 岑守一对话。结束后返回人物列表，不跳到其它页面。
-    const npcDialogPanelIdx = scene.addNode({ name: 'NpcDialogPanel', parent: safeAreaRootIdx });
+    const npcDialogPanelIdx = scene.addNode({ name: 'NpcDialogPanel', parent: npcPageIdx });
     scene.addUITransform(npcDialogPanelIdx);
     scene.addWidget(npcDialogPanelIdx, ALIGN_ALL);
     scene.entries[npcDialogPanelIdx]._active = false;
@@ -650,7 +657,7 @@ function build(uuids) {
     }
     const dialogTextIdx = scene.addNode({ name: 'DialogueText', parent: dialogBoxIdx });
     scene.addUITransform(dialogTextIdx, 570, 320);
-    const npcDialogTextLabelIdx = scene.attach(
+    scene.attach(
         dialogTextIdx,
         makeWrappedLabel('……', 24, font),
     );
@@ -663,38 +670,22 @@ function build(uuids) {
     scene.attach(dialogNextIdx, makeButton());
     const dialogNextLabelNodeIdx = scene.addNode({ name: 'Label', parent: dialogNextIdx });
     scene.addUITransform(dialogNextLabelNodeIdx, 180, 48);
-    const npcDialogNextLabelIdx = scene.attach(dialogNextLabelNodeIdx, makeLabel('继续', 24, font));
+    scene.attach(dialogNextLabelNodeIdx, makeLabel('继续', 24, font));
 
-    // ── Presenter 挂在 Canvas 上，持有以上各节点引用
-    scene.addScript(canvasIdx, uuids.campPresenter, {
-        resourceBar: { __id__: resourceBarCompIdx },
-        buildingNodes: buildingNodes.map((idx) => ({ __id__: idx })),
-        // 保留 Presenter 的旧属性以兼容组件序列化；场景不再创建旧五导航。
-        bottomNavNodes: [],
-        badgeNodes: badgeNodes.map((idx) => ({ __id__: idx })),
-        buildingStateLabels: buildingStateLabels.map((idx) => ({ __id__: idx })),
-        avatarButton: { __id__: avatarIdx },
-        mainTaskButton: { __id__: mainTaskIdx },
-        mainTaskLabel: { __id__: mainTaskLabelCompIdx },
-        panoramaViewport: { __id__: worldViewportIdx },
-        panoramaContent: { __id__: panoramaContentIdx },
-        expeditionButton: { __id__: expeditionIdx },
-        npcListPanel: { __id__: npcListPanelIdx },
-        npcDialogPanel: { __id__: npcDialogPanelIdx },
-        cenShouyiButton: { __id__: cenButtonIdx },
-        npcListBackButton: { __id__: npcListBackIdx },
-        npcDialogBackButton: { __id__: dialogBackIdx },
-        npcDialogNextButton: { __id__: dialogNextIdx },
-        npcNameLabel: { __id__: npcNameLabelIdx },
-        npcRoleLabel: { __id__: npcRoleLabelIdx },
-        npcStatusLabel: { __id__: npcStatusLabelIdx },
-        npcDialogTextLabel: { __id__: npcDialogTextLabelIdx },
-        npcDialogNextLabel: { __id__: npcDialogNextLabelIdx },
-        systemEntryNodes: systemEntryNodes.map((idx) => ({ __id__: idx })),
-        settingsPanel: { __id__: settingsPanelIdx },
-        settingsBackButton: { __id__: settingsBackIdx },
-        immortalCoinLabel: { __id__: immortalCoinLabelIdx },
-    });
+    // ── 六个 Presenter 各挂在自己的模块根节点上。
+    // 拆分后不再有跨节点 @property 接线：Presenter 用 CampSceneContract
+    // 里的相对路径在自己子树内查找，故此处只需挂载组件、无需传引用。
+    const MODULE_ROOT_IDX = {
+        panorama: worldViewportIdx,
+        buildings: buildingLayerIdx,
+        topHud: topHudIdx,
+        bottomHud: bottomHudIdx,
+        npcPage: npcPageIdx,
+        settingsPage: settingsPageIdx,
+    };
+    for (const module of CAMP_MODULES) {
+        scene.addScript(MODULE_ROOT_IDX[module.id], uuids[module.id], {});
+    }
     scene.addScript(canvasIdx, uuids.viewportAdapter, {
         safeAreaRoot: { __id__: safeAreaRootIdx },
     });

@@ -7,6 +7,7 @@ import {
     stepPanoramaInertia,
 } from 'db://assets/scripts/domain/HallPanorama';
 import type { DragGesture, PanoramaBounds } from 'db://assets/scripts/domain/HallPanorama';
+import { CAMP_PANORAMA_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
 import { campNode, disposeCampBindings } from './CampViewUtils';
 
 const { ccclass } = _decorator;
@@ -27,7 +28,7 @@ export class CampPanoramaController extends Component {
     private initialized = false;
 
     protected override onLoad(): void {
-        this.content = campNode(this.node, 'PanoramaContent');
+        this.content = campNode(this.node, CAMP_PANORAMA_PATHS.content);
         this.bindInput();
         const app = AppRoot.instance;
         this.disposers.push(

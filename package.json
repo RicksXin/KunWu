@@ -1,27 +1,29 @@
 {
-  "name": "kunwu",
-  "version": "0.1.0",
-  "description": "《昆吾禁地》竖屏 2D 像素修仙：营地经营、方格迷雾探索、四人半即时战斗",
-  "private": true,
-  "scripts": {
-    "test": "node --experimental-strip-types --import ./tests/register.mjs --test \"tests/**/*.test.ts\"",
-    "test:watch": "node --experimental-strip-types --import ./tests/register.mjs --test --watch \"tests/**/*.test.ts\"",
-    "typecheck": "node tools/typecheck.mjs",
-    "check": "pnpm typecheck && pnpm test && pnpm validate:data && pnpm validate:scene",
-    "validate:data": "node --experimental-strip-types tools/validate-data.mjs",
-    "validate:scene": "node tools/validate-scene.mjs",
-    "gen:scene": "node tools/gen-boot-scene.mjs",
-    "config:bundles": "node tools/configure-bundles.mjs",
-    "build:web": "node tools/build-web.mjs",
-    "verify:gate": "node tools/verify-gate.mjs",
-    "serve": "node tools/serve-build.mjs"
-  },
-  "creator": {
-    "version": "3.8.7"
-  },
-  "uuid": "f04dc388-0c14-4410-b056-25fd7faaa85c",
-  "devDependencies": {
-    "@types/node": "24.3.0"
-  },
-  "packageManager": "pnpm@10.33.0"
+    "name": "kunwu",
+    "version": "0.1.0",
+    "description": "《昆吾禁地》竖屏 2D 像素修仙：营地经营、方格迷雾探索、四人半即时战斗",
+    "private": true,
+    "scripts": {
+        "test": "node --experimental-strip-types --import ./tests/register.mjs --test \"tests/**/*.test.ts\"",
+        "test:watch": "node --experimental-strip-types --import ./tests/register.mjs --test --watch \"tests/**/*.test.ts\"",
+        "typecheck": "node tools/typecheck.mjs",
+        "check": "pnpm typecheck && pnpm test && pnpm validate:data && pnpm validate:scene",
+        "validate:data": "node --experimental-strip-types tools/validate-data.mjs",
+        "validate:scene": "node --experimental-strip-types tools/validate-scene.mjs",
+        "edit:camp": "node tools/edit-camp-scene.mjs",
+        "gen:scene": "node tools/gen-boot-scene.mjs",
+        "config:bundles": "node tools/configure-bundles.mjs",
+        "build:web": "node tools/build-web.mjs",
+        "verify:gate": "node tools/verify-gate.mjs",
+        "serve": "node tools/serve-build.mjs",
+        "check:layout": "node --experimental-strip-types tools/check-camp-layout.mjs"
+    },
+    "creator": {
+        "version": "3.8.7"
+    },
+    "uuid": "f04dc388-0c14-4410-b056-25fd7faaa85c",
+    "devDependencies": {
+        "@types/node": "24.3.0"
+    },
+    "packageManager": "pnpm@10.33.0"
 }

@@ -1,5 +1,6 @@
 import { _decorator, Component, Node } from 'cc';
 import { AppRoot } from 'db://assets/scripts/AppRoot';
+import { CAMP_SETTINGS_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
 import {
     bindCampButton,
     campNode,
@@ -18,12 +19,12 @@ export class CampSettingsPresenter extends Component {
 
     protected override onLoad(): void {
         fitCampPageRoot(this, this.disposers);
-        this.panel = campNode(this.node, 'SettingsPanel');
+        this.panel = campNode(this.node, CAMP_SETTINGS_PATHS.panel);
         this.panel && (this.panel.active = false);
         this.disposers.push(
             AppRoot.instance.events.on('camp.settingsRequested', () => this.open()),
         );
-        const back = campNode(this.node, 'SettingsPanel/SettingsBackButton');
+        const back = campNode(this.node, CAMP_SETTINGS_PATHS.back);
         bindCampButton(this, back, () => this.close(), this.disposers);
         warnCampTouchTarget(back, '设置页返回');
     }

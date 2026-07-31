@@ -48,16 +48,56 @@ pnpm verify:gate    # 门禁自动化验证（体积、安全区、分包、错�
 - `library/`、`temp/`、`local/`、`profiles/`、`build/` 是生成目录，已在
   `.gitignore`，不应提交。
 
-### Camp 场景唯一事实源
+### Camp 场景的修改方式
 
-- `assets/bundles/camp/Camp.scene` 以及后续拆出的 `.prefab` 文件，以 Cocos Creator
-  保存结果为唯一事实源。
-- `tools/gen-camp-scene.mjs` 只是场景完全缺失时的历史灰盒初始化脚本，不属于日常开发
-  流程；禁止使用 `--force` 或其他方式整体覆盖正式 `Camp.scene`。
-- `tools/patch-camp-*.mjs` 一类一次性补丁不作为正式场景维护方式。迁移完成后应退出
-  使用，不得与编辑器同时修改场景。
-- 视觉节点、坐标和层级在编辑器/Prefab 中维护；校验脚本只检查关键结构、引用和产品
-  约束，不应成为另一份布局事实源。
+`assets/bundles/camp/Camp.scene` 与 `prefabs/*.prefab` 可以用脚本改，也可以在编辑器改。
+分界不是「谁有权改」，而是「哪些操作需要编辑器分配 UUID」。
+
+**可以用脚本改**（走 `pnpm edit:camp`，见下）：
+
+- 节点尺寸、位置、缩放、`active`
+- 删除已有组件
+- 把 Sprite 指向**已导入**的图片（从现有 `.meta` 读 UUID）
+- Label 文案、颜色等纯数据属性
+
+**必须在编辑器做**（UUID 只能由编辑器分配，伪造会导致全项目引用错乱）：
+
+- 新增图片、字体等资源，生成 `.meta`
+- 新建节点、另存 Prefab
+- 确认视觉效果——摆位置需要看着背景图判断，脚本只能算几何
+
+```bash
+pnpm edit:camp --size yi_shi_dian=720x480 --pos yi_shi_dian=0,490
+pnpm edit:camp --remove-component TopHUD:cc.Sprite
+pnpm edit:camp --sprite ling_pu=env_camp_building_ling_pu
+pnpm edit:camp --dry-run ...        # 只打印将要发生的变更
+```
+
+`tools/edit-camp-scene.mjs` 每次改动前自动备份到 `local/scene-backups/`，改完自动跑
+`validate:scene`，校验失败自动回滚。删组件时会重排整个数组并同步重写全部 `__id__`
+引用，因此不会留下孤儿条目。
+
+- `tools/gen-camp-scene.mjs` 只是场景完全缺失时的灰盒初始化脚本；仍然禁止用它整体
+  覆盖正式场景（加 `--force` 会直接拒绝）。日常改动用 `pnpm edit:camp`。
+- 不要写新的一次性 `patch-camp-*.mjs`。需要批量改就多传几个参数给 `edit:camp`。
+- 校验脚本只检查关键结构、引用和产品约束，不锁死每个节点的具体坐标。
+
+### 营地配置的三处分工
+
+改营地时先认清改的是哪一层，否则很容易出现两份 id 各自漂移：
+
+| 内容 | 事实源 | 说明 |
+|---|---|---|
+| 逻辑 id、节点名、Presenter 访问路径 | `assets/scripts/domain/CampSceneContract.ts` | 表现层与 `tools/` 共用同一份 |
+| 尺寸、坐标、中文显示名 | `tools/camp-layout-config.mjs` | 按 id 建表，不自带 id 列表 |
+| 实际节点树与视觉 | `Camp.scene` 与 `prefabs/*.prefab` | 以编辑器保存结果为准 |
+
+- Presenter 一律通过 `CAMP_*_PATHS` 常量取节点路径，禁止内联路径字符串。
+  内联的那份不会被校验，改名后只在运行期打一行 `console.error`。
+- `tools/camp-domain-contract.mjs` 是 tools 侧读取领域层契约的桥；用到它的脚本
+  必须以 `node --experimental-strip-types` 运行。
+- `pnpm validate:scene` 会交叉核对上表前两层的键完全一致，并逐条验证
+  `presenterPaths` 在场景与 Prefab 中真实存在。
 
 ## 不可违反的架构约束
 

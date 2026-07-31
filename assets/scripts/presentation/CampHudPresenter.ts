@@ -1,6 +1,7 @@
 import { _decorator, Component } from 'cc';
 import { AppRoot } from 'db://assets/scripts/AppRoot';
 import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
+import { CAMP_TOP_HUD_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
 import { ResourceBar } from './ResourceBar';
 import {
     bindCampButton,
@@ -32,8 +33,8 @@ export class CampHudPresenter extends Component {
             app.events.on('expedition.settlementClosed', () => this.renderAll()),
         );
 
-        const avatar = campNode(this.node, 'AvatarButton');
-        const mainTask = campNode(this.node, 'MainTaskButton');
+        const avatar = campNode(this.node, CAMP_TOP_HUD_PATHS.avatar);
+        const mainTask = campNode(this.node, CAMP_TOP_HUD_PATHS.mainTask);
         bindCampButton(
             this,
             avatar,
@@ -71,7 +72,8 @@ export class CampHudPresenter extends Component {
 
     private renderWallet(): void {
         const app = AppRoot.instance;
-        const bar = campNode(this.node, 'ResourceBar')?.getComponent(ResourceBar) ?? null;
+        const bar =
+            campNode(this.node, CAMP_TOP_HUD_PATHS.resourceBar)?.getComponent(ResourceBar) ?? null;
         if (!app.state.isLoaded) {
             bar?.renderPlaceholder();
             return;
@@ -80,7 +82,7 @@ export class CampHudPresenter extends Component {
     }
 
     private renderMainTask(): void {
-        const label = campLabel(this.node, 'MainTaskButton/Objective');
+        const label = campLabel(this.node, CAMP_TOP_HUD_PATHS.mainTaskObjective);
         if (!label) {
             return;
         }

@@ -7,6 +7,7 @@ import {
 } from 'db://assets/scripts/domain/CampNpcs';
 import type { CampNpcId } from 'db://assets/scripts/domain/CampNpcs';
 import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
+import { CAMP_NPC_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
 import {
     bindCampButton,
     campLabel,
@@ -31,8 +32,8 @@ export class CampNpcPresenter extends Component {
 
     protected override onLoad(): void {
         fitCampPageRoot(this, this.disposers);
-        this.listPanel = campNode(this.node, 'NpcListPanel');
-        this.dialogPanel = campNode(this.node, 'NpcDialogPanel');
+        this.listPanel = campNode(this.node, CAMP_NPC_PATHS.listPanel);
+        this.dialogPanel = campNode(this.node, CAMP_NPC_PATHS.dialogPanel);
         this.listPanel && (this.listPanel.active = false);
         this.dialogPanel && (this.dialogPanel.active = false);
 
@@ -43,10 +44,10 @@ export class CampNpcPresenter extends Component {
             app.events.on('story.changed', () => this.renderNpcList()),
         );
 
-        const npc = campNode(this.node, 'NpcListPanel/CenShouyiButton');
-        const listBack = campNode(this.node, 'NpcListPanel/NpcListBackButton');
-        const dialogBack = campNode(this.node, 'NpcDialogPanel/NpcDialogBackButton');
-        const dialogNext = campNode(this.node, 'NpcDialogPanel/NpcDialogNextButton');
+        const npc = campNode(this.node, CAMP_NPC_PATHS.cenShouyi);
+        const listBack = campNode(this.node, CAMP_NPC_PATHS.listBack);
+        const dialogBack = campNode(this.node, CAMP_NPC_PATHS.dialogBack);
+        const dialogNext = campNode(this.node, CAMP_NPC_PATHS.dialogNext);
         bindCampButton(this, npc, () => this.openCenShouyi(), this.disposers);
         bindCampButton(this, listBack, () => this.closeList(), this.disposers);
         bindCampButton(this, dialogBack, () => this.backToList(), this.disposers);
@@ -78,15 +79,15 @@ export class CampNpcPresenter extends Component {
             return;
         }
         const npc = availableCampNpcs(app.state.require().storyFlags)[0];
-        const button = campNode(this.node, 'NpcListPanel/CenShouyiButton');
+        const button = campNode(this.node, CAMP_NPC_PATHS.cenShouyi);
         if (!npc) {
             button && (button.active = false);
             return;
         }
         button && (button.active = true);
-        const name = campLabel(this.node, 'NpcListPanel/CenShouyiButton/NpcName');
-        const role = campLabel(this.node, 'NpcListPanel/CenShouyiButton/NpcRole');
-        const status = campLabel(this.node, 'NpcListPanel/CenShouyiButton/NpcStatus');
+        const name = campLabel(this.node, CAMP_NPC_PATHS.cenShouyiName);
+        const role = campLabel(this.node, CAMP_NPC_PATHS.cenShouyiRole);
+        const status = campLabel(this.node, CAMP_NPC_PATHS.cenShouyiStatus);
         name && (name.string = npc.name);
         role && (role.string = npc.role);
         status && (status.string = npc.status);
@@ -133,8 +134,8 @@ export class CampNpcPresenter extends Component {
     }
 
     private renderDialogueLine(): void {
-        const text = campLabel(this.node, 'NpcDialogPanel/DialogueBox/DialogueText');
-        const next = campLabel(this.node, 'NpcDialogPanel/NpcDialogNextButton/Label');
+        const text = campLabel(this.node, CAMP_NPC_PATHS.dialogText);
+        const next = campLabel(this.node, CAMP_NPC_PATHS.dialogNextLabel);
         text && (text.string = this.dialogueLines[this.dialogueIndex] ?? '……');
         next &&
             (next.string =
