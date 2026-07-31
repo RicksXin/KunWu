@@ -1,117 +1,163 @@
 # 《昆吾禁地》工程约定
 
-竖屏 2D 像素修仙 · Cocos Creator 3.8.7 + TypeScript + WebGL · Web Mobile 首发
+本文件是本仓库的长期工程约定，适用于整个仓库，只记录容易踩错的部分，不替代产品与
+技术文档。`AGENTS.md` 是同一份约定的 Codex 侧镜像；本文件变更后应同步更新它。
 
-文档以 `Docs/PRD/` 为准（唯一事实源表见 `Docs/07_分阶段产品需求文档_PRD.md` §3），
-实现方式见 `Docs/01_技术实现方案.md`。本文件只记录容易踩错的工程约定。
+## 项目与事实源
 
-## 命令
+- 项目：竖屏 2D 像素修仙游戏。
+- 技术栈：Cocos Creator 3.8.7、TypeScript、WebGL，Web Mobile 首发。
+- 产品需求以 `Docs/PRD/` 为准；唯一事实源表见
+  `Docs/07_分阶段产品需求文档_PRD.md` §3。
+- 实现方式以 `Docs/01_技术实现方案.md` 为准。
+- 若本文件与产品或技术文档冲突，以对应事实源为准。
 
-**包管理器用 pnpm**，不要用 npm/yarn（`packageManager` 字段已锁定版本）。
+## 常用命令
+
+包管理器只使用 pnpm，不使用 npm 或 yarn；版本由 `packageManager` 锁定。
 
 ```bash
-pnpm check          # typecheck + 单测 + 数据校验 + 场景校验，提交前跑这个
-pnpm test           # 领域层单测（Node 原生 runner，不依赖引擎）
+pnpm check          # typecheck + 单测 + 数据校验 + 场景校验；提交前运行
+pnpm test           # 领域层单测，Node 原生 runner，不依赖引擎
 pnpm test:watch
-pnpm typecheck      # 用 Cocos 自带 tsc 检查 assets/ 与 tests/
+pnpm typecheck      # 使用 Cocos 自带 tsc 检查 assets/ 与 tests/
 pnpm validate:data  # 构建前数据表校验（PRD-10 §6 七条规则）
+pnpm validate:scene # 场景与 Prefab 的结构、脚本引用和产品约束校验
+pnpm build:web      # 命令行构建 Web Mobile
+pnpm serve          # 本地预览构建产物，并打印手机可访问的局域网地址
+pnpm verify:gate    # 门禁自动化验证（体积、安全区、分包、错误码等 11 项）
 ```
 
-### 跑起来看
+- 执行 `pnpm build:web` 前必须先关闭 Cocos Creator，避免工程锁冲突。
+- 编辑器预览地址通常为 `http://127.0.0.1:7456/`。
+- 修改场景文件后必须先在编辑器按 `Cmd+R` 刷新资源，否则编辑器会继续使用旧缓存，
+  症状是「明明改了却看不到」。
+- Cocos 安装在非默认路径时，通过 `COCOS_APP` 环境变量指定。
+- 工程不安装独立 `typescript` 依赖。`pnpm typecheck` 使用 Cocos 自带版本以保证版本
+  一致；引擎自身的 `.d.ts` 不满足 strict，`tools/typecheck.mjs` 按路径过滤，只对本
+  工程代码判定失败。
+- 打开工程可用 Cocos Dashboard 添加本目录，或运行：
+  `/Applications/Cocos/Creator/3.8.7/CocosCreator.app/Contents/MacOS/CocosCreator --project .`
 
-```bash
-pnpm build:web   # 命令行构建 Web Mobile（**必须先关闭编辑器**，它持有工程锁）
-pnpm serve       # 本地预览产物，同时打印手机可访问的局域网地址
-pnpm verify:gate # 门禁自动化验证（体积、安全区、分包、错误码等 11 项）
-```
+## Cocos 资源规则
 
-或用编辑器预览（`http://127.0.0.1:7456/`）——但**改了场景文件后必须先 `Cmd+R`
-刷新资源**，否则编辑器会用缓存的旧版本，表现为"明明改了却看不到"。
-
-**新增脚本后必须用编辑器导入一次**生成 `.meta`（`assets/**/*.meta` 必须提交，
-丢失会导致全项目引用断裂）。不要手写或用脚本伪造 `.meta`——
-UUID 由编辑器分配，伪造的 UUID 与编辑器后续分配的不一致，会造成引用错乱。
-
-工程不装 `typescript` 依赖，`pnpm typecheck` 调用 Cocos 自带的那份以保证版本一致；
-Cocos 装在非默认位置时用 `COCOS_APP` 环境变量指定。引擎自身的 `.d.ts` 不满足 `strict`，
-会产生上百条无关报错，`tools/typecheck.mjs` 按路径过滤，只对本工程代码判定失败。
-
-打开工程：Cocos Dashboard 添加本目录，或
-`/Applications/Cocos/Creator/3.8.7/CocosCreator.app/Contents/MacOS/CocosCreator --project .`
-
-## 不可违反的架构约束
-
-**战斗数据单向流**（技术方案 §10）
-`CombatCommand` → 结算器 → `CombatEvent` → 表现层。表现层只消费事件，
-不得反向决定伤害。破坏这条会同时失效：加速战斗、跳过动画、战斗回放、自动化测试。
-
-**七维字段名已冻结**（技术方案 §6）
-`strength` `magic` `technique` `speed` `constitution` `armor` `resistance`。
-数据表、存档、技能定义、探索检定全部依赖这七个键，改名等于全量迁移。
-
-**格子坐标与像素坐标不混用**（技术方案 §9.1）
-领域层只认 `GridCoord`，像素换算由表现层负责。
-
-**数值不硬编码**（技术方案 §1）
-一律从数据表读取。每个职业节点必须恰好 3 个主动技能，由 Schema 校验保证。
-
-**ID 用英文小写蛇形**，不用显示名做逻辑判断。授权名与原创名通过本地化表切换，
-不影响存档 ID（IP 双轨，见策划案 §2）。
-
-## 目录
-
-```
-assets/scripts/
-├─ domain/        无引擎依赖的纯 TS，可直接单测
-├─ services/      八个持久服务（技术方案 §4.1）
-├─ repositories/  数据表加载与存档读写
-└─ presentation/  Cocos Component、Presenter/ViewModel
-tests/            单测，故意放在 assets/ 外，避免被打进 Web 产物
-```
-
-`library/` `temp/` `local/` `profiles/` `build/` 是生成目录，已在 `.gitignore`。
-`assets/**/*.meta` 必须提交——丢失会导致全项目引用断裂。
+- 新增脚本后必须让 Cocos Creator 导入一次，由编辑器生成 `.meta`。
+- `assets/**/*.meta` 必须提交；缺失会导致全项目引用断裂。
+- 禁止手写或用脚本伪造 `.meta`。UUID 必须由编辑器分配，伪造的 UUID 与编辑器后续
+  分配的不一致，会造成引用错乱。
+- `library/`、`temp/`、`local/`、`profiles/`、`build/` 是生成目录，已在
+  `.gitignore`，不应提交。
 
 ### Camp 场景唯一事实源
 
-`assets/bundles/camp/Camp.scene` 以及后续拆出的 `.prefab`，以 Cocos Creator 保存结果
-为唯一事实源。`tools/gen-camp-scene.mjs` 仅保留为场景完全缺失时的历史灰盒初始化脚本，
-禁止用 `--force` 整体覆盖正式场景。`tools/patch-camp-*.mjs` 一类一次性补丁不作为日常
-维护方式；视觉节点、坐标和层级在编辑器/Prefab 中维护，校验脚本只检查关键结构、
-引用和产品约束。
+- `assets/bundles/camp/Camp.scene` 以及后续拆出的 `.prefab` 文件，以 Cocos Creator
+  保存结果为唯一事实源。
+- `tools/gen-camp-scene.mjs` 只是场景完全缺失时的历史灰盒初始化脚本，不属于日常开发
+  流程；禁止使用 `--force` 或其他方式整体覆盖正式 `Camp.scene`。
+- `tools/patch-camp-*.mjs` 一类一次性补丁不作为正式场景维护方式。迁移完成后应退出
+  使用，不得与编辑器同时修改场景。
+- 视觉节点、坐标和层级在编辑器/Prefab 中维护；校验脚本只检查关键结构、引用和产品
+  约束，不应成为另一份布局事实源。
 
-## 跨目录导入
+## 不可违反的架构约束
 
-用 Cocos 原生前缀，不要在 `tsconfig.json` 自定义 `paths`：
+### 战斗数据单向流
+
+依据技术方案 §10，严格保持：
+
+```text
+CombatCommand → 结算器 → CombatEvent → 表现层
+```
+
+表现层只消费事件，不得反向决定伤害。破坏这条会同时失效：加速战斗、跳过动画、
+战斗回放和自动化测试。
+
+### 七维字段名冻结
+
+依据技术方案 §6，以下字段名不可直接改名：
+
+```text
+strength magic technique speed constitution armor resistance
+```
+
+数据表、存档、技能定义和探索检定依赖这七个键。任何改名都必须按全量数据与存档迁移
+处理，不能作为普通文案修改。
+
+### 坐标边界
+
+依据技术方案 §9.1：
+
+- 领域层只使用 `GridCoord`。
+- 格子坐标与像素坐标不得混用。
+- 像素换算只由表现层负责。
+
+### 数据与标识
+
+- 数值一律从数据表读取，不在业务代码中硬编码（技术方案 §1）。
+- 每个职业节点必须恰好拥有 3 个主动技能，由 Schema 校验保证。
+- 逻辑 ID 使用英文小写蛇形命名。
+- 禁止用显示名做逻辑判断。
+- 授权名与原创名通过本地化表切换，不能改变存档 ID（IP 双轨，见策划案 §2）。
+
+## 目录职责
+
+```text
+assets/scripts/
+├─ domain/        无引擎依赖的纯 TypeScript，可直接单测
+├─ services/      八个持久服务（技术方案 §4.1）
+├─ repositories/  数据表加载与存档读写
+└─ presentation/  Cocos Component、Presenter、ViewModel
+tests/            单测；位于 assets/ 外，避免进入 Web 构建产物
+```
+
+新增代码应遵守上述分层，领域逻辑不得反向依赖 Cocos 表现层。
+
+## 导入与 TypeScript 限制
+
+跨目录导入使用 Cocos 原生 `db://` 前缀，不在 `tsconfig.json` 中自定义 `paths`：
 
 ```ts
 import { GridCoord } from 'db://assets/scripts/domain/GridCoord';
 ```
 
-`temp/tsconfig.cocos.json` 注入了 `db://assets/*` 映射，自定义 `paths` 会整体覆盖它。
-
-Node 单测认不了 `db://` 协议，也不接受省略扩展名的相对导入，
-由 `tests/resolver.mjs`（解析钩子）在测试期补齐。**不要为了迁就 Node 去改 `assets/`
-里的导入风格**——那会破坏引擎解析。测试自身的类型检查走 `tsconfig.tests.json`，
-它不继承根配置，因为测试跑在 Node 而非引擎里。
-
-**只作类型使用的导入必须写 `import type`。** 类型擦除不移除值导入，
-对类型别名（如 `Attributes`）会在运行期报「does not provide an export named」。
-
-**不要用构造函数参数属性**（`constructor(readonly width: number)`）。
-Node 的 strip-only 模式不支持——那需要生成赋值代码而非仅删类型，
-会报 `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`。改为显式声明字段并在构造函数体内赋值。
-同理不要用 `enum`（用 `as const` 数组 + 联合类型）和 `namespace`。
+- `temp/tsconfig.cocos.json` 会注入 `db://assets/*` 映射，自定义 `paths` 会整体覆盖它。
+- Node 测试通过 `tests/resolver.mjs` 在测试期兼容 `db://` 与省略扩展名的相对导入；
+  不要为了迁就 Node 修改 `assets/` 内的导入风格，那会破坏引擎解析。
+- 测试类型检查使用 `tsconfig.tests.json`，不继承根配置，因为测试运行在 Node 而非引擎。
+- 仅用于类型的导入必须写 `import type`。类型擦除不移除值导入，对类型别名（如
+  `Attributes`）会在运行期报「does not provide an export named」。
+- 不使用构造函数参数属性，例如 `constructor(readonly width: number)`；改为显式声明
+  字段并在构造函数体赋值。
+- 不使用 TypeScript `enum` 或 `namespace`。枚举语义用 `as const` 数组和联合类型。
+- 上述语法限制来自 Node strip-only 模式，违反时会出现
+  `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`。
 
 ## 像素规格
 
-设计画布 1080×1920（9:16），像素内部参考 360×640 整数 3 倍放大。
-世界 Tile 16×16 源像素 → 48×48 屏幕像素。
-`.creator/default-meta.json` 已把图片默认 `filterMode` 设为 `nearest`，
-新导入的像素图不必手动改；**禁止对 Pixel Art 开线性过滤**。
+- 设计画布：1080×1920（9:16）。
+- 像素内部参考：360×640，以整数 3 倍放大。
+- 世界 Tile：16×16 源像素，对应 48×48 屏幕像素。
+- `.creator/default-meta.json` 已将图片默认 `filterMode` 设为 `nearest`，新导入的
+  像素图不必手动改。
+- 禁止对 Pixel Art 使用线性过滤；缩放必须保持像素清晰。
 
 ## 第三方素材
 
-`ThirdParty/DemoAssets/` 全部 CC0 或 OFL，附来源、许可快照与 SHA-256。
-不得混入 `assets/` 原创目录。Ark Pixel 字体发布须随附 `OFL.txt`。
-大文件走 Git LFS（`.gitattributes`），clone 后先执行 `git lfs install`。
+- `ThirdParty/DemoAssets/` 中只允许 CC0 或 OFL 素材，并保留来源、许可快照和 SHA-256。
+- 第三方素材不得混入 `assets/` 原创素材目录。
+- 发布 Ark Pixel 字体时必须随附 `OFL.txt`。
+- 大文件使用 Git LFS（见 `.gitattributes`）；首次 clone 后先执行 `git lfs install`。
+
+## 修改与验证原则
+
+- 开始修改前先阅读相关 PRD 和技术方案，不凭页面现状猜测产品规则。
+- 保留工作区中已有且与当前任务无关的用户或其他代理改动。
+- 修改范围应与用户请求一致，不顺带重构无关模块。
+- 日常代码、页面或场景迭代不执行完整 Web 构建。改完后在 Cocos Creator 中按 `Cmd+R`
+  刷新资源，再点击运行预览即可。
+- 新增脚本时仍须先让 Cocos Creator 导入并生成 `.meta`，再运行预览。
+- 完成一个功能模块后运行 `pnpm check`，检查类型、单测、数据和场景。
+- 只有修改构建模板、Bundle 分包或发布资源，或者进行阶段验收、提交前最终验证时，
+  才运行 `pnpm build:web` 和 `pnpm verify:gate`。
+- 不要在每次代码修改后重复执行「完整构建 + Web 预览 + 门禁验证」。验证强度应与修改
+  风险和当前交付阶段相匹配。

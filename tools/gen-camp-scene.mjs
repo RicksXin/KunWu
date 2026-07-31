@@ -29,6 +29,13 @@ import {
 } from './scene-builder.mjs';
 import { uuidFromMeta } from './uuid-compress.mjs';
 import { writeScene } from './write-scene.mjs';
+import {
+    CAMP_BUILDINGS,
+    CAMP_CLOSED_ANCHORS,
+    CAMP_LAYOUT,
+    CAMP_SYSTEM_ENTRIES,
+    CAMP_TOP_RESOURCES,
+} from './camp-layout-config.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -108,18 +115,10 @@ function makeSprite(frame, { sliced = true, color = [255, 255, 255] } = {}) {
 
 
 /** 七座建筑（PRD-01 §2），顺序须与 domain/HallBadges 的 BUILDING_IDS 一致。 */
-const BUILDING_IDS = [
-    'yi_shi_dian',
-    'ling_pu',
-    'zhao_xian_tai',
-    'bai_bao_ku',
-    'lian_qi_fang',
-    'jiao_yi_hang',
-    'huan_hun_tan',
-];
+const BUILDING_IDS = CAMP_BUILDINGS.map(({ id }) => id);
 
 /** 常驻顶部显示的五种资源（PRD-01 §2）。仙铢与魂晶在展开区。 */
-const TOP_RESOURCES = ['spiritGrain', 'spiritWood', 'darkIron', 'spiritStone', 'gengJing'];
+const TOP_RESOURCES = CAMP_TOP_RESOURCES.map(({ id }) => id);
 
 
 /**
@@ -127,58 +126,32 @@ const TOP_RESOURCES = ['spiritGrain', 'spiritWood', 'darkIron', 'spiritStone', '
  * building.* / nav.* / resource.* 保持一致。
  * 接入本地化服务后应改为运行时查表（P2）。
  */
-const BUILDING_NAMES = {
-    yi_shi_dian: '议事殿',
-    ling_pu: '灵圃',
-    zhao_xian_tai: '招贤馆',
-    bai_bao_ku: '百宝库',
-    lian_qi_fang: '炼器坊',
-    jiao_yi_hang: '交易行',
-    huan_hun_tan: '还魂殿',
-};
+const BUILDING_NAMES = Object.fromEntries(CAMP_BUILDINGS.map(({ id, label }) => [id, label]));
 
-const RESOURCE_NAMES = {
-    spiritGrain: '灵粮',
-    spiritWood: '灵木',
-    darkIron: '玄铁',
-    spiritStone: '灵晶',
-    gengJing: '庚精',
-};
+const RESOURCE_NAMES = Object.fromEntries(CAMP_TOP_RESOURCES.map(({ id, label }) => [id, label]));
 
-const SYSTEM_ENTRIES = [
-    ['SettingsButton', '设置'],
-    ['AchievementsButton', '成就'],
-    ['LeaderboardButton', '排行'],
-    ['MailButton', '邮件'],
-    ['DailyProgressButton', '日常'],
-];
+const SYSTEM_ENTRIES = CAMP_SYSTEM_ENTRIES.map(({ nodeName, label }) => [nodeName, label]);
 
 /** 顶部 HUD 同时容纳头像、五资源和主线。 */
-const TOP_HUD_HEIGHT = 300;
-const RESOURCE_BAR_HEIGHT = 148;
+const TOP_HUD_HEIGHT = CAMP_LAYOUT.sizes.topHud.height;
+const RESOURCE_BAR_HEIGHT = CAMP_LAYOUT.sizes.resourceBar.height;
 /** 底部固定 HUD 高度。 */
-const BOTTOM_HUD_HEIGHT = 120;
+const BOTTOM_HUD_HEIGHT = CAMP_LAYOUT.sizes.bottomHud.height;
 /** 左/中/右连续空间总宽为 2.8 屏，默认 x=0 停在中部。 */
-const PANORAMA_WIDTH = DESIGN_WIDTH * 2.8;
+const PANORAMA_WIDTH = CAMP_LAYOUT.sizes.panoramaContent.width;
 /** 375×817 UI 稿按 1080 设计宽等比换算后的全高。 */
-const PANORAMA_HEIGHT = 2353;
+const PANORAMA_HEIGHT = CAMP_LAYOUT.sizes.panoramaContent.height;
 /** 1152×896 交付背景包含安全出血；中央 1050×817 才是有效内容区。 */
-const PANORAMA_ART_WIDTH = 3318;
-const PANORAMA_ART_HEIGHT = 2580;
+const PANORAMA_ART_WIDTH = CAMP_LAYOUT.sizes.panoramaArtwork.width;
+const PANORAMA_ART_HEIGHT = CAMP_LAYOUT.sizes.panoramaArtwork.height;
 
 /**
  * 1.2.4 先把七座现有建筑放进左/中/右逻辑空间。
  * 1.2.5 再根据正式美术稿细化坐标、锚点和入口状态。
  */
-const BUILDING_POSITIONS = {
-    yi_shi_dian: [0, 300],
-    ling_pu: [1050, 80],
-    zhao_xian_tai: [-350, 0],
-    bai_bao_ku: [-1050, 260],
-    lian_qi_fang: [552, -250],
-    jiao_yi_hang: [350, 0],
-    huan_hun_tan: [-1050, -220],
-};
+const BUILDING_POSITIONS = Object.fromEntries(
+    CAMP_BUILDINGS.map(({ id, position }) => [id, [position.x, position.y]]),
+);
 
 const REQUIRED_SCRIPTS = {
     campPresenter: 'assets/scripts/presentation/CampPresenter.ts',
@@ -281,7 +254,11 @@ function build(uuids) {
             parent: buildingLayerIdx,
             pos: vec3(x, y, 0),
         });
-        scene.addUITransform(nodeIdx, 240, 180);
+        scene.addUITransform(
+            nodeIdx,
+            CAMP_LAYOUT.sizes.building.width,
+            CAMP_LAYOUT.sizes.building.height,
+        );
         if (buildingFrame) {
             scene.attach(nodeIdx, makeSprite(buildingFrame));
         }
@@ -322,9 +299,13 @@ function build(uuids) {
     const expeditionIdx = scene.addNode({
         name: 'ExpeditionEntry',
         parent: buildingLayerIdx,
-        pos: vec3(0, -330, 0),
+        pos: vec3(CAMP_LAYOUT.positions.expedition.x, CAMP_LAYOUT.positions.expedition.y, 0),
     });
-    scene.addUITransform(expeditionIdx, 280, 150);
+    scene.addUITransform(
+        expeditionIdx,
+        CAMP_LAYOUT.sizes.expedition.width,
+        CAMP_LAYOUT.sizes.expedition.height,
+    );
     if (buildingFrame) {
         scene.attach(expeditionIdx, makeSprite(buildingFrame));
     }
@@ -340,7 +321,11 @@ function build(uuids) {
             parent: buildingLayerIdx,
             pos: vec3(x, y, 0),
         });
-        scene.addUITransform(nodeIdx, 240, 180);
+        scene.addUITransform(
+            nodeIdx,
+            CAMP_LAYOUT.sizes.building.width,
+            CAMP_LAYOUT.sizes.building.height,
+        );
         if (fallbackFrame) {
             scene.attach(nodeIdx, makeSprite(fallbackFrame, { color: [150, 145, 140] }));
         }
@@ -349,12 +334,9 @@ function build(uuids) {
         scene.attach(labelIdx, makeLabel(`${label}·未开放`, 24, font, [125, 118, 112]));
         return nodeIdx;
     };
-    addClosedAnchor('ArenaAnchor', '竞技场', 552, 300);
-    // 2.8 屏总宽在 1080 设计宽下为 3024，边界为 ±1512。
-    // 最外侧 320 宽锚点放在 ±1350，滑到边界时仍保留 2dp 余量。
-    addClosedAnchor('RelicAnchor', '遗迹', 1390, -220);
-    addClosedAnchor('SacredSiteAnchor', '圣迹', -1390, 260);
-    addClosedAnchor('ChurchAnchor', '教会', -1390, -220);
+    CAMP_CLOSED_ANCHORS.forEach(({ name, label, position }) =>
+        addClosedAnchor(name, label, position.x, position.y),
+    );
 
     // ── 安全区根。Camp 是独立场景，不能引用 Boot 场景中 AppRoot 的
     // SafeArea 节点，因此复用 ViewportAdapter 为本场景根单独应用 Insets。
@@ -389,7 +371,7 @@ function build(uuids) {
         parent: topHudIdx,
         pos: vec3(100, 56, 0),
     });
-    const resourceBarWidth = 840;
+    const resourceBarWidth = CAMP_LAYOUT.sizes.resourceBar.width;
     scene.addUITransform(resourceBarIdx, resourceBarWidth, RESOURCE_BAR_HEIGHT);
 
     // 资源栏底图
@@ -467,16 +449,25 @@ function build(uuids) {
     }
 
     const bottomLeftIdx = scene.addNode({ name: 'BottomLeftSlots', parent: bottomHudIdx });
-    scene.addUITransform(bottomLeftIdx, 640, BOTTOM_HUD_HEIGHT);
+    scene.addUITransform(
+        bottomLeftIdx,
+        CAMP_LAYOUT.sizes.bottomLeftSlots.width,
+        CAMP_LAYOUT.sizes.bottomLeftSlots.height,
+    );
     scene.addWidget(bottomLeftIdx, ALIGN_TOP | ALIGN_BOTTOM | ALIGN_LEFT);
     const systemEntryNodes = [];
     SYSTEM_ENTRIES.forEach(([nodeName, label], index) => {
+        const entryConfig = CAMP_SYSTEM_ENTRIES[index];
         const entryIdx = scene.addNode({
             name: nodeName,
             parent: bottomLeftIdx,
-            pos: vec3(-260 + index * 130, 0, 0),
+            pos: vec3(entryConfig.position.x, entryConfig.position.y, 0),
         });
-        scene.addUITransform(entryIdx, 112, 96);
+        scene.addUITransform(
+            entryIdx,
+            CAMP_LAYOUT.sizes.systemEntry.width,
+            CAMP_LAYOUT.sizes.systemEntry.height,
+        );
         if (buildingFrame) {
             scene.attach(entryIdx, makeSprite(buildingFrame));
         }
@@ -488,21 +479,41 @@ function build(uuids) {
     });
 
     const bottomRightIdx = scene.addNode({ name: 'BottomRightCurrency', parent: bottomHudIdx });
-    scene.addUITransform(bottomRightIdx, 320, BOTTOM_HUD_HEIGHT);
+    scene.addUITransform(
+        bottomRightIdx,
+        CAMP_LAYOUT.sizes.bottomRightCurrency.width,
+        CAMP_LAYOUT.sizes.bottomRightCurrency.height,
+    );
     scene.addWidget(bottomRightIdx, ALIGN_TOP | ALIGN_BOTTOM | ALIGN_RIGHT);
     const currencyIconIdx = scene.addNode({
         name: 'ImmortalCoinIcon',
         parent: bottomRightIdx,
-        pos: vec3(-90, 0, 0),
+        pos: vec3(
+            CAMP_LAYOUT.positions.immortalCoinIcon.x,
+            CAMP_LAYOUT.positions.immortalCoinIcon.y,
+            0,
+        ),
     });
-    scene.addUITransform(currencyIconIdx, 64, 64);
+    scene.addUITransform(
+        currencyIconIdx,
+        CAMP_LAYOUT.sizes.immortalCoinIcon.width,
+        CAMP_LAYOUT.sizes.immortalCoinIcon.height,
+    );
     scene.attach(currencyIconIdx, makeLabel('石', 28, font, [218, 188, 96]));
     const currencyValueIdx = scene.addNode({
         name: 'ImmortalCoinValue',
         parent: bottomRightIdx,
-        pos: vec3(45, 0, 0),
+        pos: vec3(
+            CAMP_LAYOUT.positions.immortalCoinValue.x,
+            CAMP_LAYOUT.positions.immortalCoinValue.y,
+            0,
+        ),
     });
-    scene.addUITransform(currencyValueIdx, 180, 48);
+    scene.addUITransform(
+        currencyValueIdx,
+        CAMP_LAYOUT.sizes.immortalCoinValue.width,
+        CAMP_LAYOUT.sizes.immortalCoinValue.height,
+    );
     const immortalCoinLabelIdx = scene.attach(currencyValueIdx, makeLabel('--', 28, font));
 
     // 设置页页面壳；详细音频、画面和存档控制属于后续设置任务。

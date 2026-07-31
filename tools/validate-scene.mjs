@@ -1,7 +1,7 @@
 /**
- * 校验手写场景与工程配置的一致性（任务 #6b）。
+ * 校验 Cocos Creator 场景、Prefab 与工程配置的一致性（任务 #6b）。
  *
- * 存在原因：场景是脚本生成的，而脚本 UUID 来自 .meta。
+ * 存在原因：场景与 Prefab 引用的脚本 UUID 来自 .meta。
  * 若日后有人重新导入脚本导致 UUID 变化，场景里的组件引用会失效，
  * 症状是「场景能打开但组件全没了」——不报错，很难发现。此脚本把它变成硬失败。
  *
@@ -20,6 +20,38 @@ const CAMP_BACKGROUND_META_PATH = path.join(
     REPO_ROOT,
     'assets/bundles/camp/env_camp_panorama_bg.png.meta',
 );
+const CAMP_PREFABS = [
+    {
+        path: 'assets/bundles/camp/prefabs/CampPanorama.prefab',
+        root: 'WorldViewport',
+        presenter: 'assets/scripts/presentation/CampPanoramaController.ts',
+        requiredNodes: ['PanoramaContent', 'BackgroundLayer', 'BuildingLayer', 'ForegroundLayer'],
+    },
+    {
+        path: 'assets/bundles/camp/prefabs/CampTopHud.prefab',
+        root: 'TopHUD',
+        presenter: 'assets/scripts/presentation/CampHudPresenter.ts',
+        requiredNodes: ['ResourceBar', 'AvatarButton', 'MainTaskButton'],
+    },
+    {
+        path: 'assets/bundles/camp/prefabs/CampBottomHud.prefab',
+        root: 'BottomHUD',
+        presenter: 'assets/scripts/presentation/CampBottomHudPresenter.ts',
+        requiredNodes: ['BottomLeftSlots', 'BottomRightCurrency', 'SettingsButton'],
+    },
+    {
+        path: 'assets/bundles/camp/prefabs/CampNpcPage.prefab',
+        root: 'NpcPage',
+        presenter: 'assets/scripts/presentation/CampNpcPresenter.ts',
+        requiredNodes: ['NpcListPanel', 'NpcDialogPanel', 'CenShouyiButton'],
+    },
+    {
+        path: 'assets/bundles/camp/prefabs/CampSettingsPage.prefab',
+        root: 'SettingsPage',
+        presenter: 'assets/scripts/presentation/CampSettingsPresenter.ts',
+        requiredNodes: ['SettingsPanel', 'SettingsBackButton'],
+    },
+];
 
 const problems = [];
 const notes = [];
@@ -291,10 +323,12 @@ if (!existsSync(CAMP_SCENE_PATH)) {
     }
     expectParent('BottomLeftSlots', 'BottomHUD');
     expectParent('BottomRightCurrency', 'BottomHUD');
-    expectParent('SettingsPanel', 'SafeAreaRoot');
+    expectParent('SettingsPage', 'SafeAreaRoot');
+    expectParent('SettingsPanel', 'SettingsPage');
     expectParent('SettingsBackButton', 'SettingsPanel');
-    expectParent('NpcListPanel', 'SafeAreaRoot');
-    expectParent('NpcDialogPanel', 'SafeAreaRoot');
+    expectParent('NpcPage', 'SafeAreaRoot');
+    expectParent('NpcListPanel', 'NpcPage');
+    expectParent('NpcDialogPanel', 'NpcPage');
 
     if (findNodeIdx('BottomNav') >= 0) {
         problems.push('Camp.scene 仍包含旧 BottomNav，1.2.1 要求删除五主导航布局');
@@ -321,90 +355,26 @@ if (!existsSync(CAMP_SCENE_PATH)) {
         problems.push('Camp.scene ViewportAdapter.safeAreaRoot 未指向 SafeAreaRoot');
     }
 
-    const presenterType = compressUuid(
-        uuidFromMeta(
-            path.join(REPO_ROOT, 'assets/scripts/presentation/CampPresenter.ts.meta'),
-        ),
-    );
-    const presenter = camp.find((entry) => entry.__type__ === presenterType);
-    if (!presenter) {
-        problems.push('Camp.scene 未挂载 CampPresenter');
-    } else {
-        if ((presenter.buildingNodes ?? []).length !== 7) {
-            problems.push('CampPresenter.buildingNodes 必须保留七座成长建筑引用');
+    const expectPresenterOnNode = (scriptPath, nodeName) => {
+        const type = compressUuid(uuidFromMeta(path.join(REPO_ROOT, `${scriptPath}.meta`)));
+        const nodeIdx = findNodeIdx(nodeName);
+        const componentTypes = (camp[nodeIdx]?._components ?? []).map(
+            (ref) => camp[ref.__id__]?.__type__,
+        );
+        if (!componentTypes.includes(type)) {
+            problems.push(`Camp.scene ${nodeName} 未挂载 ${path.basename(scriptPath)}`);
         }
-        if ((presenter.badgeNodes ?? []).length !== 7) {
-            problems.push('CampPresenter.badgeNodes 必须与七座建筑一一对应');
-        }
-        if ((presenter.buildingStateLabels ?? []).length !== 7) {
-            problems.push('CampPresenter.buildingStateLabels 必须与七座建筑一一对应');
-        } else {
-            for (const ref of presenter.buildingStateLabels) {
-                if (camp[ref?.__id__]?.__type__ !== 'cc.Label') {
-                    problems.push('CampPresenter.buildingStateLabels 必须全部指向 cc.Label');
-                    break;
-                }
-            }
-        }
-        if ((presenter.bottomNavNodes ?? []).length !== 0) {
-            problems.push('CampPresenter.bottomNavNodes 应为空，旧五导航不得继续接线');
-        }
-        for (const [property, expectedName] of [
-            ['avatarButton', 'AvatarButton'],
-            ['mainTaskButton', 'MainTaskButton'],
-            ['panoramaViewport', 'WorldViewport'],
-            ['panoramaContent', 'PanoramaContent'],
-            ['expeditionButton', 'ExpeditionEntry'],
-            ['npcListPanel', 'NpcListPanel'],
-            ['npcDialogPanel', 'NpcDialogPanel'],
-            ['cenShouyiButton', 'CenShouyiButton'],
-            ['npcListBackButton', 'NpcListBackButton'],
-            ['npcDialogBackButton', 'NpcDialogBackButton'],
-            ['npcDialogNextButton', 'NpcDialogNextButton'],
-            ['settingsPanel', 'SettingsPanel'],
-            ['settingsBackButton', 'SettingsBackButton'],
-        ]) {
-            const target = camp[presenter[property]?.__id__];
-            if (target?.__type__ !== 'cc.Node' || target._name !== expectedName) {
-                problems.push(`CampPresenter.${property} 未指向 ${expectedName}`);
-            }
-        }
-        const mainTaskLabel = camp[presenter.mainTaskLabel?.__id__];
-        if (mainTaskLabel?.__type__ !== 'cc.Label') {
-            problems.push('CampPresenter.mainTaskLabel 未指向 cc.Label');
-        }
-        for (const property of [
-            'npcNameLabel',
-            'npcRoleLabel',
-            'npcStatusLabel',
-            'npcDialogTextLabel',
-            'npcDialogNextLabel',
-        ]) {
-            if (camp[presenter[property]?.__id__]?.__type__ !== 'cc.Label') {
-                problems.push(`CampPresenter.${property} 未指向 cc.Label`);
-            }
-        }
-        const expectedSystemEntries = [
-            'SettingsButton',
-            'AchievementsButton',
-            'LeaderboardButton',
-            'MailButton',
-            'DailyProgressButton',
-        ];
-        if ((presenter.systemEntryNodes ?? []).length !== expectedSystemEntries.length) {
-            problems.push('CampPresenter.systemEntryNodes 必须按顺序接线五个底部系统入口');
-        } else {
-            presenter.systemEntryNodes.forEach((ref, index) => {
-                if (camp[ref?.__id__]?._name !== expectedSystemEntries[index]) {
-                    problems.push(
-                        `CampPresenter.systemEntryNodes[${index}] 应指向 ${expectedSystemEntries[index]}`,
-                    );
-                }
-            });
-        }
-        if (camp[presenter.immortalCoinLabel?.__id__]?.__type__ !== 'cc.Label') {
-            problems.push('CampPresenter.immortalCoinLabel 必须指向右下灵石余额 Label');
-        }
+    };
+
+    for (const [scriptPath, nodeName] of [
+        ['assets/scripts/presentation/CampPanoramaController.ts', 'WorldViewport'],
+        ['assets/scripts/presentation/CampBuildingPresenter.ts', 'BuildingLayer'],
+        ['assets/scripts/presentation/CampHudPresenter.ts', 'TopHUD'],
+        ['assets/scripts/presentation/CampBottomHudPresenter.ts', 'BottomHUD'],
+        ['assets/scripts/presentation/CampNpcPresenter.ts', 'NpcPage'],
+        ['assets/scripts/presentation/CampSettingsPresenter.ts', 'SettingsPage'],
+    ]) {
+        expectPresenterOnNode(scriptPath, nodeName);
     }
 
     const nodeTransform = (nodeIdx) =>
@@ -477,54 +447,6 @@ if (!existsSync(CAMP_SCENE_PATH)) {
         }
     }
 
-    const expectedPanoramaPositions = {
-        SacredSiteAnchor: [-1390, 260],
-        ChurchAnchor: [-1390, -220],
-        huan_hun_tan: [-1050, -220],
-        bai_bao_ku: [-1050, 260],
-        zhao_xian_tai: [-350, 0],
-        yi_shi_dian: [0, 300],
-        ExpeditionEntry: [0, -330],
-        jiao_yi_hang: [350, 0],
-        lian_qi_fang: [552, -250],
-        ArenaAnchor: [552, 300],
-        ling_pu: [1050, 80],
-        RelicAnchor: [1390, -220],
-    };
-    for (const [nodeName, [expectedX, expectedY]] of Object.entries(
-        expectedPanoramaPositions,
-    )) {
-        const node = camp[findNodeIdx(nodeName)];
-        if (node?._lpos?.x !== expectedX || node?._lpos?.y !== expectedY) {
-            problems.push(
-                `Camp.scene ${nodeName} 的位置应为 (${expectedX}, ${expectedY})`,
-            );
-        }
-    }
-
-    for (const buildingName of [
-        'yi_shi_dian',
-        'ling_pu',
-        'zhao_xian_tai',
-        'bai_bao_ku',
-        'lian_qi_fang',
-        'jiao_yi_hang',
-        'huan_hun_tan',
-        'ArenaAnchor',
-        'RelicAnchor',
-        'SacredSiteAnchor',
-        'ChurchAnchor',
-    ]) {
-        const size = nodeTransform(findNodeIdx(buildingName))?._contentSize;
-        if (size?.width !== 240 || size?.height !== 180) {
-            problems.push(`Camp.scene ${buildingName} 尺寸必须为 240×180`);
-        }
-    }
-    const expeditionSize = nodeTransform(findNodeIdx('ExpeditionEntry'))?._contentSize;
-    if (expeditionSize?.width !== 280 || expeditionSize?.height !== 150) {
-        problems.push('Camp.scene ExpeditionEntry 尺寸必须为 280×150');
-    }
-
     for (const anchorName of [
         'ArenaAnchor',
         'RelicAnchor',
@@ -560,25 +482,25 @@ if (!existsSync(CAMP_SCENE_PATH)) {
 
     const bottomLeftIdx = findNodeIdx('BottomLeftSlots');
     const expectedBottomEntries = [
-        ['SettingsButton', -260],
-        ['AchievementsButton', -130],
-        ['LeaderboardButton', 0],
-        ['MailButton', 130],
-        ['DailyProgressButton', 260],
+        'SettingsButton',
+        'AchievementsButton',
+        'LeaderboardButton',
+        'MailButton',
+        'DailyProgressButton',
     ];
     const bottomEntryNames = (camp[bottomLeftIdx]?._children ?? []).map(
         (ref) => camp[ref.__id__]?._name,
     );
     if (
         JSON.stringify(bottomEntryNames) !==
-        JSON.stringify(expectedBottomEntries.map(([name]) => name))
+        JSON.stringify(expectedBottomEntries)
     ) {
         problems.push('Camp.scene 底部左侧入口顺序必须为设置、成就、排行榜、邮件、日常进度');
     }
-    for (const [name, expectedX] of expectedBottomEntries) {
+    for (const name of expectedBottomEntries) {
         const idx = findNodeIdx(name);
-        if (camp[idx]?._parent?.__id__ !== bottomLeftIdx || camp[idx]?._lpos?.x !== expectedX) {
-            problems.push(`Camp.scene ${name} 底部位置不正确`);
+        if (camp[idx]?._parent?.__id__ !== bottomLeftIdx) {
+            problems.push(`Camp.scene ${name} 必须位于 BottomLeftSlots`);
         }
         if (!componentTypesForNode(idx).includes('cc.Button')) {
             problems.push(`Camp.scene ${name} 必须可点击`);
@@ -665,6 +587,93 @@ if (!existsSync(CAMP_SCENE_PATH)) {
     }
 
     notes.push(`Camp.scene 三层骨架 ${camp.length} 条目`);
+}
+
+for (const spec of CAMP_PREFABS) {
+    const fullPath = path.join(REPO_ROOT, spec.path);
+    const label = path.basename(spec.path);
+    if (!existsSync(fullPath)) {
+        problems.push(`缺少营地 Prefab：${spec.path}`);
+        continue;
+    }
+    if (!existsSync(`${fullPath}.meta`)) {
+        problems.push(`${spec.path} 缺少 Cocos Creator 生成的 .meta`);
+    }
+
+    const prefab = JSON.parse(readFileSync(fullPath, 'utf8'));
+    const prefabAsset = prefab.find((entry) => entry.__type__ === 'cc.Prefab');
+    const rootIdx = prefab.findIndex(
+        (entry) => entry.__type__ === 'cc.Node' && entry._name === spec.root,
+    );
+    if (rootIdx < 0 || prefabAsset?.data?.__id__ !== rootIdx) {
+        problems.push(`${label} 根节点必须为 ${spec.root}`);
+        continue;
+    }
+
+    for (const nodeName of spec.requiredNodes) {
+        if (!prefab.some((entry) => entry.__type__ === 'cc.Node' && entry._name === nodeName)) {
+            problems.push(`${label} 缺少 ${nodeName} 节点`);
+        }
+    }
+
+    const presenterType = compressUuid(
+        uuidFromMeta(path.join(REPO_ROOT, `${spec.presenter}.meta`)),
+    );
+    const rootComponentTypes = (prefab[rootIdx]._components ?? []).map(
+        (ref) => prefab[ref.__id__]?.__type__,
+    );
+    if (!rootComponentTypes.includes(presenterType)) {
+        problems.push(`${label} 根节点未挂载 ${path.basename(spec.presenter)}`);
+    }
+
+    const prefabCustomTypes = new Set(
+        prefab
+            .map((entry) => entry.__type__)
+            .filter((type) => typeof type === 'string' && !type.startsWith('cc.')),
+    );
+    for (const compressed of prefabCustomTypes) {
+        if (!scriptIndex.has(compressed)) {
+            problems.push(`${label} 引用了未知脚本组件 ${compressed}`);
+        }
+    }
+
+    prefab.forEach((entry, index) => {
+        const nodeRef = entry?.node?.__id__;
+        if (typeof nodeRef !== 'number') {
+            return;
+        }
+        const node = prefab[nodeRef];
+        if (
+            node?.__type__ !== 'cc.Node' ||
+            !(node._components ?? []).some((ref) => ref.__id__ === index)
+        ) {
+            problems.push(`${label} [${index}] ${entry.__type__} 未被节点双向登记`);
+        }
+    });
+
+    for (const panelName of ['NpcListPanel', 'NpcDialogPanel', 'SettingsPanel']) {
+        const panel = prefab.find(
+            (entry) => entry.__type__ === 'cc.Node' && entry._name === panelName,
+        );
+        if (panel && panel._active !== false) {
+            problems.push(`${label} ${panelName} 默认必须隐藏`);
+        }
+    }
+
+    for (const button of prefab.filter((entry) => entry.__type__ === 'cc.Button')) {
+        const node = prefab[button.node?.__id__];
+        const transform = (node?._components ?? [])
+            .map((ref) => prefab[ref.__id__])
+            .find((component) => component?.__type__ === 'cc.UITransform');
+        const size = transform?._contentSize;
+        if (!size || size.width < 48 || size.height < 48) {
+            problems.push(
+                `${label} 可点击节点 ${node?._name ?? '(未知)'} 的触控区小于 48×48dp`,
+            );
+        }
+    }
+
+    notes.push(`${label} ${prefab.length} 条目`);
 }
 
 if (problems.length > 0) {
