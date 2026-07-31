@@ -507,6 +507,49 @@ if (!existsSync(CAMP_SCENE_PATH)) {
         }
     }
 
+    /**
+     * 建筑名必须完整位于建筑框下方，状态文字再位于名称下方。
+     * 这里只校验相对关系，不锁死具体坐标，允许美术按每张贴图的透明边界微调。
+     */
+    for (const buildingId of BUILDING_IDS) {
+        const buildingIdx = findNodeIdx(buildingId);
+        if (buildingIdx < 0) {
+            continue;
+        }
+        const childIdx = (childName) =>
+            (camp[buildingIdx]._children ?? [])
+                .map((ref) => ref.__id__)
+                .find((idx) => camp[idx]?._name === childName) ?? -1;
+        const nameIdx = childIdx('Name');
+        const stateIdx = childIdx('State');
+        if (nameIdx < 0) {
+            problems.push(`Camp.scene ${buildingId} 缺少建筑名称 Name`);
+            continue;
+        }
+        if (stateIdx < 0) {
+            problems.push(`Camp.scene ${buildingId} 缺少状态文字 State`);
+            continue;
+        }
+
+        const buildingTransform = nodeTransform(buildingIdx);
+        const nameTransform = nodeTransform(nameIdx);
+        const stateTransform = nodeTransform(stateIdx);
+        if (!buildingTransform || !nameTransform || !stateTransform) {
+            continue;
+        }
+
+        const buildingBottom = -buildingTransform._contentSize.height / 2;
+        const nameTop = camp[nameIdx]._lpos.y + nameTransform._contentSize.height / 2;
+        const nameBottom = camp[nameIdx]._lpos.y - nameTransform._contentSize.height / 2;
+        const stateTop = camp[stateIdx]._lpos.y + stateTransform._contentSize.height / 2;
+        if (nameTop > buildingBottom) {
+            problems.push(`Camp.scene ${buildingId}/Name 必须完整位于建筑下方`);
+        }
+        if (stateTop > nameBottom) {
+            problems.push(`Camp.scene ${buildingId}/State 必须位于建筑名称下方且不能重叠`);
+        }
+    }
+
     for (const anchorName of CAMP_CLOSED_ANCHOR_NAMES) {
         const anchorIdx = findNodeIdx(anchorName);
         const componentTypes = componentTypesForNode(anchorIdx);
@@ -617,11 +660,21 @@ if (!existsSync(CAMP_SCENE_PATH)) {
         const nameLabel = (nameNode?._components ?? [])
             .map((ref) => camp[ref.__id__])
             .find((component) => component?.__type__ === 'cc.Label');
+        const nameSprite = (nameNode?._components ?? [])
+            .map((ref) => camp[ref.__id__])
+            .find((component) => component?.__type__ === 'cc.Sprite');
         const valueLabel = (valueNode?._components ?? [])
             .map((ref) => camp[ref.__id__])
             .find((component) => component?.__type__ === 'cc.Label');
-        if (nameLabel?._string !== displayName) {
-            problems.push(`Camp.scene ${resourceNodeName} 显示名应为${displayName}`);
+        // 灰盒阶段用中文 Label，正式 HUD 到位后同一 Name 节点改为资源图标 Sprite。
+        // 两种表现都保留节点路径，Presenter 与 Prefab 契约无需随美术阶段漂移。
+        if (
+            nameLabel?._string !== displayName &&
+            !nameSprite?._spriteFrame?.__uuid__
+        ) {
+            problems.push(
+                `Camp.scene ${resourceNodeName} 应显示名称“${displayName}”或正式资源图标`,
+            );
         }
         if (valueLabel?._string !== '--') {
             problems.push(`Camp.scene ${resourceNodeName} 默认值应为 --，不得写假数值`);

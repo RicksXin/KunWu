@@ -12,6 +12,7 @@
  *   pnpm edit:camp --size yi_shi_dian=720x480 --pos yi_shi_dian=0,490
  *   pnpm edit:camp --remove-component TopHUD:cc.Sprite
  *   pnpm edit:camp --sprite ling_pu=env_camp_building_ling_pu
+ *   pnpm edit:camp --label-to-sprite AvatarButton/Label=portrait_player_placeholder
  *   pnpm edit:camp --active NpcListPanel=false --label MainTaskButton/Objective=主线：--
  *   pnpm edit:camp --dry-run --size yi_shi_dian=800x533
  *   pnpm edit:camp --file assets/bundles/camp/prefabs/CampTopHud.prefab --size ...
@@ -256,6 +257,38 @@ const HANDLERS = {
         const uuid = findSpriteFrameUuid(imageName);
         component._spriteFrame = { __uuid__: uuid, __expectedType__: 'cc.SpriteFrame' };
         changes.push(`${selector} 贴图 -> ${imageName}`);
+    },
+
+    /**
+     * 把现有 Label 组件原位转换为 Sprite。
+     *
+     * HUD 灰盒最初用 Label 充当图标占位。正式图到位后复用同一个组件条目，
+     * 可以保留 Cocos 已分配的组件 _id 和节点引用，不新增节点、不生成或伪造 UUID。
+     */
+    '--label-to-sprite': (value) => {
+        const [selector, imageName] = splitOnce(value, '--label-to-sprite');
+        const nodeIdx = findNode(selector);
+        const { idx, component: label } = requireComponent(nodeIdx, 'cc.Label', selector);
+        const template = entries.find((entry) => entry?.__type__ === 'cc.Sprite');
+        if (!template) {
+            fail('场景中没有可复用的 cc.Sprite 组件模板');
+        }
+        const uuid = findSpriteFrameUuid(imageName);
+        entries[idx] = {
+            ...structuredClone(template),
+            _name: label._name,
+            _objFlags: label._objFlags,
+            __editorExtras__: structuredClone(label.__editorExtras__ ?? {}),
+            node: { __id__: nodeIdx },
+            _enabled: label._enabled,
+            __prefab: label.__prefab,
+            _color: { __type__: 'cc.Color', r: 255, g: 255, b: 255, a: 255 },
+            _spriteFrame: { __uuid__: uuid, __expectedType__: 'cc.SpriteFrame' },
+            _type: 0,
+            _sizeMode: 0,
+            _id: label._id,
+        };
+        changes.push(`${selector} Label 占位 -> Sprite ${imageName}`);
     },
 
     '--remove-component': (value) => {

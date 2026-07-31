@@ -277,15 +277,22 @@ function build(uuids) {
         // 实现 LOCKED/DISABLED 不可点（PRD-01 §5）
         scene.attach(nodeIdx, makeButton());
 
-        // 建筑名。文案 Key 见 localization/zh_cn.json 的 building.*
-        const labelNodeIdx = scene.addNode({ name: 'Name', parent: nodeIdx });
+        // 建筑名放在建筑下方，状态文字再排在名称下方；不能让两者压住贴图主体。
+        // 这里使用相对建筑高度的偏移，灰盒尺寸以后调整时仍保持正确层级。
+        const buildingBottom = -CAMP_LAYOUT.sizes.building.height / 2;
+        const nameY = buildingBottom - 30;
+        const labelNodeIdx = scene.addNode({
+            name: 'Name',
+            parent: nodeIdx,
+            pos: vec3(0, nameY, 0),
+        });
         scene.addUITransform(labelNodeIdx, 216, 48);
         scene.attach(labelNodeIdx, makeLabel(BUILDING_NAMES[buildingId], 28, font));
 
         const stateNodeIdx = scene.addNode({
             name: 'State',
             parent: nodeIdx,
-            pos: vec3(0, -64, 0),
+            pos: vec3(0, nameY - 50, 0),
         });
         scene.addUITransform(stateNodeIdx, 260, 36);
         scene.attach(stateNodeIdx, makeLabel('未加载', 20, font, [125, 118, 112]));
