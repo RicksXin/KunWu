@@ -30,6 +30,8 @@ import {
     campCurrencyBalances,
 } from '../domain/CampBottomHud';
 import type { CampSystemEntryId } from '../domain/CampBottomHud';
+import { CampExpeditionPresenter } from './CampExpeditionPresenter';
+import { applyCampBuildingSprite } from './CampViewUtils';
 
 const { ccclass, property } = _decorator;
 
@@ -292,6 +294,7 @@ export class CampPresenter extends Component {
             if (button) {
                 button.interactable = true;
             }
+            applyCampBuildingSprite(node, buildingId, states[buildingId]);
             const stateLabel = this.buildingStateLabels[index];
             if (stateLabel) {
                 stateLabel.string = BUILDING_STATE_NAMES[states[buildingId]];
@@ -337,6 +340,11 @@ export class CampPresenter extends Component {
             return buildingId;
         }
 
+        if (buildingId === 'ling_pu') {
+            app.events.emit('camp.lingPuRequested', {});
+            return buildingId;
+        }
+
         app.showFeedback(`${BUILDING_NAMES[buildingId]}页面尚未开放`);
         return buildingId;
     }
@@ -347,7 +355,7 @@ export class CampPresenter extends Component {
         }
         const app = AppRoot.instance;
         app.events.emit('expedition.requested', {});
-        app.showFeedback('出征准备尚未开放');
+        CampExpeditionPresenter.showFrom(this);
     }
 
     openNpcList(): void {
@@ -730,5 +738,5 @@ const NAV_FEEDBACK: Readonly<Record<BottomNavItem, string>> = {
     heroes: '修士页面尚未开放',
     inventory: '背包页面尚未开放',
     quests: '任务页面尚未开放',
-    expedition: '出征准备尚未开放',
+    expedition: '请点击营地传送阵打开出征准备面板',
 };

@@ -6,7 +6,7 @@
  *   - 无前排、后排、距离和站位承伤
  *   - 死亡角色不能上阵
  *   - 同一角色不能出现在多个活动队伍
- *   - MVP 至少保存 3 套队伍预设
+ *   - 新档初始只开放 1 支队伍，后续队伍由出征准备面板解锁
  *
  * 「无站位」意味着槽位只决定 UI 顺序，不参与任何结算——
  * 这条必须在类型层面就守住，否则日后很容易冒出"前排承伤"这类逻辑。
@@ -14,8 +14,8 @@
 
 import { MAX_PARTY_SIZE } from './CombatTypes';
 
-/** MVP 至少保存 3 套预设（PRD-04 §2）。 */
-export const MIN_PARTY_PRESETS = 3;
+/** 新档与任何合法存档都必须至少保留第 1 队（PRD-04 §2）。 */
+export const MIN_PARTY_PRESETS = 1;
 
 /**
  * 队伍槽位。索引仅表示显示顺序，不含战术含义——
@@ -204,7 +204,7 @@ export function validateForExpedition(
     return { isValid: problems.length === 0, problems };
 }
 
-/** 校验预设集合是否满足 MVP 要求（PRD-04 §2：至少 3 套）。 */
+/** 校验预设集合至少保留第 1 队；可解锁上限由外置出征配置决定。 */
 export function validatePresets(presets: readonly PartyPreset[]): PartyValidation {
     const problems: string[] = [];
 

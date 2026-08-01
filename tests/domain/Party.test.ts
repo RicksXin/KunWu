@@ -269,21 +269,21 @@ describe('出征校验', () => {
     });
 });
 
-describe('预设（PRD-04 §2：至少 3 套）', () => {
-    test('至少 3 套', () => {
-        assert.equal(MIN_PARTY_PRESETS, 3);
+describe('预设（PRD-04 §2：初始 1 队）', () => {
+    test('至少保留第 1 队', () => {
+        assert.equal(MIN_PARTY_PRESETS, 1);
     });
 
-    test('3 套通过校验', () => {
-        const presets = ['p1', 'p2', 'p3'].map((id) => createPreset(id, id));
+    test('1 套通过校验', () => {
+        const presets = [createPreset('p1', '1队')];
         assert.equal(validatePresets(presets).isValid, true);
     });
 
-    test('少于 3 套被拒', () => {
-        const presets = ['p1', 'p2'].map((id) => createPreset(id, id));
+    test('没有任何队伍被拒', () => {
+        const presets: ReturnType<typeof createPreset>[] = [];
         const result = validatePresets(presets);
         assert.equal(result.isValid, false);
-        assert.ok(result.problems.some((p) => /至少 3 套/.test(p)));
+        assert.ok(result.problems.some((p) => /至少 1 套/.test(p)));
     });
 
     test('预设 ID 重复被拒', () => {

@@ -4,18 +4,21 @@ import { BUILDING_IDS } from '../../assets/scripts/domain/HallBadges.ts';
 import { CAMP_SYSTEM_ENTRY_IDS } from '../../assets/scripts/domain/CampBottomHud.ts';
 import {
     CAMP_MODULES,
+    CAMP_LING_PU_RESOURCE_ROW_IDS,
+    CAMP_LING_PU_ROW_CHILD_PATHS,
     CAMP_PREFAB_PATHS,
     CAMP_SYSTEM_ENTRY_NODE_NAMES,
     campBuildingPath,
+    campLingPuResourceRowPath,
     campModule,
     campSystemEntryPath,
 } from '../../assets/scripts/domain/CampSceneContract.ts';
 
 describe('CampSceneContract', () => {
-    it('六个模块的 id 唯一', () => {
+    it('七个模块的 id 唯一', () => {
         const ids = CAMP_MODULES.map((module) => module.id);
         assert.equal(new Set(ids).size, ids.length);
-        assert.equal(ids.length, 6);
+        assert.equal(ids.length, 7);
     });
 
     it('每个模块都声明了 Presenter 与至少一条路径', () => {
@@ -75,6 +78,25 @@ describe('CampSceneContract', () => {
         }
         const nodeNames = CAMP_SYSTEM_ENTRY_IDS.map((id) => CAMP_SYSTEM_ENTRY_NODE_NAMES[id]);
         assert.equal(new Set(nodeNames).size, nodeNames.length, '入口节点名重复');
+    });
+
+    it('灵圃模块声明五条可编辑资源栏及其全部内部节点', () => {
+        const paths = new Set(campModule('lingPuPage').presenterPaths);
+        assert.equal(CAMP_LING_PU_RESOURCE_ROW_IDS.length, 5);
+        for (const resourceId of CAMP_LING_PU_RESOURCE_ROW_IDS) {
+            assert.ok(paths.has(campLingPuResourceRowPath(resourceId)));
+            for (const child of Object.keys(CAMP_LING_PU_ROW_CHILD_PATHS)) {
+                assert.ok(
+                    paths.has(
+                        campLingPuResourceRowPath(
+                            resourceId,
+                            child as keyof typeof CAMP_LING_PU_ROW_CHILD_PATHS,
+                        ),
+                    ),
+                    `缺少 ${resourceId}/${child}`,
+                );
+            }
+        }
     });
 
     it('campModule 对未知 id 抛错，避免静默返回 undefined', () => {

@@ -9,6 +9,8 @@
         "typecheck": "node tools/typecheck.mjs",
         "check": "pnpm typecheck && pnpm test && pnpm validate:data && pnpm validate:scene",
         "validate:data": "node --experimental-strip-types tools/validate-data.mjs",
+        "balance:xlsx": "node --experimental-strip-types tools/build-balance-workbook.mjs",
+        "balance:print": "node --experimental-strip-types tools/print-balance.mjs",
         "validate:scene": "node --experimental-strip-types tools/validate-scene.mjs",
         "edit:camp": "node tools/edit-camp-scene.mjs",
         "gen:scene": "node tools/gen-boot-scene.mjs",

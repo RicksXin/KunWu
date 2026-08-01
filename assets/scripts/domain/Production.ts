@@ -57,6 +57,9 @@ export type WorkerAssignment = Readonly<Record<ProductionJob, number>>;
 /** 结算产出，各资源增量。 */
 export type ProductionYield = Readonly<Record<ProductionJob, number>>;
 
+/** 资源存储上限；未提供的岗位视为当前阶段不设上限。 */
+export type ProductionStorageCaps = Readonly<Partial<Record<ProductionJob, number>>>;
+
 export interface SettlementInput {
     readonly assignment: WorkerAssignment;
     /** 有效秒数，由 TimeService.computeSettlementWindow 给出。 */
@@ -235,13 +238,25 @@ export function settleProduction(input: SettlementInput): SettlementOutput {
 export function applyYields(
     stock: Readonly<Record<ProductionJob, number>>,
     output: SettlementOutput,
+    storageCaps: ProductionStorageCaps = {},
 ): Record<ProductionJob, number> {
     const next = emptyYield();
     for (const job of PRODUCTION_JOBS) {
         const base = stock[job] ?? 0;
         const delta = job === 'spiritGrain' ? output.netGrainChange : output.yields[job];
         // clamp 到 0：停工逻辑本应保证不为负，这里是最后一道防线
-        next[job] = Math.max(0, base + delta);
+        const nonNegative = Math.max(0, base + delta);
+        const cap = storageCaps[job];
+        if (cap === undefined) {
+            next[job] = nonNegative;
+            continue;
+        }
+        if (!Number.isSafeInteger(cap) || cap < 0) {
+            throw new Error(`资源 ${job} 的存储上限必须为非负安全整数，收到 ${cap}`);
+        }
+        // 旧档可能在引入容量字段前已经超过新上限：不能借迁移或一次结算没收资源。
+        // 仅限制新增部分，消费仍可正常把超额库存降下来。
+        next[job] = delta > 0 ? Math.max(base, Math.min(cap, nonNegative)) : nonNegative;
     }
     return next;
 }

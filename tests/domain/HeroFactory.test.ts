@@ -8,7 +8,13 @@ import {
     toSkillRuntime,
     buildSkillTable,
 } from 'db://assets/scripts/domain/HeroFactory';
-import type { CareerData, SkillData, HeroData } from 'db://assets/scripts/domain/HeroFactory';
+import type {
+    CareerData,
+    SkillData,
+    HeroData,
+    HeroBalanceContext,
+} from 'db://assets/scripts/domain/HeroFactory';
+import { parseBalanceTables } from 'db://assets/scripts/domain/BalanceTables';
 import { ATTRIBUTE_KEYS } from 'db://assets/scripts/domain/Attributes';
 import { SKILL_TARGET_TYPES, isTauntable } from 'db://assets/scripts/domain/SkillTargeting';
 import { MAX_PARTY_SIZE } from 'db://assets/scripts/domain/CombatTypes';
@@ -37,6 +43,29 @@ const startingHeroes = loadDir<HeroData>('assets/data/heroes');
 
 const careerMap = new Map(careers.map((c) => [c.id, c]));
 const skillMap = new Map(skills.map((s) => [s.id, s]));
+
+/**
+ * 仓库内的平衡表。测试一律显式传入，不依赖各模块的兜底默认值——
+ * 兜底路径下成长恒为 0，测出来的「属性增长」会是假的通过。
+ */
+const balance: HeroBalanceContext = (() => {
+    const read = (name: string) =>
+        JSON.parse(
+            readFileSync(path.join(REPO_ROOT, 'assets/data/balance', `${name}.json`), 'utf8'),
+        );
+    const tables = parseBalanceTables({
+        growth_rates: read('growth_rates'),
+        grade_multipliers: read('grade_multipliers'),
+        combat_constants: read('combat_constants'),
+        production_rates: read('production_rates'),
+        realm_ranges: read('realm_ranges'),
+    });
+    return {
+        growthRates: tables.growthRates,
+        gradeMultipliers: tables.gradeMultipliers,
+        constitutionHpFactor: tables.combat.constitutionHpFactor,
+    };
+})();
 
 describe('职业数据表（策划案 §7.3）', () => {
     test('六个初始职业', () => {
@@ -245,7 +274,7 @@ describe('四名初始修士（PRD-04 §2）', () => {
 
     test('全部可实例化', () => {
         for (const hero of startingHeroes) {
-            const instance = instantiateHero(hero, careerMap);
+            const instance = instantiateHero(hero, careerMap, balance);
             assert.ok(instance.maxHp > 0);
             assert.equal(instance.skillIds.length, 3);
         }
@@ -261,28 +290,88 @@ describe('实例化', () => {
         level: 1,
     };
 
-    test('1 级时最终值等于基础值', () => {
-        const instance = instantiateHero(hero, careerMap);
+    test('1 级时成长为 0，最终值只来自品级缩放后的基础值', () => {
+        const instance = instantiateHero(hero, careerMap, balance);
+        const { base, growth, final } = instance.attributes;
+        for (const key of ATTRIBUTE_KEYS) {
+            assert.equal(growth[key], 0, `${key} 在 1 级的成长应为 0`);
+        }
+        assert.equal(final.strength, base.strength);
+    });
+
+    test('1 级基础值已按品级缩放，D 品才等于职业表裸值', () => {
+        // PRD-03 §3：品级影响初始七维。若 C 品 1 级仍等于裸值，
+        // 说明 basePercent 没生效或被 floor 抹掉（Docs/13 §3.3）
         const career = careerMap.get('wu_xiu')!;
-        // 成长在 1 级为 0，便于策划核对数据表
-        assert.equal(instance.attributes.final.strength, career.baseAttributes.strength);
+        const dGrade = instantiateHero({ ...hero, grade: 'D' }, careerMap, balance);
+        assert.equal(dGrade.attributes.base.strength, career.baseAttributes.strength);
+
+        const cGrade = instantiateHero(hero, careerMap, balance);
+        assert.ok(
+            cGrade.attributes.base.strength > career.baseAttributes.strength,
+            `C 品 1 级 strength ${cGrade.attributes.base.strength} 未高于裸值 ${career.baseAttributes.strength}`,
+        );
+    });
+
+    test('七维全部随等级成长，无一冻结', () => {
+        // 旧结构只长主维与副维，法修等职业的生命上限从 1 级到 60 级完全不变
+        const lv1 = instantiateHero(hero, careerMap, balance);
+        const lv60 = instantiateHero({ ...hero, level: 60 }, careerMap, balance);
+        for (const key of ATTRIBUTE_KEYS) {
+            assert.ok(
+                lv60.attributes.final[key] > lv1.attributes.final[key],
+                `${key} 从 1 级到 60 级没有变化，该维被冻结`,
+            );
+        }
+    });
+
+    test('全部六个职业的生命上限都随等级增长', () => {
+        // 问题的实际症状：法修/医修/潜修/符修的 baseHp 与 constitution 都不长，
+        // maxHp 从 Lv1 到 Lv60 恒定不变
+        for (const career of careers) {
+            const lv1 = instantiateHero(
+                { ...hero, careerId: career.id, level: 1 },
+                careerMap,
+                balance,
+            );
+            const lv60 = instantiateHero(
+                { ...hero, careerId: career.id, level: 60 },
+                careerMap,
+                balance,
+            );
+            assert.ok(
+                lv60.maxHp > lv1.maxHp * 2,
+                `${career.id} 的生命上限 ${lv1.maxHp} → ${lv60.maxHp} 增长不足 2 倍`,
+            );
+        }
+    });
+
+    test('缺成长率配置时抛错，而非静默按零成长处理', () => {
+        assert.throws(
+            () =>
+                instantiateHero(hero, careerMap, {
+                    ...balance,
+                    growthRates: {},
+                }),
+            /缺少成长率配置/,
+        );
     });
 
     test('等级提升后属性增长', () => {
-        const lv1 = instantiateHero(hero, careerMap);
-        const lv20 = instantiateHero({ ...hero, level: 20 }, careerMap);
+        const lv1 = instantiateHero(hero, careerMap, balance);
+        const lv20 = instantiateHero({ ...hero, level: 20 }, careerMap, balance);
         assert.ok(lv20.attributes.final.strength > lv1.attributes.final.strength);
         assert.ok(lv20.maxHp > lv1.maxHp);
     });
 
     test('品级越高属性越强', () => {
-        const low = instantiateHero({ ...hero, grade: 'D', level: 20 }, careerMap);
-        const high = instantiateHero({ ...hero, grade: 'SSS', level: 20 }, careerMap);
+        const low = instantiateHero({ ...hero, grade: 'D', level: 20 }, careerMap, balance);
+        const high = instantiateHero({ ...hero, grade: 'SSS', level: 20 }, careerMap, balance);
         assert.ok(high.attributes.final.strength > low.attributes.final.strength);
     });
 
     test('属性拆解可查（PRD-03 §8）', () => {
-        const instance = instantiateHero({ ...hero, level: 20 }, careerMap);
+        const instance = instantiateHero({ ...hero, level: 20 }, careerMap, balance);
         const { base, growth, final } = instance.attributes;
         // 五个来源都要能单独展示
         assert.ok(base.strength > 0);
@@ -294,8 +383,9 @@ describe('实例化', () => {
         const withGear = instantiateHero(
             { ...hero, equipmentBonus: { ...ZERO_ATTRS, strength: 50 } },
             careerMap,
+            balance,
         );
-        const without = instantiateHero(hero, careerMap);
+        const without = instantiateHero(hero, careerMap, balance);
         assert.equal(
             withGear.attributes.final.strength - without.attributes.final.strength,
             50,
@@ -305,39 +395,39 @@ describe('实例化', () => {
     test('未知职业抛错而非静默跳过', () => {
         // 静默会让玩家发现角色凭空消失，比报错更难查
         assert.throws(
-            () => instantiateHero({ ...hero, careerId: 'ghost' }, careerMap),
+            () => instantiateHero({ ...hero, careerId: 'ghost' }, careerMap, balance),
             /不存在于数据表/,
         );
     });
 
     test('等级越界抛错', () => {
-        assert.throws(() => instantiateHero({ ...hero, level: 0 }, careerMap), /超出/);
-        assert.throws(() => instantiateHero({ ...hero, level: 999 }, careerMap), /超出/);
+        assert.throws(() => instantiateHero({ ...hero, level: 0 }, careerMap, balance), /超出/);
+        assert.throws(() => instantiateHero({ ...hero, level: 999 }, careerMap, balance), /超出/);
     });
 });
 
 describe('转战斗单位', () => {
     test('满血入场', () => {
-        const instance = instantiateHero(startingHeroes[0]!, careerMap);
+        const instance = instantiateHero(startingHeroes[0]!, careerMap, balance);
         const unit = toCombatUnit(instance, 1);
         assert.equal(unit.currentHp, instance.maxHp);
         assert.equal(unit.isDead, false);
     });
 
     test('可指定当前血量（带伤出征）', () => {
-        const instance = instantiateHero(startingHeroes[0]!, careerMap);
+        const instance = instantiateHero(startingHeroes[0]!, careerMap, balance);
         const unit = toCombatUnit(instance, 1, 'ally', 30);
         assert.equal(unit.currentHp, 30);
     });
 
     test('首次行动时间错开，避免全队同 tick 出手', () => {
-        const instances = startingHeroes.map((h) => instantiateHero(h, careerMap));
+        const instances = startingHeroes.map((h) => instantiateHero(h, careerMap, balance));
         const timers = instances.map((inst, i) => toCombatUnit(inst, i + 1).actionTimer);
         assert.ok(new Set(timers).size > 1, '全队行动时间相同');
     });
 
     test('阵营可指定', () => {
-        const instance = instantiateHero(startingHeroes[0]!, careerMap);
+        const instance = instantiateHero(startingHeroes[0]!, careerMap, balance);
         assert.equal(toCombatUnit(instance, 1, 'enemy').side, 'enemy');
     });
 });
@@ -346,13 +436,14 @@ describe('四人队实战（端到端）', () => {
     test('初始队伍能打赢两个同级敌人', () => {
         const table = buildSkillTable(skills);
         const allies = startingHeroes.map((hero, i) =>
-            toCombatUnit(instantiateHero(hero, careerMap), i + 1, 'ally'),
+            toCombatUnit(instantiateHero(hero, careerMap, balance), i + 1, 'ally'),
         );
         // 敌人用同一套数据，血量减半模拟低阶敌人
         const enemies = [0, 1].map((i) => {
             const inst = instantiateHero(
                 { ...startingHeroes[0]!, instanceId: `enemy_${i}`, grade: 'D' },
                 careerMap,
+                balance,
             );
             return {
                 ...toCombatUnit(inst, 100 + i, 'enemy'),
@@ -375,12 +466,13 @@ describe('四人队实战（端到端）', () => {
     test('战斗在合理时长内结束', () => {
         const table = buildSkillTable(skills);
         const allies = startingHeroes.map((hero, i) =>
-            toCombatUnit(instantiateHero(hero, careerMap), i + 1, 'ally'),
+            toCombatUnit(instantiateHero(hero, careerMap, balance), i + 1, 'ally'),
         );
         const enemies = [0, 1, 2].map((i) => {
             const inst = instantiateHero(
                 { ...startingHeroes[0]!, instanceId: `e${i}`, grade: 'D' },
                 careerMap,
+                balance,
             );
             return toCombatUnit(inst, 200 + i, 'enemy');
         });

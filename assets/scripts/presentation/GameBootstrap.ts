@@ -11,8 +11,23 @@ import type { SaveLoadResult } from '../services/SaveRepository';
 import {
     createDefaultProfile,
     deserializeProfile,
+    migrateProfileV1ToV2,
+    migrateProfileV2ToV3,
+    migrateProfileV3ToV4,
     serializeProfile,
 } from '../services/ProfileCodec';
+import {
+    LING_PU_CONFIG_ID,
+    LING_PU_CONFIG_TABLE,
+    parseLingPuConfig,
+} from '../domain/LingPu';
+import type { LingPuConfig } from '../domain/LingPu';
+import {
+    EXPEDITION_CONFIG_ID,
+    EXPEDITION_CONFIG_TABLE,
+    parseExpeditionPreparationConfig,
+} from '../domain/ExpeditionPreparation';
+import type { ExpeditionPreparationConfig } from '../domain/ExpeditionPreparation';
 
 const { ccclass, property } = _decorator;
 
@@ -81,6 +96,11 @@ export class GameBootstrap extends Component {
         const options = {
             gameVersion: '0.1.0',
             nowUtcSeconds: () => AppRoot.instance.time.nowUtcSeconds(),
+            migrations: new Map([
+                [1, migrateProfileV1ToV2],
+                [2, migrateProfileV2ToV3],
+                [3, migrateProfileV3ToV4],
+            ]),
         };
 
         if (IndexedDbSaveBackend.isSupported()) {
@@ -102,23 +122,27 @@ export class GameBootstrap extends Component {
      */
     private async loadAndPrepareProfile(saves: SaveRepository): Promise<SaveLoadResult> {
         const app = AppRoot.instance;
+        await this.loadLingPuConfig();
+        await this.loadExpeditionPreparationConfig();
         const loaded = await saves.load();
 
         let profile;
-        let result = loaded;
         if (loaded.envelope) {
             profile = deserializeProfile(loaded.envelope.payload);
         } else {
             const seed = await this.loadDefaultProfileSeed();
             profile = createDefaultProfile(seed, app.time.nowUtcSeconds());
-            const envelope = await saves.save(serializeProfile(profile));
-            result = {
-                status: 'ok',
-                envelope,
-                // “主档不存在”对首次启动是正常情况，不当作坏档诊断。
-                diagnostics: loaded.diagnostics.filter((line) => line !== '主档不存在'),
-            };
         }
+
+        // P1 不结算浏览器关闭或后台期间的收益；加载后从当前时刻重新计在线周期。
+        profile.camp.lastSettledAtUtc = app.time.nowUtcSeconds();
+        const envelope = await saves.save(serializeProfile(profile));
+        const result: SaveLoadResult = {
+            status: loaded.envelope ? loaded.status : 'ok',
+            envelope,
+            // “主档不存在”对首次启动是正常情况，不当作坏档诊断。
+            diagnostics: loaded.diagnostics.filter((line) => line !== '主档不存在'),
+        };
 
         app.state.load(profile);
         app.events.emit('profile.loaded', { source: loaded.status });
@@ -128,19 +152,59 @@ export class GameBootstrap extends Component {
 
     /** shared Bundle 内的数据种子是新档数值的唯一来源。 */
     private loadDefaultProfileSeed(): Promise<unknown> {
+        return this.loadSharedJson('default_profile');
+    }
+
+    /** 灵圃数值表在读取/迁移 Profile 前完成注册，Presenter 不持有硬编码费用。 */
+    private async loadLingPuConfig(): Promise<void> {
+        const app = AppRoot.instance;
+        if (app.data.has(LING_PU_CONFIG_TABLE)) {
+            return;
+        }
+        const raw = (await this.loadSharedJson('ling_pu_config')) as {
+            ling_pu?: unknown;
+        };
+        app.data.registerTable<LingPuConfig>(
+            {
+                tableName: LING_PU_CONFIG_TABLE,
+                validate: (value) => parseLingPuConfig(value),
+            },
+            { [LING_PU_CONFIG_ID]: raw.ling_pu },
+        );
+    }
+
+    /** 出征、精力、队伍解锁与地图门槛统一从 shared 数据表读取。 */
+    private async loadExpeditionPreparationConfig(): Promise<void> {
+        const app = AppRoot.instance;
+        if (app.data.has(EXPEDITION_CONFIG_TABLE)) {
+            return;
+        }
+        const raw = (await this.loadSharedJson('expedition_preparation')) as {
+            expedition_preparation?: unknown;
+        };
+        app.data.registerTable<ExpeditionPreparationConfig>(
+            {
+                tableName: EXPEDITION_CONFIG_TABLE,
+                validate: (value) => parseExpeditionPreparationConfig(value),
+            },
+            { [EXPEDITION_CONFIG_ID]: raw.expedition_preparation },
+        );
+    }
+
+    private loadSharedJson(assetPath: string): Promise<unknown> {
         const bundle = assetManager.getBundle('shared');
         if (!bundle) {
             return Promise.reject(new Error('shared Bundle 尚未加载'));
         }
 
         return new Promise((resolve, reject) => {
-            bundle.load('default_profile', JsonAsset, (error, asset) => {
+            bundle.load(assetPath, JsonAsset, (error, asset) => {
                 if (error) {
                     reject(error);
                     return;
                 }
                 if (!asset?.json) {
-                    reject(new Error('新档数据种子 default_profile 为空'));
+                    reject(new Error(`shared JSON ${assetPath} 为空`));
                     return;
                 }
                 resolve(asset.json);

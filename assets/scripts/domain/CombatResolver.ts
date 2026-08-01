@@ -43,6 +43,17 @@ export interface ResolverConfig {
     readonly random: RandomSource;
     /** 防止无限战斗的 tick 上限。到达即判平局。 */
     readonly maxTicks?: number;
+    /**
+     * 减伤等级常数（PRD-04 §5 的「等级常数」），由 balance 表按遭遇等级算出。
+     *
+     * 省略时退回 DEFENSE_LEVEL_CONSTANT_BASE，与本参数引入前的行为一致——
+     * 既有测试与尚未接入数据表的调用方不必同步改动。
+     * 之所以取单个数而非等级：一场战斗内敌我可能不同级，
+     * 若各按自身等级取 K，同一次攻击的减伤会依赖攻方等级，
+     * 那意味着「打等级低的敌人反而更难破防」，反直觉且难以向玩家解释。
+     * 故整场战斗用同一个 K，由遭遇配置决定。
+     */
+    readonly defenseLevelConstant?: number;
 }
 
 /** 默认上限：20Hz × 180 秒 = 3600 tick。 */
@@ -357,7 +368,7 @@ function applySkillTo(
     actor: CombatUnit,
     skill: SkillRuntime,
     targetId: number,
-    _config: ResolverConfig,
+    config: ResolverConfig,
     events: CombatEventPayload[],
 ): readonly CombatUnit[] {
     const target = units.find((unit) => unit.unitId === targetId);
@@ -385,7 +396,10 @@ function applySkillTo(
             .reduce((sum, status) => sum + status.magnitude, 0);
         const defense = target.attributes[defenseKey] - armorBreak;
 
-        const raw = finalDamage(base, damageReduction(defense));
+        const raw = finalDamage(
+            base,
+            damageReduction(defense, config.defenseLevelConstant),
+        );
 
         // 护盾优先吸收
         const shield = shieldAmountOf(target);

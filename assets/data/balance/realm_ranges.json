@@ -1,0 +1,13 @@
+{
+  "//": "境界等级区间。规则见 PRD-03 §9：境界突破固定成功，不加入失败概率，故本表只做区间映射。",
+  "//约束": "区间必须连续、无重叠、完整覆盖 1 到 maxLevel，由 validate:data 校验。",
+  "realm_ranges": {
+    "maxLevel": 60,
+    "tier1UnlockLevel": 10,
+    "realms": [
+      { "id": "zhu_ji", "min": 1, "max": 20 },
+      { "id": "jie_dan", "min": 21, "max": 40 },
+      { "id": "yuan_ying", "min": 41, "max": 60 }
+    ]
+  }
+}

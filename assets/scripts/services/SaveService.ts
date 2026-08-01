@@ -9,8 +9,14 @@ export const SAVE_DB_NAME = 'kunwu_game';
 export const SAVE_STORES = ['profiles', 'backups', 'settings', 'telemetry_local'] as const;
 export type SaveStore = (typeof SAVE_STORES)[number];
 
-/** 当前存档结构版本。每次改变 Schema 递增，并新增迁移函数。 */
-export const CURRENT_SCHEMA_VERSION = 1;
+/**
+ * 当前存档结构版本。每次改变 Schema 递增，并新增迁移函数。
+ *
+ * v3：roster 的 attributes 与 maxHp 按 Docs/13 §3 的新成长曲线重算
+ *     （七维全维成长、品级同时影响初始值）。见 ProfileCodec.migrateProfileV2ToV3。
+ * v4：增加英雄精力、队伍预设、出征携带物与自然恢复结算锚点。
+ */
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export interface SaveEnvelope {
     readonly schema_version: number;

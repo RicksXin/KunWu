@@ -8,8 +8,10 @@
 // 只作类型使用，必须用 import type：类型擦除不会移除值导入，
 // 而 Attributes 是类型别名，运行期没有对应导出。
 import type { Attributes } from '../domain/Attributes';
+import type { ExpeditionLoadout } from '../domain/ExpeditionPreparation';
 import type { GridCoord } from '../domain/GridCoord';
 import type { HeroGrade } from '../domain/HeroGrowth';
+import type { PartyPreset } from '../domain/Party';
 
 /** 资源一律用整数，乘法在整数域完成（技术方案 §7）。 */
 export interface Wallet {
@@ -26,8 +28,12 @@ export interface Wallet {
 export interface CampState {
     /** 建筑 ID → 等级。 */
     readonly buildingLevels: Record<string, number>;
+    /** 当前拥有的杂役总数；不能仅由岗位分配反推。 */
+    workerCount: number;
     /** 岗位 ID → 分配人数。 */
     readonly workerAssignments: Record<string, number>;
+    /** 资源 ID → 独立存储等级；最大储量由数据表推导。 */
+    readonly resourceStorageLevels: Record<string, number>;
     /** 上次生产结算的 UTC 秒。 */
     lastSettledAtUtc: number;
 }
@@ -46,6 +52,18 @@ export interface HeroInstance {
     readonly skillIds: readonly string[];
     /** 阵亡后进入还魂名单。 */
     isDead: boolean;
+    /** 出征消耗；营地中按配置周期自然恢复，范围 0–100。 */
+    stamina: number;
+}
+
+/** 出征准备面板的持久状态；不是独立页面状态。 */
+export interface ExpeditionPreparationState {
+    /** 只保存已解锁队伍；新档仅第 1 队。 */
+    partyPresets: PartyPreset[];
+    activePresetId: string;
+    loadout: ExpeditionLoadout;
+    /** 上次精力自然恢复结算锚点（UTC 秒）。 */
+    lastStaminaSettledAtUtc: number;
 }
 
 export interface ExpeditionState {
@@ -64,6 +82,7 @@ export interface Profile {
     readonly roster: HeroInstance[];
     readonly inventory: Record<string, number>;
     readonly storyFlags: Record<string, boolean>;
+    readonly expeditionPreparation: ExpeditionPreparationState;
     expedition: ExpeditionState | null;
 }
 

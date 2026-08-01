@@ -1,0 +1,16 @@
+{
+  "//": "杂役生产速率与灵粮维护。规则见 PRD-02 §3，本表只提供数值。",
+  "//方案": "Docs/13_数值设计方案.md §4.2 方案 B：灵粮岗产 2、其余维护减半。现状（产 1、维护 2/3/4/9）下 6 名杂役只有 3 个能开副岗的可持续配置，最优解是无脑堆灵粮岗，岗位权衡不存在。",
+  "//停工顺序": "PRD-02 §3：灵粮不足时按维护成本从高到低停工。顺序固定才能让玩家预测；随机停工会被当成 bug。spiritGrain 不得出现在此列表——它是供给来源，停它等于全盘停摆。",
+  "production_rates": {
+    "cycleSeconds": 30,
+    "jobs": {
+      "spiritGrain": { "outputPerWorker": 2, "grainUpkeepPerWorker": 0 },
+      "spiritWood": { "outputPerWorker": 1, "grainUpkeepPerWorker": 1 },
+      "darkIron": { "outputPerWorker": 1, "grainUpkeepPerWorker": 2 },
+      "spiritStone": { "outputPerWorker": 1, "grainUpkeepPerWorker": 3 },
+      "gengJing": { "outputPerWorker": 1, "grainUpkeepPerWorker": 6 }
+    },
+    "shutdownOrder": ["gengJing", "spiritStone", "darkIron", "spiritWood"]
+  }
+}

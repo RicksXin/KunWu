@@ -60,22 +60,26 @@ describe('结算触发（PRD-02 §6）', () => {
         assert.equal(result.output.yields.spiritGrain, 5);
     });
 
-    test('结算后时间戳推进到当前', () => {
+    test('结算后只推进完整周期并保留零头', () => {
         const clock = makeClock();
         const economy = makeEconomy(clock);
         clock.advance(45);
         const result = economy.settle(makeState());
-        assert.equal(result.state.lastSettledAtUtc, clock.now());
+        assert.equal(result.state.lastSettledAtUtc, 1_030);
     });
 
-    test('不足一周期也推进时间戳，避免零头被反复丢弃', () => {
+    test('不足一周期不推进时间戳，下一次继续累计', () => {
         const clock = makeClock();
         const economy = makeEconomy(clock);
         clock.advance(10);
         const result = economy.settle(makeState());
         assert.equal(result.output.cycles, 0);
-        // 若不推进，每次 10 秒都从头算，玩家永远拿不到产出
-        assert.equal(result.state.lastSettledAtUtc, clock.now());
+        assert.equal(result.state.lastSettledAtUtc, 1_000);
+
+        clock.advance(20);
+        const completed = economy.settle(result.state);
+        assert.equal(completed.output.cycles, 1);
+        assert.equal(completed.state.lastSettledAtUtc, 1_030);
     });
 
     test('库存累加而非替换', () => {
@@ -143,6 +147,7 @@ describe('离线上限', () => {
         // 上限 60 秒 = 2 周期
         assert.equal(result.output.cycles, 2);
         assert.equal(result.discardedSeconds, 240);
+        assert.equal(result.state.lastSettledAtUtc, clock.now());
     });
 
     test('未超上限时无丢弃', () => {
@@ -267,5 +272,47 @@ describe('停工联动', () => {
         for (const value of Object.values(result.state.stock)) {
             assert.ok(value >= 0, `库存为负: ${value}`);
         }
+    });
+});
+
+describe('资源储量上限', () => {
+    test('新增产出不会超过配置上限', () => {
+        const clock = makeClock();
+        const economy = makeEconomy(clock);
+        clock.advance(30);
+        const result = economy.settle(
+            makeState({
+                stock: {
+                    spiritGrain: 198,
+                    spiritWood: 0,
+                    darkIron: 0,
+                    spiritStone: 0,
+                    gengJing: 0,
+                },
+                assignment: createAssignment({ spiritGrain: 5 }),
+                storageCaps: { spiritGrain: 200 },
+            }),
+        );
+        assert.equal(result.state.stock.spiritGrain, 200);
+    });
+
+    test('旧档超额库存不会被一次结算没收', () => {
+        const clock = makeClock();
+        const economy = makeEconomy(clock);
+        clock.advance(30);
+        const result = economy.settle(
+            makeState({
+                stock: {
+                    spiritGrain: 250,
+                    spiritWood: 0,
+                    darkIron: 0,
+                    spiritStone: 0,
+                    gengJing: 0,
+                },
+                assignment: createAssignment({ spiritGrain: 5 }),
+                storageCaps: { spiritGrain: 200 },
+            }),
+        );
+        assert.equal(result.state.stock.spiritGrain, 250);
     });
 });

@@ -1,0 +1,16 @@
+{
+  "//": "战斗公式常数。公式本身见 PRD-04 §5，本表只提供数值。",
+  "//事实源": "Docs/13_数值设计方案.md §3.2。",
+  "combat_constants": {
+    "constitutionHpFactor": 8,
+    "minActionIntervalTicks": 4,
+    "maxActionIntervalTicks": 200,
+    "minDamage": 1,
+    "//defenseLevelConstant": "减伤公式的等级常数 K(L) = base + floor(perTenLevels × (L-1) / 10)。Lv1=100，Lv60=241。用两个数而非 60 项数组：曲线是线性的，展开成数组会让「这是一条直线」的意图消失在数据里。",
+    "//斜率取值理由": "验证过 perTenLevels=100（Lv60 K=690），非坦减伤跌到 1%、坦也只有 17%，减伤机制整体失效。24 是「坦有意义」与「脆皮不裸奔」之间的取值。",
+    "defenseLevelConstant": {
+      "base": 100,
+      "perTenLevels": 24
+    }
+  }
+}

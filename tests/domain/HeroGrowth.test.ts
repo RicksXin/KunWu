@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
     HERO_GRADES,
     GRADE_GROWTH_PERCENT,
+    GRADE_BASE_PERCENT,
     REALMS,
     REALM_LEVEL_RANGES,
     MAX_LEVEL,
@@ -10,6 +11,7 @@ import {
     realmOf,
     canPromoteToTier1,
     computeGrowth,
+    scaleBaseByGrade,
     summarize,
     requiresDismissConfirm,
     isDismissLocked,
@@ -102,67 +104,124 @@ describe('一转开放（PRD-03 §6）', () => {
 });
 
 describe('等级成长（PRD-03 §3）', () => {
-    const profile = {
-        primaryPerLevel: 3,
-        secondaryPerLevel: 1,
-        primaryAttribute: 'strength' as const,
-        secondaryAttribute: 'constitution' as const,
+    /** 千分位：主维 3.0/级，肉身 1.0/级，其余 0.2/级。 */
+    const rates = {
+        strength: 3000,
+        magic: 200,
+        technique: 200,
+        speed: 200,
+        constitution: 1000,
+        armor: 200,
+        resistance: 200,
     };
 
     test('1 级时成长为 0', () => {
         // 初始值全部来自 base，便于策划核对数据表
-        const growth = computeGrowth(1, 'D', profile);
+        const growth = computeGrowth(1, 'D', rates);
         for (const key of ATTRIBUTE_KEYS) {
             assert.equal(growth[key], 0, `${key} 在 1 级应为 0`);
         }
     });
 
-    test('D 级 11 级：主属性 10 级 × 3 = 30', () => {
-        const growth = computeGrowth(11, 'D', profile);
+    test('D 级 11 级：主属性 10 级 × 3.0 = 30', () => {
+        const growth = computeGrowth(11, 'D', rates);
         assert.equal(growth.strength, 30);
         assert.equal(growth.constitution, 10);
     });
 
+    test('七维全部成长，无一冻结', () => {
+        // 旧结构只长主维与副维，其余五维终身不变；这是 Docs/13 §1.2 问题 1
+        const growth = computeGrowth(60, 'D', rates);
+        for (const key of ATTRIBUTE_KEYS) {
+            assert.ok(growth[key] > 0, `${key} 在 60 级仍为 0，该维被冻结`);
+        }
+    });
+
     test('品级越高成长越多', () => {
-        const low = computeGrowth(21, 'D', profile).strength;
-        const high = computeGrowth(21, 'SSS', profile).strength;
+        const low = computeGrowth(21, 'D', rates).strength;
+        const high = computeGrowth(21, 'SSS', rates).strength;
         assert.ok(high > low);
     });
 
     test('SSS 级按 190% 计算', () => {
-        // 20 级 × 3 × 190% = 114
-        assert.equal(computeGrowth(21, 'SSS', profile).strength, 114);
+        // 20 级 × 3.0 × 190% = 114
+        assert.equal(computeGrowth(21, 'SSS', rates).strength, 114);
+    });
+
+    test('显式传入品级倍率时覆盖内置常数', () => {
+        // 20 级 × 3.0 × 200% = 120，与 GRADE_GROWTH_PERCENT.SSS 的 190% 不同
+        assert.equal(computeGrowth(21, 'SSS', rates, 200).strength, 120);
     });
 
     test('结果向下取整', () => {
-        // 10 × 1 × 110% = 11；用 secondary 验证小数被截断
-        const growth = computeGrowth(11, 'C', profile);
-        assert.ok(Number.isInteger(growth.constitution));
+        // 10 级 × 0.2 × 110% = 2.2 → 2
+        const growth = computeGrowth(11, 'C', rates);
+        assert.equal(growth.armor, 2);
+        for (const key of ATTRIBUTE_KEYS) {
+            assert.ok(Number.isInteger(growth[key]), `${key} 不是整数`);
+        }
     });
 
-    test('未声明副属性时只长主属性', () => {
-        const growth = computeGrowth(11, 'D', {
-            primaryPerLevel: 3,
-            secondaryPerLevel: 1,
-            primaryAttribute: 'magic',
-        });
-        assert.equal(growth.magic, 30);
-        assert.equal(growth.constitution, 0);
+    test('成长率为 0 的维度不成长', () => {
+        const growth = computeGrowth(11, 'D', { ...rates, armor: 0 });
+        assert.equal(growth.armor, 0);
+        assert.equal(growth.strength, 30);
     });
 
-    test('主副属性相同时累加而非覆盖', () => {
-        const growth = computeGrowth(11, 'D', {
-            primaryPerLevel: 3,
-            secondaryPerLevel: 2,
-            primaryAttribute: 'strength',
-            secondaryAttribute: 'strength',
-        });
-        // 30 + 20 = 50，不能是 20 把 30 覆盖掉
-        assert.equal(growth.strength, 50);
+    test('负成长率抛错', () => {
+        assert.throws(() => computeGrowth(11, 'D', { ...rates, speed: -100 }), /不能为负/);
     });
 
     test('非法等级抛错', () => {
-        assert.throws(() => computeGrowth(0, 'D', profile), /正整数/);
+        assert.throws(() => computeGrowth(0, 'D', rates), /正整数/);
+    });
+});
+
+describe('品级缩放初始七维（PRD-03 §3）', () => {
+    const base = createAttributes({ strength: 14, constitution: 13, armor: 11 });
+
+    test('D 品为基准，初始值不变', () => {
+        const scaled = scaleBaseByGrade(base, 'D');
+        assert.equal(scaled.strength, 14);
+        assert.equal(scaled.constitution, 13);
+    });
+
+    test('品级越高初始值越高', () => {
+        const d = scaleBaseByGrade(base, 'D').strength;
+        const sss = scaleBaseByGrade(base, 'SSS').strength;
+        assert.ok(sss > d, `SSS ${sss} 应高于 D ${d}`);
+    });
+
+    test('相邻品级在 floor 后仍有差异——否则招募界面看不出区别', () => {
+        // 这是 GRADE_BASE_PERCENT 步长取约 8 个百分点的原因：
+        // 初始七维是个位数量级，105% 作用在 14 上 floor 后仍是 14
+        let previous = -1;
+        for (const grade of HERO_GRADES) {
+            const value = scaleBaseByGrade(base, grade).strength;
+            assert.ok(
+                value > previous,
+                `${grade} 品的 strength ${value} 未超过上一品级 ${previous}`,
+            );
+            previous = value;
+        }
+    });
+
+    test('显式传入倍率时覆盖内置常数', () => {
+        assert.equal(scaleBaseByGrade(base, 'D', 200).strength, 28);
+    });
+
+    test('倍率非正时抛错', () => {
+        assert.throws(() => scaleBaseByGrade(base, 'D', 0), /必须为正/);
+    });
+
+    test('初始倍率曲线比成长倍率平缓', () => {
+        // 初始值只需让玩家看出差别，不该在 1 级就制造代差
+        const baseRatio = GRADE_BASE_PERCENT.SSS / GRADE_BASE_PERCENT.D;
+        const growthRatio = GRADE_GROWTH_PERCENT.SSS / GRADE_GROWTH_PERCENT.D;
+        assert.ok(
+            baseRatio < growthRatio,
+            `初始倍率跨度 ${baseRatio} 不应达到成长倍率跨度 ${growthRatio}`,
+        );
     });
 });
 

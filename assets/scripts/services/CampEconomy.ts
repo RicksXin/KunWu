@@ -12,8 +12,18 @@
  * 用新岗位追溯领取旧时段的产出，是可被利用的刷资源手段。
  */
 
-import type { ProductionJob, WorkerAssignment, SettlementOutput } from '../domain/Production';
-import { settleProduction, applyYields, grainUpkeepPerCycle } from '../domain/Production';
+import type {
+    ProductionJob,
+    ProductionStorageCaps,
+    WorkerAssignment,
+    SettlementOutput,
+} from '../domain/Production';
+import {
+    BASE_CYCLE_SECONDS,
+    settleProduction,
+    applyYields,
+    grainUpkeepPerCycle,
+} from '../domain/Production';
 import type { SettlementWindow } from './TimeService';
 
 /** P1 不结算离线（PRD-02 §6）。P2 起放开到 4 小时。 */
@@ -24,6 +34,7 @@ export type ResourceStock = Record<ProductionJob, number>;
 export interface CampEconomyState {
     readonly stock: ResourceStock;
     readonly assignment: WorkerAssignment;
+    readonly storageCaps?: ProductionStorageCaps;
     /** 上次结算的 UTC 秒。 */
     readonly lastSettledAtUtc: number;
 }
@@ -98,12 +109,20 @@ export class CampEconomy {
             outputBonusPercent: this.deps.outputBonusPercent,
         });
 
+        const cycleSeconds = this.deps.cycleSeconds ?? BASE_CYCLE_SECONDS;
+        const nextSettledAt =
+            window.discardedSeconds > 0
+                ? this.deps.nowUtcSeconds()
+                : state.lastSettledAtUtc + output.cycles * cycleSeconds;
+
         return {
             state: {
-                stock: applyYields(state.stock, output),
+                stock: applyYields(state.stock, output, state.storageCaps),
                 assignment: state.assignment,
-                // 即使本次不足一周期也推进时间戳，否则零头会被反复丢弃
-                lastSettledAtUtc: this.deps.nowUtcSeconds(),
+                storageCaps: state.storageCaps,
+                // 只推进已经完成的周期，保留不足 30 秒的进度。
+                // 超出离线上限的时长则整体丢弃并锚定当前时刻，避免分批领取。
+                lastSettledAtUtc: nextSettledAt,
             },
             output,
             clockRolledBack: false,

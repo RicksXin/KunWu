@@ -18,12 +18,18 @@
       "jiao_yi_hang": 0,
       "huan_hun_tan": 0
     },
+    "workerCount": 6,
     "workerAssignments": {
       "spiritGrain": 0,
       "spiritWood": 0,
       "darkIron": 0,
       "spiritStone": 0,
       "gengJing": 0
+    },
+    "resourceStorageLevels": {
+      "spiritGrain": 1,
+      "spiritWood": 1,
+      "darkIron": 1
     },
     "lastSettledAtUtc": 0
   },
@@ -36,18 +42,23 @@
       "grade": "C",
       "level": 1,
       "attributes": {
-        "strength": 14,
+        "strength": 15,
         "magic": 4,
         "technique": 7,
         "speed": 8,
-        "constitution": 13,
+        "constitution": 14,
         "armor": 11,
         "resistance": 6
       },
-      "maxHp": 224,
+      "maxHp": 232,
       "currentHp": 224,
-      "skillIds": ["zhan_ji", "tiao_xin", "chong_zhuang"],
-      "isDead": false
+      "skillIds": [
+        "zhan_ji",
+        "tiao_xin",
+        "chong_zhuang"
+      ],
+      "isDead": false,
+      "stamina": 100
     },
     {
       "instanceId": "hero_fa_xiu_01",
@@ -58,7 +69,7 @@
       "level": 1,
       "attributes": {
         "strength": 4,
-        "magic": 15,
+        "magic": 16,
         "technique": 10,
         "speed": 8,
         "constitution": 7,
@@ -67,8 +78,13 @@
       },
       "maxHp": 140,
       "currentHp": 140,
-      "skillIds": ["ling_huo_dan", "ning_shuang_hu", "ling_neng_zhen_dang"],
-      "isDead": false
+      "skillIds": [
+        "ling_huo_dan",
+        "ning_shuang_hu",
+        "ling_neng_zhen_dang"
+      ],
+      "isDead": false,
+      "stamina": 100
     },
     {
       "instanceId": "hero_yi_xiu_01",
@@ -79,7 +95,7 @@
       "level": 1,
       "attributes": {
         "strength": 4,
-        "magic": 13,
+        "magic": 14,
         "technique": 11,
         "speed": 9,
         "constitution": 8,
@@ -88,8 +104,13 @@
       },
       "maxHp": 156,
       "currentHp": 156,
-      "skillIds": ["hui_chun_shu", "qing_xin_jue", "ling_guang_ji"],
-      "isDead": false
+      "skillIds": [
+        "hui_chun_shu",
+        "qing_xin_jue",
+        "ling_guang_ji"
+      ],
+      "isDead": false,
+      "stamina": 100
     },
     {
       "instanceId": "hero_qian_xiu_01",
@@ -109,13 +130,42 @@
       },
       "maxHp": 160,
       "currentHp": 160,
-      "skillIds": ["ying_xi", "tou_ren", "yan_dun"],
-      "isDead": false
+      "skillIds": [
+        "ying_xi",
+        "tou_ren",
+        "yan_dun"
+      ],
+      "isDead": false,
+      "stamina": 100
     }
   ],
-  "inventory": {},
+  "inventory": {
+    "pickaxe": 3,
+    "lens": 1
+  },
   "storyFlags": {
     "tutorial_started": false
+  },
+  "expeditionPreparation": {
+    "partyPresets": [
+      {
+        "presetId": "party_01",
+        "name": "1队",
+        "slots": [
+          "hero_wu_xiu_01",
+          "hero_fa_xiu_01",
+          "hero_yi_xiu_01",
+          "hero_qian_xiu_01"
+        ]
+      }
+    ],
+    "activePresetId": "party_01",
+    "loadout": {
+      "spiritGrain": 60,
+      "pickaxe": 0,
+      "lens": 0
+    },
+    "lastStaminaSettledAtUtc": 0
   },
   "expedition": null
 }

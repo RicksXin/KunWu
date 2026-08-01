@@ -19,13 +19,24 @@ export const MIN_ACTION_INTERVAL_TICKS = 4;
 export const MAX_ACTION_INTERVAL_TICKS = 200;
 
 /**
- * 减伤计算的等级常数（PRD-04 §5）。
- * 数值随等级增长，使同样的护体值在高等级下减伤更少。
- * 具体曲线由数据表提供，此处给出 Demo 阶段基线。
+ * 减伤计算的等级常数在 1 级时的取值（PRD-04 §5）。
+ *
+ * 正式取值来自 `assets/data/balance/combat_constants.json` 的
+ * `defenseLevelConstant`，由 `BalanceTables.defenseLevelConstantAt` 按等级算出，
+ * 随等级增长使同样的护体值在高等级下减伤更少。
+ *
+ * 此处保留常量只为两个用途：`damageReduction` 的默认参数（省略即 1 级行为），
+ * 以及未接入数据表的调用方兜底。**不要在新代码里直接引用它**——
+ * 那等于把数值又焊回代码，与技术方案 §1 相悖。
  */
 export const DEFENSE_LEVEL_CONSTANT_BASE = 100;
 
-/** 生命上限中肉身的系数（PRD-04 §5）。 */
+/**
+ * 生命上限中肉身的系数（PRD-04 §5）。
+ *
+ * 正式取值来自 `combat_constants.json` 的 `constitutionHpFactor`，
+ * 通过 `maxHp` 的 factor 参数注入。同上，此处仅作默认值。
+ */
 export const CONSTITUTION_HP_FACTOR = 8;
 
 /**

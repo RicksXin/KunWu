@@ -25,6 +25,22 @@ const { validateDataBundle } = await import(
 const { createDefaultProfile } = await import(
     pathToFileURL(path.join(REPO_ROOT, 'assets/scripts/services/ProfileCodec.ts')).href
 );
+const { parseLingPuConfig } = await import(
+    pathToFileURL(path.join(REPO_ROOT, 'assets/scripts/domain/LingPu.ts')).href
+);
+const { parseExpeditionPreparationConfig } = await import(
+    pathToFileURL(
+        path.join(REPO_ROOT, 'assets/scripts/domain/ExpeditionPreparation.ts'),
+    ).href
+);
+const {
+    parseBalanceTables,
+    assertGrowthRatesCoverCareers,
+    assertPrimaryAttributeMatchesGrowth,
+    BALANCE_TABLE_NAMES,
+} = await import(
+    pathToFileURL(path.join(REPO_ROOT, 'assets/scripts/domain/BalanceTables.ts')).href
+);
 
 function readJsonDir(dir) {
     const full = path.join(DATA_ROOT, dir);
@@ -96,4 +112,84 @@ try {
     console.error(`新档 Profile 数据种子校验失败：${error.message}`);
 }
 
-process.exit(report.hasErrors || defaultProfileError ? 1 : 0);
+let lingPuConfigError = null;
+const lingPuConfigPath = path.join(
+    REPO_ROOT,
+    'assets',
+    'bundles',
+    'shared',
+    'ling_pu_config.json',
+);
+try {
+    const table = JSON.parse(readFileSync(lingPuConfigPath, 'utf8'));
+    parseLingPuConfig(table.ling_pu);
+    console.log('灵圃数值配置校验通过');
+} catch (error) {
+    lingPuConfigError = error;
+    console.error(`灵圃数值配置校验失败：${error.message}`);
+}
+
+let expeditionConfigError = null;
+const expeditionConfigPath = path.join(
+    REPO_ROOT,
+    'assets',
+    'bundles',
+    'shared',
+    'expedition_preparation.json',
+);
+try {
+    const table = JSON.parse(readFileSync(expeditionConfigPath, 'utf8'));
+    parseExpeditionPreparationConfig(table.expedition_preparation);
+    console.log('出征准备数值配置校验通过');
+} catch (error) {
+    expeditionConfigError = error;
+    console.error(`出征准备数值配置校验失败：${error.message}`);
+}
+
+// 平衡数值表（Docs/13 §5）。与运行时共用 BalanceTables 的解析函数，
+// 避免构建期与运行期两处校验漂移。
+let balanceError = null;
+const balanceDir = path.join(DATA_ROOT, 'balance');
+const balanceFiles = BALANCE_TABLE_NAMES.map((name) => ({
+    name,
+    file: path.join(balanceDir, `${name}.json`),
+}));
+const missingBalance = balanceFiles.filter(({ file }) => !existsSync(file));
+
+if (missingBalance.length === BALANCE_TABLE_NAMES.length) {
+    // 全缺视为尚未产出，与本脚本对空 assets/data/ 的处理保持一致
+    console.log('assets/data/balance/ 暂无平衡表，跳过校验');
+} else if (missingBalance.length > 0) {
+    // 部分缺失是真问题：解析会用到全部五张表，缺一张就是半套配置
+    balanceError = new Error(
+        `平衡表缺失：${missingBalance.map(({ name }) => `${name}.json`).join('、')}`,
+    );
+    console.error(`平衡数值表校验失败：${balanceError.message}`);
+} else {
+    try {
+        const raw = {};
+        for (const { name, file } of balanceFiles) {
+            raw[name] = JSON.parse(readFileSync(file, 'utf8'));
+        }
+        const tables = parseBalanceTables(raw);
+        assertGrowthRatesCoverCareers(
+            tables.growthRates,
+            bundle.careers.map((career) => career.id),
+        );
+        assertPrimaryAttributeMatchesGrowth(tables.growthRates, bundle.careers);
+        console.log(`平衡数值表校验通过（${BALANCE_TABLE_NAMES.length} 张表）`);
+    } catch (error) {
+        balanceError = error;
+        console.error(`平衡数值表校验失败：${error.message}`);
+    }
+}
+
+process.exit(
+    report.hasErrors ||
+    defaultProfileError ||
+    lingPuConfigError ||
+    expeditionConfigError ||
+    balanceError
+        ? 1
+        : 0,
+);

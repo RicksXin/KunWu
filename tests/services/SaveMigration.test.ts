@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { SaveRepository, PRIMARY_PROFILE_KEY } from 'db://assets/scripts/services/SaveRepository';
 import { MemorySaveBackend } from 'db://assets/scripts/services/MemorySaveBackend';
 import type { SaveMigration } from 'db://assets/scripts/services/SaveService';
+import { CURRENT_SCHEMA_VERSION } from 'db://assets/scripts/services/SaveService';
 import { computeChecksum } from 'db://assets/scripts/services/SaveChecksum';
 
 /**
@@ -26,6 +27,14 @@ function seedOldSave(
             payload,
         }),
     );
+}
+
+function completeMigrationChain(first: SaveMigration): Map<number, SaveMigration> {
+    const migrations = new Map<number, SaveMigration>();
+    for (let version = 0; version < CURRENT_SCHEMA_VERSION; version += 1) {
+        migrations.set(version, version === 0 ? first : (payload) => payload);
+    }
+    return migrations;
 }
 
 describe('存档迁移', () => {
@@ -53,7 +62,7 @@ describe('存档迁移', () => {
         const repo = new SaveRepository(backend, {
             gameVersion: '0.1.0',
             nowUtcSeconds: () => 2_000,
-            migrations: new Map([[0, addField]]),
+            migrations: completeMigrationChain(addField),
         });
 
         const result = await repo.load();
@@ -73,7 +82,10 @@ describe('存档迁移', () => {
         const repo = new SaveRepository(backend, {
             gameVersion: '0.1.0',
             nowUtcSeconds: () => 2_000,
-            migrations: new Map([[0, (payload) => ({ ...payload, migrated: true })]]),
+            migrations: completeMigrationChain((payload) => ({
+                ...payload,
+                migrated: true,
+            })),
         });
 
         const migrated = await repo.load();
@@ -91,14 +103,9 @@ describe('存档迁移', () => {
         const repo = new SaveRepository(backend, {
             gameVersion: '0.1.0',
             nowUtcSeconds: () => 2_000,
-            migrations: new Map([
-                [
-                    0,
-                    () => {
-                        throw new Error('字段解析失败');
-                    },
-                ],
-            ]),
+            migrations: completeMigrationChain(() => {
+                throw new Error('字段解析失败');
+            }),
         });
 
         const result = await repo.load();
@@ -107,9 +114,10 @@ describe('存档迁移', () => {
     });
 
     test('20 份历史存档全部可迁移（PRD-10 §11）', async () => {
-        const migrations = new Map<number, SaveMigration>([
-            [0, (payload) => ({ ...payload, upgraded: true })],
-        ]);
+        const migrations = completeMigrationChain((payload) => ({
+            ...payload,
+            upgraded: true,
+        }));
 
         for (let i = 0; i < 20; i += 1) {
             const backend = new MemorySaveBackend();

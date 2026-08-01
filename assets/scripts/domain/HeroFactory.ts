@@ -10,14 +10,14 @@
 
 import { createAttributes } from './Attributes';
 import type { AttributeKey, Attributes } from './Attributes';
-import { computeGrowth, summarize, MAX_LEVEL } from './HeroGrowth';
-import type { AttributeBreakdown, GrowthProfile, HeroGrade } from './HeroGrowth';
+import { computeGrowth, scaleBaseByGrade, summarize, MAX_LEVEL } from './HeroGrowth';
+import type { AttributeBreakdown, GrowthRates, HeroGrade } from './HeroGrowth';
 import { maxHp } from './CombatFormulas';
 import type { CombatUnit, CombatSide, SkillRuntime } from './CombatState';
 import type { SkillTargetType } from './SkillTargeting';
 import type { DamageKind } from './CombatTypes';
 
-/** 职业定义，对应 assets/data/careers.json 的条目。 */
+/** 职业定义，对应 assets/data/careers/*.json 的条目。 */
 export interface CareerData {
     readonly id: string;
     readonly nameKey: string;
@@ -27,11 +27,24 @@ export interface CareerData {
     readonly skillIds: readonly string[];
     readonly baseAttributes: Readonly<Record<AttributeKey, number>>;
     readonly baseHp: number;
-    readonly growth: {
-        readonly primaryPerLevel: number;
-        readonly secondaryPerLevel: number;
-        readonly secondaryAttribute?: AttributeKey;
-    };
+}
+
+/**
+ * 实例化所需的平衡数值，来自 `assets/data/balance/`。
+ *
+ * 全部可选：省略时退回各模块的默认常数，与接入数据表前的行为一致。
+ * 之所以整体作为一个参数而非拆成多个：这三项必须同批变更——
+ * 只换成长率不换品级倍率会得到一份没人验算过的曲线。
+ */
+export interface HeroBalanceContext {
+    /** 职业 id → 七维成长率（千分位）。 */
+    readonly growthRates?: Readonly<Record<string, GrowthRates>>;
+    /** 品级 → 初始与成长倍率（百分比）。 */
+    readonly gradeMultipliers?: Readonly<
+        Record<HeroGrade, { readonly basePercent: number; readonly growthPercent: number }>
+    >;
+    /** 生命上限中肉身的系数。 */
+    readonly constitutionHpFactor?: number;
 }
 
 /** 技能定义，对应 assets/data/skills.json 的条目。 */
@@ -83,6 +96,7 @@ export interface HeroInstance {
 export function instantiateHero(
     data: HeroData,
     careers: ReadonlyMap<string, CareerData>,
+    balance: HeroBalanceContext = {},
 ): HeroInstance {
     const career = careers.get(data.careerId);
     if (!career) {
@@ -97,15 +111,26 @@ export function instantiateHero(
         );
     }
 
-    const profile: GrowthProfile = {
-        primaryPerLevel: career.growth.primaryPerLevel,
-        secondaryPerLevel: career.growth.secondaryPerLevel,
-        primaryAttribute: career.primaryAttribute,
-        secondaryAttribute: career.growth.secondaryAttribute,
-    };
+    const multiplier = balance.gradeMultipliers?.[data.grade];
+    const rates = balance.growthRates?.[career.id];
 
-    const base = createAttributes(career.baseAttributes);
-    const growth = computeGrowth(data.level, data.grade, profile);
+    // 缺成长率时抛错而非按 0 处理：零成长会让七维终身冻结，
+    // 症状是「等级涨了面板不动」，比启动时报错难查得多。
+    // 但完全没传 balance 时走默认常数，保持未接表调用方可用。
+    if (balance.growthRates && !rates) {
+        throw new Error(
+            `职业 ${career.id} 在 growth_rates 表中缺少成长率配置`,
+        );
+    }
+
+    const base = scaleBaseByGrade(
+        createAttributes(career.baseAttributes),
+        data.grade,
+        multiplier?.basePercent,
+    );
+    const growth = rates
+        ? computeGrowth(data.level, data.grade, rates, multiplier?.growthPercent)
+        : createAttributes();
     const attributes = summarize({
         base,
         growth,
@@ -116,7 +141,12 @@ export function instantiateHero(
         data,
         career,
         attributes,
-        maxHp: maxHp(career.baseHp, attributes.final.constitution),
+        maxHp: maxHp(
+            career.baseHp,
+            attributes.final.constitution,
+            0,
+            balance.constitutionHpFactor,
+        ),
         skillIds: career.skillIds,
     };
 }

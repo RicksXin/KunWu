@@ -15,7 +15,17 @@ function makeProfile(): Profile {
             soulCrystal: 0,
             immortalCoin: 0,
         },
-        camp: { buildingLevels: {}, workerAssignments: {}, lastSettledAtUtc: 0 },
+        camp: {
+            buildingLevels: {},
+            workerCount: 6,
+            workerAssignments: {},
+            resourceStorageLevels: {
+                spiritGrain: 1,
+                spiritWood: 1,
+                darkIron: 1,
+            },
+            lastSettledAtUtc: 0,
+        },
         roster: [
             {
                 instanceId: 'hero_1',
@@ -29,10 +39,23 @@ function makeProfile(): Profile {
                 currentHp: 50,
                 skillIds: ['zhan_ji', 'tiao_xin', 'chong_zhuang'],
                 isDead: false,
+                stamina: 100,
             },
         ],
         inventory: {},
         storyFlags: {},
+        expeditionPreparation: {
+            partyPresets: [
+                {
+                    presetId: 'party_01',
+                    name: '1队',
+                    slots: ['hero_1', null, null, null],
+                },
+            ],
+            activePresetId: 'party_01',
+            loadout: { spiritGrain: 0, pickaxe: 0, lens: 0 },
+            lastStaminaSettledAtUtc: 0,
+        },
         expedition: null,
     };
 }

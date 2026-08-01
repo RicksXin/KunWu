@@ -1,0 +1,79 @@
+{
+  "expedition_preparation": {
+    "staminaMax": 100,
+    "staminaRecoveryAmount": 1,
+    "staminaRecoveryIntervalSeconds": 300,
+    "baseBurden": 60,
+    "strengthBurdenFactor": 2,
+    "constitutionBurdenFactor": 1,
+    "maxPartyPresets": 3,
+    "partyUnlockCosts": [0, 300, 900],
+    "items": [
+      {
+        "id": "spiritGrain",
+        "nameKey": "resource.spirit_grain",
+        "inventoryId": null,
+        "weight": 1
+      },
+      {
+        "id": "pickaxe",
+        "nameKey": "item.pickaxe",
+        "inventoryId": "pickaxe",
+        "weight": 12
+      },
+      {
+        "id": "lens",
+        "nameKey": "item.lens",
+        "inventoryId": "lens",
+        "weight": 4
+      }
+    ],
+    "maps": [
+      {
+        "mapId": "map_01",
+        "mapNumber": 1,
+        "nameKey": "map.map_01",
+        "staminaCost": 10,
+        "grainPerStep": 1,
+        "minimumCarriedGrain": 20,
+        "unlockFlag": null
+      },
+      {
+        "mapId": "map_02",
+        "mapNumber": 2,
+        "nameKey": "map.map_02",
+        "staminaCost": 15,
+        "grainPerStep": 1,
+        "minimumCarriedGrain": 30,
+        "unlockFlag": "map_02_unlocked"
+      },
+      {
+        "mapId": "map_03",
+        "mapNumber": 3,
+        "nameKey": "map.map_03",
+        "staminaCost": 20,
+        "grainPerStep": 2,
+        "minimumCarriedGrain": 40,
+        "unlockFlag": "map_03_unlocked"
+      },
+      {
+        "mapId": "map_04",
+        "mapNumber": 4,
+        "nameKey": "map.map_04",
+        "staminaCost": 25,
+        "grainPerStep": 2,
+        "minimumCarriedGrain": 50,
+        "unlockFlag": "map_04_unlocked"
+      },
+      {
+        "mapId": "map_05",
+        "mapNumber": 5,
+        "nameKey": "map.map_05",
+        "staminaCost": 30,
+        "grainPerStep": 3,
+        "minimumCarriedGrain": 60,
+        "unlockFlag": "map_05_unlocked"
+      }
+    ]
+  }
+}

@@ -531,3 +531,63 @@ describe('冷却（PRD-04 §4）', () => {
         assert.equal(snapshot.units[0]!.cooldowns.strike, 2);
     });
 });
+
+describe('减伤等级常数注入（Docs/13 §3.2）', () => {
+    /** 护体 100 的守方，攻方裸伤 50。K=100 时减伤 50%，K=241 时减伤约 29%。 */
+    function armoredPair() {
+        return snapshotOf([
+            unit({ unitId: 1, side: 'ally', actionTimer: 1 }),
+            unit({
+                unitId: 2,
+                side: 'enemy',
+                actionTimer: 99,
+                attributes: createAttributes({ armor: 100 }),
+                currentHp: 500,
+                maxHp: 500,
+            }),
+        ]);
+    }
+
+    function damageDealt(config: ResolverConfig): number {
+        const { snapshot } = step(armoredPair(), config);
+        return 500 - snapshot.units[1]!.currentHp;
+    }
+
+    test('省略 defenseLevelConstant 时行为与引入该参数前一致', () => {
+        // 裸伤 50，护体 100，K=100 → 减伤 50% → 25
+        assert.equal(damageDealt(makeConfig()), 25);
+    });
+
+    test('K 增大时减伤降低，伤害提高', () => {
+        const withHigherK = damageDealt({ ...makeConfig(), defenseLevelConstant: 241 });
+        // 50 × (1 - 100/341) = 35.3 → floor 35
+        assert.equal(withHigherK, 35);
+        assert.ok(withHigherK > damageDealt(makeConfig()));
+    });
+
+    test('K 极大时减伤趋近 0，防御几乎无效', () => {
+        // 减伤 100/1000100 ≈ 0.01%，floor(50 × 0.9999) = 49；
+        // 取不到 50 是 finalDamage 的向下取整所致，不是减伤没生效
+        assert.equal(damageDealt({ ...makeConfig(), defenseLevelConstant: 1_000_000 }), 49);
+    });
+
+    test('破甲与注入的 K 共同作用', () => {
+        const s = snapshotOf([
+            unit({ unitId: 1, side: 'ally', actionTimer: 1 }),
+            unit({
+                unitId: 2,
+                side: 'enemy',
+                actionTimer: 99,
+                attributes: createAttributes({ armor: 100 }),
+                currentHp: 500,
+                maxHp: 500,
+                statuses: [
+                    { kind: 'armor_break', remainingTicks: 10, magnitude: 60, sourceId: 1 },
+                ],
+            }),
+        ]);
+        // 护体 100 - 破甲 60 = 40，K=241 → 减伤 40/281 = 14.2% → 50 × 0.858 = 42
+        const { snapshot } = step(s, { ...makeConfig(), defenseLevelConstant: 241 });
+        assert.equal(500 - snapshot.units[1]!.currentHp, 42);
+    });
+});

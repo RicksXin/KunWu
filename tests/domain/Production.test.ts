@@ -339,4 +339,27 @@ describe('库存应用（PRD-02 §8：不允许负库存）', () => {
         applyYields(stock, out);
         assert.equal(stock.spiritGrain, 100, '入参被修改');
     });
+
+    test('存储上限只截断新增产出', () => {
+        const stock = { ...emptyStock, spiritGrain: 99 };
+        const out = settleProduction({
+            assignment: createAssignment({ spiritGrain: 5 }),
+            effectiveSeconds: 30,
+            grainStock: 99,
+        });
+        const next = applyYields(stock, out, { spiritGrain: 100 });
+        assert.equal(next.spiritGrain, 100);
+    });
+
+    test('非法存储上限被拒绝', () => {
+        const out = settleProduction({
+            assignment: createAssignment(),
+            effectiveSeconds: 30,
+            grainStock: 0,
+        });
+        assert.throws(
+            () => applyYields(emptyStock, out, { spiritGrain: -1 }),
+            /非负安全整数/,
+        );
+    });
 });

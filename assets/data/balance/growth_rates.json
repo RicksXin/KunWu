@@ -1,0 +1,59 @@
+{
+  "//": "七维每级成长率，千分位整数：3000 = 每级 +3.0 点。整数域运算，见技术方案 §7。",
+  "//档位": "主维 3000 / 核心副维 2000 / 相关维 600-1200 / 无关维 200-400。无关维不取 0，否则该维终身冻结，减伤与生命上限对该职业失效。",
+  "//事实源": "曲线设计与验证见 Docs/13_数值设计方案.md §3.1。规则归属见 PRD-03 §3。",
+  "ti_xiu": {
+    "strength": 800,
+    "magic": 200,
+    "technique": 300,
+    "speed": 300,
+    "constitution": 3000,
+    "armor": 3000,
+    "resistance": 800
+  },
+  "wu_xiu": {
+    "strength": 3000,
+    "magic": 200,
+    "technique": 600,
+    "speed": 600,
+    "constitution": 2000,
+    "armor": 1200,
+    "resistance": 600
+  },
+  "qian_xiu": {
+    "strength": 800,
+    "magic": 200,
+    "technique": 3000,
+    "speed": 1200,
+    "constitution": 800,
+    "armor": 600,
+    "resistance": 600
+  },
+  "fa_xiu": {
+    "strength": 200,
+    "magic": 3000,
+    "technique": 2000,
+    "speed": 400,
+    "constitution": 800,
+    "armor": 600,
+    "resistance": 1200
+  },
+  "yi_xiu": {
+    "strength": 200,
+    "magic": 3000,
+    "technique": 800,
+    "speed": 400,
+    "constitution": 800,
+    "armor": 600,
+    "resistance": 2000
+  },
+  "fu_xiu": {
+    "strength": 200,
+    "magic": 2000,
+    "technique": 3000,
+    "speed": 400,
+    "constitution": 800,
+    "armor": 600,
+    "resistance": 1200
+  }
+}

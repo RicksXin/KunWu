@@ -13,7 +13,9 @@ import {
 } from 'db://assets/scripts/domain/CampSceneContract';
 import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
 import { CampPanoramaController } from './CampPanoramaController';
+import { CampExpeditionPresenter } from './CampExpeditionPresenter';
 import {
+    applyCampBuildingSprite,
     bindCampButton,
     campLabel,
     campNode,
@@ -86,6 +88,7 @@ export class CampBuildingPresenter extends Component {
         );
         for (const buildingId of BUILDING_IDS) {
             const node = campNode(this.node, campBuildingPath(buildingId));
+            node && applyCampBuildingSprite(node, buildingId, this.buildingStates[buildingId]);
             const button = node?.getComponent(Button);
             button && (button.interactable = true);
             const label = campLabel(this.node, campBuildingPath(buildingId, 'State'));
@@ -112,6 +115,10 @@ export class CampBuildingPresenter extends Component {
             app.events.emit('camp.npcListRequested', {});
             return buildingId;
         }
+        if (buildingId === 'ling_pu') {
+            app.events.emit('camp.lingPuRequested', {});
+            return buildingId;
+        }
         app.showFeedback(`${BUILDING_NAMES[buildingId]}页面尚未开放`);
         return buildingId;
     }
@@ -122,7 +129,7 @@ export class CampBuildingPresenter extends Component {
         }
         const app = AppRoot.instance;
         app.events.emit('expedition.requested', {});
-        app.showFeedback('出征准备尚未开放');
+        CampExpeditionPresenter.showFrom(this);
     }
 }
 

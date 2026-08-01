@@ -7,6 +7,18 @@ import { BrowserLifecycle } from './services/BrowserLifecycle';
 import { CocosSceneRouter } from './presentation/CocosSceneRouter';
 import { SaveRepository } from './services/SaveRepository';
 import { serializeProfile } from './services/ProfileCodec';
+import { LingPuService } from './services/LingPuService';
+import {
+    LING_PU_CONFIG_ID,
+    LING_PU_CONFIG_TABLE,
+} from './domain/LingPu';
+import type { LingPuConfig } from './domain/LingPu';
+import { BASE_CYCLE_SECONDS } from './domain/Production';
+import {
+    EXPEDITION_CONFIG_ID,
+    EXPEDITION_CONFIG_TABLE,
+} from './domain/ExpeditionPreparation';
+import type { ExpeditionPreparationConfig } from './domain/ExpeditionPreparation';
 
 const { ccclass, property } = _decorator;
 
@@ -25,6 +37,7 @@ export class AppRoot extends Component {
     readonly time = new TimeService();
     readonly data = new DataRegistry();
     readonly state = new GameState();
+    readonly lingPu = new LingPuService(this.time);
 
     /** 导航加载期间覆盖全屏并拦截输入。 */
     @property(Node)
@@ -41,6 +54,7 @@ export class AppRoot extends Component {
     private readonly lifecycle = new BrowserLifecycle(this.events);
     private _router: CocosSceneRouter | null = null;
     private saveRepository: SaveRepository | null = null;
+    private productionTickInFlight = false;
 
     /** 唯一的全局场景路由，生命周期与持久 AppRoot 一致。 */
     get router(): CocosSceneRouter {
@@ -86,6 +100,7 @@ export class AppRoot extends Component {
 
         // 引擎不转发 webglcontextlost 等原生事件，需自行监听（PRD-10 §8）
         this.lifecycle.start(game.canvas ?? null);
+        this.schedule(this.tickCampProduction, 1);
     }
 
     protected override onDestroy(): void {
@@ -95,6 +110,7 @@ export class AppRoot extends Component {
         game.off(Game.EVENT_HIDE, this.onGameHide, this);
         game.off(Game.EVENT_SHOW, this.onGameShow, this);
         this.lifecycle.stop();
+        this.unschedule(this.tickCampProduction);
         this.unschedule(this.hideFeedback);
         this.events.clear();
         this._router = null;
@@ -121,6 +137,32 @@ export class AppRoot extends Component {
         this.events.emit('save.completed', { savedAtUtc: envelope.saved_at_utc });
     }
 
+    getLingPuConfig(): LingPuConfig | null {
+        if (!this.data.has(LING_PU_CONFIG_TABLE)) {
+            return null;
+        }
+        return this.data.get<LingPuConfig>(LING_PU_CONFIG_TABLE, LING_PU_CONFIG_ID);
+    }
+
+    getExpeditionPreparationConfig(): ExpeditionPreparationConfig | null {
+        if (!this.data.has(EXPEDITION_CONFIG_TABLE)) {
+            return null;
+        }
+        return this.data.get<ExpeditionPreparationConfig>(
+            EXPEDITION_CONFIG_TABLE,
+            EXPEDITION_CONFIG_ID,
+        );
+    }
+
+    /** 灵圃操作与自动周期结算统一发这两个事件，顶部资源栏和面板不直接互相引用。 */
+    notifyLingPuChanged(): void {
+        if (!this.state.isLoaded) {
+            return;
+        }
+        this.events.emit('wallet.changed', { wallet: this.state.require().wallet });
+        this.events.emit('camp.productionChanged', {});
+    }
+
     /** 显示一条有时限的全局反馈，连续点击会刷新计时。 */
     showFeedback(message: string, durationSeconds = 2): void {
         if (this.feedbackLabel) {
@@ -141,10 +183,57 @@ export class AppRoot extends Component {
     };
 
     private onGameHide(): void {
+        void this.settleCampProduction(true);
         this.events.emit('app.hide', { atUtc: this.time.nowUtcSeconds() });
     }
 
     private onGameShow(): void {
+        if (this.state.isLoaded) {
+            this.lingPu.resetOnlineAnchor(this.state.require());
+            this.notifyLingPuChanged();
+            void this.saveCurrentProfile().catch((error) => {
+                console.error('[灵圃] 恢复前台保存失败', error);
+                this.showFeedback('存档失败，请稍后重试');
+            });
+        }
         this.events.emit('app.show', { atUtc: this.time.nowUtcSeconds() });
+    }
+
+    private readonly tickCampProduction = (): void => {
+        if (!this.state.isLoaded || this.productionTickInFlight) {
+            return;
+        }
+        const profile = this.state.require();
+        const elapsed = this.time.nowUtcSeconds() - profile.camp.lastSettledAtUtc;
+        if (elapsed < BASE_CYCLE_SECONDS) {
+            return;
+        }
+        void this.settleCampProduction(true);
+    };
+
+    private async settleCampProduction(save: boolean): Promise<void> {
+        const config = this.getLingPuConfig();
+        if (!this.state.isLoaded || !config || this.productionTickInFlight) {
+            return;
+        }
+        this.productionTickInFlight = true;
+        try {
+            const result = this.lingPu.settleOnline(this.state.require(), config);
+            if (result.clockRolledBack) {
+                this.showFeedback('系统时间异常，生产已暂停');
+                return;
+            }
+            if (result.output.cycles > 0) {
+                this.notifyLingPuChanged();
+                if (save) {
+                    await this.saveCurrentProfile();
+                }
+            }
+        } catch (error) {
+            console.error('[灵圃] 自动结算失败', error);
+            this.showFeedback('生产结算失败，请稍后重试');
+        } finally {
+            this.productionTickInFlight = false;
+        }
     }
 }

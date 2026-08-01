@@ -18,9 +18,5 @@
     "resistance": 12
   },
   "baseHp": 92,
-  "growth": {
-    "primaryPerLevel": 3,
-    "secondaryPerLevel": 2,
-    "secondaryAttribute": "resistance"
-  }
+  "//growth": "七维成长率见 assets/data/balance/growth_rates.json（按职业 id 索引）"
 }

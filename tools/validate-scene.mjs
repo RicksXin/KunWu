@@ -300,7 +300,14 @@ if (!existsSync(CAMP_SCENE_PATH)) {
     const campCustomTypes = new Set(
         camp
             .map((entry) => entry.__type__)
-            .filter((type) => typeof type === 'string' && !type.startsWith('cc.')),
+            .filter(
+                (type) =>
+                    typeof type === 'string' &&
+                    !type.startsWith('cc.') &&
+                    // Cocos 将 Prefab 实例的位置、名称等覆写序列化为该内置类型。
+                    // 它不是脚本组件，也不会拥有对应的 .ts.meta。
+                    type !== 'CCPropertyOverrideInfo',
+            ),
     );
     for (const compressed of campCustomTypes) {
         if (!scriptIndex.has(compressed)) {
@@ -326,8 +333,39 @@ if (!existsSync(CAMP_SCENE_PATH)) {
         }
     });
 
-    const findNodeIdx = (name) =>
-        camp.findIndex((entry) => entry.__type__ === 'cc.Node' && entry._name === name);
+    const prefabAssetUuidForNode = (nodeIdx) => {
+        const prefabInfoIdx = camp[nodeIdx]?._prefab?.__id__;
+        return camp[prefabInfoIdx]?.asset?.__uuid__ ?? null;
+    };
+    const linkedModulePrefabUuid = new Map(
+        CAMP_MODULES.flatMap((module) => {
+            const metaPath = path.join(REPO_ROOT, `${module.prefabPath}.meta`);
+            return existsSync(metaPath)
+                ? [[module.rootNode, uuidFromMeta(metaPath)]]
+                : [];
+        }),
+    );
+    const findNodeIdx = (name) => {
+        const directIdx = camp.findIndex(
+            (entry) => entry.__type__ === 'cc.Node' && entry._name === name,
+        );
+        if (directIdx >= 0) {
+            return directIdx;
+        }
+
+        // 关联 Prefab 的根节点在 .scene 中只保存父节点与 PrefabInfo，真实名称和
+        // 子树位于 .prefab 文件，打开场景时由 Cocos 展开。因此这里按资源 UUID
+        // 识别模块实例，避免要求场景保存一份会与 Prefab 漂移的重复节点树。
+        const assetUuid = linkedModulePrefabUuid.get(name);
+        if (!assetUuid) {
+            return -1;
+        }
+        return camp.findIndex(
+            (entry, index) =>
+                entry.__type__ === 'cc.Node' &&
+                prefabAssetUuidForNode(index) === assetUuid,
+        );
+    };
     const expectNode = (name) => {
         const idx = findNodeIdx(name);
         if (idx < 0) {
@@ -411,6 +449,11 @@ if (!existsSync(CAMP_SCENE_PATH)) {
         const type = compressUuid(
             uuidFromMeta(path.join(REPO_ROOT, `${module.presenter}.meta`)),
         );
+        if (prefabAssetUuidForNode(rootIdx)) {
+            // 关联实例只在场景中保存 PrefabInfo；Presenter 与访问路径由下方的
+            // Prefab 校验负责，场景层这里只校验实例存在且父级正确。
+            continue;
+        }
         const componentTypes = (camp[rootIdx]._components ?? []).map(
             (ref) => camp[ref.__id__]?.__type__,
         );
