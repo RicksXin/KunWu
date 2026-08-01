@@ -6,7 +6,7 @@
  *   - 无前排、后排、距离和站位承伤
  *   - 死亡角色不能上阵
  *   - 同一角色不能出现在多个活动队伍
- *   - 新档初始只开放 1 支队伍，后续队伍由出征准备面板解锁
+ *   - 新档初始只开放 1 支队伍，后续队伍由入山整备面板解锁
  *
  * 「无站位」意味着槽位只决定 UI 顺序，不参与任何结算——
  * 这条必须在类型层面就守住，否则日后很容易冒出"前排承伤"这类逻辑。
@@ -64,7 +64,7 @@ export function partySize(slots: PartySlots): number {
     return membersOf(slots).length;
 }
 
-/** 队伍是否满编。出征通常要求满编。 */
+/** 队伍是否满编。入山通常要求满编。 */
 export function isFull(slots: PartySlots): boolean {
     return partySize(slots) === MAX_PARTY_SIZE;
 }
@@ -168,7 +168,7 @@ export interface PartyValidation {
 }
 
 /**
- * 校验队伍可否出征。
+ * 校验队伍可否入山。
  * 收集全部问题而非首个即返回——玩家应一次看到所有需要修的地方。
  */
 export function validateForExpedition(
@@ -204,7 +204,7 @@ export function validateForExpedition(
     return { isValid: problems.length === 0, problems };
 }
 
-/** 校验预设集合至少保留第 1 队；可解锁上限由外置出征配置决定。 */
+/** 校验预设集合至少保留第 1 队；可解锁上限由外置入山配置决定。 */
 export function validatePresets(presets: readonly PartyPreset[]): PartyValidation {
     const problems: string[] = [];
 

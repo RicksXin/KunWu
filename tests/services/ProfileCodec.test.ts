@@ -71,7 +71,7 @@ describe('新档 Profile', () => {
         assert.throws(() => createDefaultProfile(seed, 1_000), /重复修士/);
     });
 
-    test('初始修士与职业、英雄主数据一致', () => {
+    test('初始修士与职业、修士主数据一致', () => {
         const profile = createDefaultProfile(loadSeed(), 1_000);
         const starting = JSON.parse(
             readFileSync(path.join(REPO_ROOT, 'assets/data/heroes/starting.json'), 'utf8'),
@@ -338,8 +338,8 @@ describe('Profile v2 → v3（成长曲线变更）', () => {
     });
 });
 
-describe('Profile v3 → v4（出征准备）', () => {
-    test('补齐满精力、初始 1 队与默认携带物', () => {
+describe('Profile v3 → v4（入山整备）', () => {
+    test('补齐满灵息、初始 1 队与默认携带物', () => {
         const v3 = loadSeed() as Record<string, unknown>;
         delete v3.expeditionPreparation;
         const roster = v3.roster as Record<string, unknown>[];

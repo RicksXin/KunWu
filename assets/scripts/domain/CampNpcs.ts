@@ -13,7 +13,7 @@ export interface CampNpcListItem {
 
 export const CEN_SHOUYI_INTRO_DIALOGUE = [
     '山门外的灯，熄了十二年。你既接了这方营印，就先看粮册，再看阵图。',
-    '禁地里的宝物不会跑，营里的人却会饿死。灵粮既养营，也供你出征。',
+    '禁地里的宝物不会跑，营里的人却会饿死。灵粮既养营，也供你入山。',
     '议事殿、灵圃与百宝库尚可运转。整备妥当，再来谈山门外的阵灯。',
 ] as const;
 

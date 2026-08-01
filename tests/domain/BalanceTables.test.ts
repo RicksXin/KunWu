@@ -361,13 +361,13 @@ describe('境界区间表', () => {
         );
     });
 
-    test('仓库表覆盖 1 到 60 且与 PRD-03 §9 的三境界一致', () => {
+    test('仓库表覆盖 1 到 60 且与 PRD-03 §9 的六个当前境界一致', () => {
         const tables = loadTables();
         assert.equal(tables.realms.maxLevel, 60);
         assert.equal(tables.realms.tier1UnlockLevel, 10);
         assert.deepEqual(
             tables.realms.realms.map((realm) => realm.id),
-            ['zhu_ji', 'jie_dan', 'yuan_ying'],
+            ['lian_qi', 'zhu_ji', 'jie_dan', 'yuan_ying', 'hua_shen', 'lian_xu'],
         );
     });
 });

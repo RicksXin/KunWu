@@ -232,7 +232,7 @@ describe('清理死亡成员（PRD-03 §10）', () => {
     });
 });
 
-describe('出征校验', () => {
+describe('入山校验', () => {
     test('满编存活队伍通过', () => {
         const result = validateForExpedition(partyOf('h1', 'h2', 'h3', 'h4'), HEROES);
         assert.equal(result.isValid, true);
@@ -263,7 +263,7 @@ describe('出征校验', () => {
     });
 
     test('未满编但有存活成员可通过', () => {
-        // PRD 未要求必须满编才能出征
+        // PRD 未要求必须满编才能入山
         const result = validateForExpedition(partyOf('h1', null, null, null), HEROES);
         assert.equal(result.isValid, true);
     });

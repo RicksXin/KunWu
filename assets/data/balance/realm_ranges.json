@@ -5,9 +5,12 @@
     "maxLevel": 60,
     "tier1UnlockLevel": 10,
     "realms": [
-      { "id": "zhu_ji", "min": 1, "max": 20 },
-      { "id": "jie_dan", "min": 21, "max": 40 },
-      { "id": "yuan_ying", "min": 41, "max": 60 }
+      { "id": "lian_qi", "min": 1, "max": 10 },
+      { "id": "zhu_ji", "min": 11, "max": 20 },
+      { "id": "jie_dan", "min": 21, "max": 30 },
+      { "id": "yuan_ying", "min": 31, "max": 40 },
+      { "id": "hua_shen", "min": 41, "max": 50 },
+      { "id": "lian_xu", "min": 51, "max": 60 }
     ]
   }
 }

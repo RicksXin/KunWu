@@ -173,7 +173,7 @@ export class GameBootstrap extends Component {
         );
     }
 
-    /** 出征、精力、队伍解锁与地图门槛统一从 shared 数据表读取。 */
+    /** 入山、灵息、队伍解锁与地图门槛统一从 shared 数据表读取。 */
     private async loadExpeditionPreparationConfig(): Promise<void> {
         const app = AppRoot.instance;
         if (app.data.has(EXPEDITION_CONFIG_TABLE)) {

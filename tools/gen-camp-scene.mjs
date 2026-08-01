@@ -309,7 +309,7 @@ function build(uuids) {
         scene.entries[badgeIdx]._active = false;
     });
 
-    // 中部出征入口。准备页未完成前仍必须给出明确反馈。
+    // 中部入山入口。整备页未完成前仍必须给出明确反馈。
     const expeditionIdx = scene.addNode({
         name: 'ExpeditionEntry',
         parent: buildingLayerIdx,

@@ -44,8 +44,8 @@ export class PageStack {
     }
 
     /**
-     * 清栈并跳转。用于出征／回城这类不应保留历史的切换：
-     * 出征后按返回不该退回营地大厅的旧实例。
+     * 清栈并跳转。用于入山／回城这类不应保留历史的切换：
+     * 入山后按返回不该退回营地大厅的旧实例。
      */
     replaceRoot(entry: RouteEntry): void {
         this.pages.length = 0;

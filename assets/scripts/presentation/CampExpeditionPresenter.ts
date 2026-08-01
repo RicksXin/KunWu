@@ -1,5 +1,6 @@
 import {
     _decorator,
+    assetManager,
     Button,
     Color,
     Component,
@@ -13,6 +14,8 @@ import {
     Mask,
     Node,
     ScrollView,
+    Sprite,
+    SpriteFrame,
     UITransform,
 } from 'cc';
 import { AppRoot } from 'db://assets/scripts/AppRoot';
@@ -29,6 +32,7 @@ import type {
     ExpeditionMapOption,
     ExpeditionPreparationConfig,
 } from 'db://assets/scripts/domain/ExpeditionPreparation';
+import { realmOf } from 'db://assets/scripts/domain/HeroGrowth';
 import {
     assignToSlot,
     clearSlot,
@@ -48,6 +52,25 @@ const { ccclass } = _decorator;
 const LOGICAL_WIDTH = 375;
 const LOGICAL_HEIGHT = 817;
 const RUNTIME_HOST_NAME = 'ExpeditionPreparationRuntime';
+
+const EXPEDITION_VISUAL_PATHS = Object.freeze({
+    panel: 'ui/ling_pu/ui_ling_pu_panel_frame/spriteFrame',
+    cardFrame: 'ui/expedition/ui_expedition_hero_card_frame/spriteFrame',
+    emptySilhouette: 'ui/expedition/ui_expedition_hero_empty_silhouette/spriteFrame',
+    avatarFrame: 'ui/top/ui_camp_avatar_frame/spriteFrame',
+    lock: 'ui/expedition/icon_expedition_lock/spriteFrame',
+    portraits: Object.freeze({
+        'hero.shi_yan': 'ui/expedition/portrait_hero_shi_yan_expedition/spriteFrame',
+        'hero.lu_qing': 'ui/expedition/portrait_hero_lu_qing_expedition/spriteFrame',
+        'hero.bai_ling': 'ui/expedition/portrait_hero_bai_ling_expedition/spriteFrame',
+        'hero.mo_yan': 'ui/expedition/portrait_hero_mo_yan_expedition/spriteFrame',
+    } as const),
+    items: Object.freeze({
+        spiritGrain: 'ui/top/icon_resource_spirit_grain/spriteFrame',
+        pickaxe: 'ui/expedition/icon_expedition_pickaxe/spriteFrame',
+        lens: 'ui/expedition/icon_expedition_lens/spriteFrame',
+    } satisfies Readonly<Record<ExpeditionItemId, string>>),
+});
 
 const COLORS = Object.freeze({
     backdrop: new Color(4, 8, 9, 224),
@@ -78,15 +101,21 @@ const FALLBACK_TEXT: Readonly<Record<string, string>> = {
     'hero.lu_qing': '陆清',
     'hero.bai_ling': '白灵',
     'hero.mo_yan': '墨言',
-    'career.wu_xiu': '武修',
+    'career.wu_xiu': '剑修',
     'career.fa_xiu': '法修',
     'career.yi_xiu': '医修',
     'career.qian_xiu': '潜修',
     'career.fu_xiu': '符修',
     'career.ti_xiu': '体修',
+    'realm.lian_qi': '炼气',
+    'realm.zhu_ji': '筑基',
+    'realm.jie_dan': '结丹',
+    'realm.yuan_ying': '元婴',
+    'realm.hua_shen': '化神',
+    'realm.lian_xu': '炼虚',
     'resource.spirit_grain': '灵粮',
-    'item.pickaxe': '十字镐',
-    'item.lens': '透镜',
+    'item.pickaxe': '开山镐',
+    'item.lens': '探灵镜',
     'map.map_01': '破禁山麓',
     'map.map_02': '白玉广场',
     'map.map_03': '灵宝遗址',
@@ -104,7 +133,7 @@ const CAREER_CARD_COLORS: Readonly<Record<string, Color>> = {
 };
 
 /**
- * 营地传送阵唤起的出征准备弹窗。
+ * 营地传送阵唤起的入山整备弹窗。
  *
  * 节点运行时创建，是因为本次不能伪造新场景节点 UUID；脚本本身仍须由 Cocos
  * Creator 首次导入并生成 .meta。后续正式美术到位后可把同一 Presenter 挂到 Prefab。
@@ -115,6 +144,14 @@ export class CampExpeditionPresenter extends Component {
     private preparationLayer: Node | null = null;
     private selectionLayer: Node | null = null;
     private mapLayer: Node | null = null;
+    private panelFrame: SpriteFrame | null = null;
+    private heroCardFrame: SpriteFrame | null = null;
+    private emptyHeroFrame: SpriteFrame | null = null;
+    private avatarFrame: SpriteFrame | null = null;
+    private lockFrame: SpriteFrame | null = null;
+    private readonly portraitFrames = new Map<string, SpriteFrame>();
+    private readonly itemFrames = new Map<ExpeditionItemId, SpriteFrame>();
+    private visualLoadStarted = false;
     private saveQueue: Promise<void> = Promise.resolve();
 
     /** 两套大厅 Presenter 都可调用；重复调用复用同一个运行时宿主。 */
@@ -123,7 +160,7 @@ export class CampExpeditionPresenter extends Component {
         const canvas = scene?.getChildByName('Canvas') ?? null;
         const mount = canvas?.getChildByName('SafeAreaRoot') ?? canvas;
         if (!mount) {
-            AppRoot.instance.showFeedback('出征面板挂载失败');
+            AppRoot.instance.showFeedback('入山整备面板挂载失败');
             return;
         }
 
@@ -149,6 +186,7 @@ export class CampExpeditionPresenter extends Component {
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         this.schedule(this.tickStamina, 1);
         this.buildShell();
+        void this.loadVisualAssets();
     }
 
     protected override onDestroy(): void {
@@ -161,7 +199,7 @@ export class CampExpeditionPresenter extends Component {
         const app = AppRoot.instance;
         this.config = app.getExpeditionPreparationConfig();
         if (!this.config || !app.state.isLoaded) {
-            app.showFeedback('出征配置尚未就绪');
+            app.showFeedback('入山配置尚未就绪');
             return;
         }
         this.node.active = true;
@@ -209,8 +247,8 @@ export class CampExpeditionPresenter extends Component {
         const state = profile.expeditionPreparation;
         const preset = currentPreset(state);
 
-        createRect(layer, 'Panel', 0, 18, 359, 755, COLORS.panel, COLORS.border);
-        createLabel(layer, 'Title', '出征准备', 0, 374, 200, 30, 20, COLORS.text);
+        this.createPanelBackground(layer, 'Panel', 0, 0, 359, 570);
+        createLabel(layer, 'Title', '入山整备', 0, 260, 200, 30, 20, COLORS.text);
 
         for (let index = 0; index < 4; index += 1) {
             const heroId = preset.slots[index] ?? null;
@@ -222,7 +260,7 @@ export class CampExpeditionPresenter extends Component {
             name: 'EditPartyButton',
             text: '编辑队伍',
             x: -127,
-            y: 130,
+            y: 17,
             width: 94,
             height: 42,
             onClick: () => this.openHeroSelection(),
@@ -230,25 +268,25 @@ export class CampExpeditionPresenter extends Component {
         this.createPartyTabs(layer, state, profile);
         createButton(layer, {
             name: 'RestoreStaminaButton',
-            text: '补充精力',
+            text: '调息',
             x: 127,
-            y: 130,
+            y: 17,
             width: 94,
             height: 42,
             enabled: false,
-            onClick: () => app.showFeedback('补充精力暂未开放'),
+            onClick: () => app.showFeedback('调息功能暂未开放'),
         });
 
         const heroes = heroSnapshots(profile);
         const weight = loadoutWeight(state.loadout, config);
         const limit = partyBurdenLimit(preset.slots, heroes, config);
-        createRect(layer, 'BurdenRow', 0, 86, 327, 32, COLORS.panelAlt, COLORS.borderSoft);
+        createRect(layer, 'BurdenRow', 0, -26, 327, 32, COLORS.panelAlt, COLORS.borderSoft);
         createLabel(
             layer,
             'BurdenLabel',
             `负重  ${weight}/${limit}`,
             0,
-            86,
+            -26,
             250,
             28,
             15,
@@ -256,24 +294,24 @@ export class CampExpeditionPresenter extends Component {
         );
 
         EXPEDITION_ITEM_IDS.forEach((itemId, index) => {
-            this.createLoadoutRow(layer, itemId, 37 - index * 58, profile, preset.slots);
+            this.createLoadoutRow(layer, itemId, -70 - index * 55, profile, preset.slots);
         });
 
         createButton(layer, {
             name: 'AdventureButton',
-            text: '冒险',
+            text: '历练',
             x: -121,
-            y: -359,
+            y: -255,
             width: 105,
             height: 50,
             enabled: false,
-            onClick: () => app.showFeedback('冒险功能暂未开放'),
+            onClick: () => app.showFeedback('历练功能暂未开放'),
         });
         createButton(layer, {
             name: 'DepartButton',
-            text: '出发',
+            text: '启程',
             x: 0,
-            y: -359,
+            y: -255,
             width: 105,
             height: 50,
             primary: true,
@@ -283,7 +321,7 @@ export class CampExpeditionPresenter extends Component {
             name: 'LeaveButton',
             text: '离开',
             x: 121,
-            y: -359,
+            y: -255,
             width: 105,
             height: 50,
             onClick: () => this.close(),
@@ -296,24 +334,59 @@ export class CampExpeditionPresenter extends Component {
         const background = hero
             ? CAREER_CARD_COLORS[hero.careerId] ?? COLORS.panelAlt
             : new Color(30, 34, 33, 255);
-        const card = createRect(parent, `HeroCard${index + 1}`, x, 257, width, 205, background, COLORS.borderSoft);
-        createSilhouette(card, 0, 25, hero === null);
+        const card = createRect(parent, `HeroCard${index + 1}`, x, 145, width, 205, background, COLORS.borderSoft);
+        const portraitFrame = hero ? this.portraitFrames.get(hero.nameKey) ?? null : null;
+        if (portraitFrame) {
+            createSpriteNode(card, 'Portrait', portraitFrame, 0, 0, width, 205);
+        } else if (!hero && this.emptyHeroFrame) {
+            createSpriteNode(card, 'EmptyPortrait', this.emptyHeroFrame, 0, 25, 64, 112);
+        } else {
+            createSilhouette(card, 0, 25, hero === null);
+        }
+        // 卡框只覆盖人物，不得压住后续运行时文字。
+        this.addHeroCardFrame(card);
         if (!hero) {
-            createLabel(card, 'Undecided', '人选未定', 0, -73, 68, 40, 14, COLORS.textSecondary);
+            createLabel(card, 'Undecided', '人选未定', 0, -78, 72, 24, 13, COLORS.textSecondary);
             return;
         }
 
-        const staminaMax = this.config?.staminaMax ?? hero.stamina;
-        const stars = '★'.repeat(starCount(hero.grade));
         const details = [
-            `精力 ${hero.stamina}/${staminaMax}`,
+            `灵息 ${hero.stamina}`,
             heroName(hero),
             `${localized(`career.${hero.careerId}`)}·${hero.level}级`,
-            stars,
+            localized(`realm.${realmOf(hero.level)}`),
         ].join('\n');
-        createRect(card, 'InfoShade', 0, -61, width - 4, 79, new Color(5, 8, 8, 205));
-        const label = createLabel(card, 'HeroInfo', details, 0, -60, width - 8, 76, 12, COLORS.text);
+        const label = createLabel(card, 'HeroInfo', details, 0, -50, width - 8, 76, 12, COLORS.text);
         label.lineHeight = 17;
+    }
+
+    private addHeroCardFrame(card: Node): void {
+        if (this.heroCardFrame) {
+            createSpriteNode(card, 'CardFrame', this.heroCardFrame, 0, 0, 79, 205);
+        }
+    }
+
+    private createPanelBackground(
+        parent: Node,
+        name: string,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+    ): Node {
+        if (this.panelFrame) {
+            return createSlicedSpriteNode(
+                parent,
+                name,
+                this.panelFrame,
+                x,
+                y,
+                width,
+                height,
+                30,
+            );
+        }
+        return createRect(parent, name, x, y, width, height, COLORS.panel, COLORS.border);
     }
 
     private createPartyTabs(
@@ -331,9 +404,9 @@ export class CampExpeditionPresenter extends Component {
             const isCurrent = preset?.presetId === state.activePresetId;
             const button = createButton(parent, {
                 name: `PartyTab${index + 1}`,
-                text: preset ? `${index + 1}队` : `${index + 1}队🔒`,
+                text: `${index + 1}队`,
                 x: -46 + index * 46,
-                y: 130,
+                y: 17,
                 width: tabWidth,
                 height: 42,
                 primary: isCurrent,
@@ -348,6 +421,9 @@ export class CampExpeditionPresenter extends Component {
                 },
             });
             button.label.fontSize = 11;
+            if (!preset && this.lockFrame) {
+                createSpriteNode(button.node, 'LockIcon', this.lockFrame, 13, 12, 14, 14);
+            }
         }
     }
 
@@ -391,7 +467,12 @@ export class CampExpeditionPresenter extends Component {
         const canAdd = carried < available && currentWeight + item.weight <= limit;
 
         const row = createRect(parent, `Loadout_${itemId}`, 0, y, 327, 50, COLORS.row, COLORS.borderSoft);
-        createItemGlyph(row, itemId, -137, 0);
+        const itemFrame = this.itemFrames.get(itemId) ?? null;
+        if (itemFrame) {
+            createSpriteNode(row, 'ItemIcon', itemFrame, -137, 0, 24, 24);
+        } else {
+            createItemGlyph(row, itemId, -137, 0);
+        }
         createLabel(row, 'Name', localized(item.nameKey), -91, 7, 75, 22, 14, COLORS.text, HorizontalTextAlignment.LEFT);
         createLabel(
             row,
@@ -449,7 +530,7 @@ export class CampExpeditionPresenter extends Component {
             app.showFeedback('负重已达上限');
             return;
         }
-        this.queueSave('调整出征物资');
+        this.queueSave('调整入山物资');
         this.renderPreparation();
     }
 
@@ -462,8 +543,8 @@ export class CampExpeditionPresenter extends Component {
         clearChildren(layer);
         layer.active = true;
         createRect(layer, 'Backdrop', 0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT, COLORS.backdrop);
-        createRect(layer, 'Panel', 0, 0, 359, 777, COLORS.panel, COLORS.border);
-        createLabel(layer, 'Title', '选择出征修士', 0, 370, 220, 32, 20, COLORS.text);
+        this.createPanelBackground(layer, 'Panel', 0, 0, 359, 777);
+        createLabel(layer, 'Title', '选择入山修士', 0, 370, 220, 32, 20, COLORS.text);
         createLabel(layer, 'Hint', '已拥有修士 · 最多上阵 4 名', 0, 342, 260, 24, 12, COLORS.textSecondary);
 
         const viewport = createScrollViewport(layer, 'HeroList', 0, 7, 331, 620);
@@ -520,20 +601,39 @@ export class CampExpeditionPresenter extends Component {
             'Avatar',
             -127,
             7,
-            62,
-            76,
+            50,
+            50,
             CAREER_CARD_COLORS[hero.careerId] ?? COLORS.panelAlt,
             COLORS.borderSoft,
         );
-        createSilhouette(avatar, 0, 0, false, 0.55);
-        createLabel(row, 'Stars', '★'.repeat(starCount(hero.grade)), -127, -42, 67, 18, 10, COLORS.text);
+        const mask = avatar.addComponent(Mask);
+        mask.type = Mask.Type.RECT;
+        const portraitFrame = this.portraitFrames.get(hero.nameKey) ?? null;
+        if (portraitFrame) {
+            createSpriteNode(avatar, 'Portrait', portraitFrame, 0, -44, 50, 130);
+        } else {
+            createSilhouette(avatar, 0, -7, false, 0.43);
+        }
+        if (this.avatarFrame) {
+            createSpriteNode(avatar, 'AvatarFrame', this.avatarFrame, 0, 0, 50, 50);
+        }
+        createLabel(
+            row,
+            'Realm',
+            localized(`realm.${realmOf(hero.level)}`),
+            -127,
+            -42,
+            67,
+            18,
+            10,
+            COLORS.text,
+        );
 
         const rating = Object.values(hero.attributes).reduce((sum, value) => sum + value, 0);
-        const staminaMax = this.config?.staminaMax ?? hero.stamina;
         const info = [
             `${heroName(hero)} · ${localized(`career.${hero.careerId}`)}`,
-            `等级 ${hero.level}    精力 ${hero.stamina}/${staminaMax}`,
-            `评分 ${rating}`,
+            `等级 ${hero.level}    灵息 ${hero.stamina}`,
+            `战力 ${rating}`,
         ].join('\n');
         const infoLabel = createLabel(
             row,
@@ -621,8 +721,8 @@ export class CampExpeditionPresenter extends Component {
         clearChildren(layer);
         layer.active = true;
         createRect(layer, 'Backdrop', 0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT, COLORS.backdrop);
-        createRect(layer, 'Panel', 0, 0, 359, 777, COLORS.panel, COLORS.border);
-        createLabel(layer, 'Title', '选择出征地图', 0, 370, 220, 32, 20, COLORS.text);
+        this.createPanelBackground(layer, 'Panel', 0, 0, 359, 777);
+        createLabel(layer, 'Title', '选择禁地区域', 0, 370, 220, 32, 20, COLORS.text);
         createLabel(layer, 'Hint', '点击地图项目即发起传送', 0, 342, 260, 24, 12, COLORS.textSecondary);
 
         const viewport = createScrollViewport(layer, 'MapList', 0, 12, 331, 612);
@@ -655,7 +755,7 @@ export class CampExpeditionPresenter extends Component {
         const button = createButton(parent, {
             name: `Map_${map.mapId}`,
             text: unlocked
-                ? `${map.mapNumber}. ${localized(map.nameKey)}\n精力 ${map.staminaCost} · 灵粮/步 ${map.grainPerStep} · 最低携带 ${map.minimumCarriedGrain}`
+                ? `${map.mapNumber}. ${localized(map.nameKey)}\n灵息 ${map.staminaCost} · 灵粮/步 ${map.grainPerStep} · 最低携带 ${map.minimumCarriedGrain}`
                 : `${map.mapNumber}. ${localized(map.nameKey)}  ·  尚未解锁`,
             x: 0,
             y,
@@ -666,6 +766,71 @@ export class CampExpeditionPresenter extends Component {
         });
         button.label.fontSize = 13;
         button.label.lineHeight = 23;
+        if (!unlocked && this.lockFrame) {
+            createSpriteNode(button.node, 'LockIcon', this.lockFrame, -138, 0, 14, 14);
+        }
+    }
+
+    private async loadVisualAssets(): Promise<void> {
+        if (this.visualLoadStarted) {
+            return;
+        }
+        this.visualLoadStarted = true;
+
+        const portraitEntries = Object.entries(EXPEDITION_VISUAL_PATHS.portraits);
+        const itemEntries = Object.entries(EXPEDITION_VISUAL_PATHS.items) as [
+            ExpeditionItemId,
+            string,
+        ][];
+        const [panelFrame, cardFrame, emptyHeroFrame, avatarFrame, lockFrame, portraits, items] =
+            await Promise.all([
+                loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.panel),
+                loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.cardFrame),
+                loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.emptySilhouette),
+                loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.avatarFrame),
+                loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.lock),
+                Promise.all(
+                    portraitEntries.map(async ([nameKey, path]) => [
+                        nameKey,
+                        await loadOptionalSpriteFrame(path),
+                    ] as const),
+                ),
+                Promise.all(
+                    itemEntries.map(async ([itemId, path]) => [
+                        itemId,
+                        await loadOptionalSpriteFrame(path),
+                    ] as const),
+                ),
+            ]);
+
+        if (!this.node.isValid) {
+            return;
+        }
+        this.panelFrame = panelFrame;
+        this.heroCardFrame = cardFrame;
+        this.emptyHeroFrame = emptyHeroFrame;
+        this.avatarFrame = avatarFrame;
+        this.lockFrame = lockFrame;
+        for (const [nameKey, frame] of portraits) {
+            if (frame) {
+                this.portraitFrames.set(nameKey, frame);
+            }
+        }
+        for (const [itemId, frame] of items) {
+            if (frame) {
+                this.itemFrames.set(itemId, frame);
+            }
+        }
+
+        if (this.node.active) {
+            this.renderPreparation();
+            if (this.selectionLayer?.active) {
+                this.openHeroSelection();
+            }
+            if (this.mapLayer?.active) {
+                this.openMapSelection();
+            }
+        }
     }
 
     private selectMap(map: ExpeditionMapOption): void {
@@ -691,11 +856,11 @@ export class CampExpeditionPresenter extends Component {
             config,
         });
         if (!readiness.isReady) {
-            app.showFeedback(readiness.problems[0] ?? '当前无法出征', 3);
+            app.showFeedback(readiness.problems[0] ?? '当前无法入山', 3);
             return;
         }
 
-        // 地图场景尚未完成，先发出稳定交接事件；不可提前扣精力/物资后再加载失败。
+        // 地图场景尚未完成，先发出稳定交接事件；不可提前扣灵息/物资后再加载失败。
         app.events.emit('expedition.mapSelected', {
             mapId: map.mapId,
             partyPresetId: preset.presetId,
@@ -727,7 +892,7 @@ export class CampExpeditionPresenter extends Component {
             hero.stamina = result.staminaByHero[hero.instanceId] ?? hero.stamina;
         }
         state.lastStaminaSettledAtUtc = result.nextSettledAtUtc;
-        this.queueSave('精力自然恢复');
+        this.queueSave('灵息自然恢复');
         if (result.recovered > 0) {
             app.events.emit('heroes.staminaChanged', { recovered: result.recovered });
         }
@@ -757,8 +922,8 @@ export class CampExpeditionPresenter extends Component {
         this.saveQueue = this.saveQueue
             .then(() => app.saveCurrentProfile())
             .catch((error: unknown) => {
-                console.error(`[出征准备] ${reason}保存失败`, error);
-                app.showFeedback('出征准备保存失败');
+                console.error(`[入山整备] ${reason}保存失败`, error);
+                app.showFeedback('入山整备保存失败');
             });
     }
 
@@ -816,10 +981,6 @@ function heroName(hero: HeroInstance): string {
 
 function localized(key: string): string {
     return FALLBACK_TEXT[key] ?? key;
-}
-
-function starCount(grade: HeroInstance['grade']): number {
-    return Math.max(1, ['D', 'C', 'B', 'A', 'S', 'SS', 'SSS'].indexOf(grade) + 1);
 }
 
 function partyRejectionText(reason: string): string {
@@ -946,6 +1107,85 @@ function createButton(parent: Node, options: {
         node.on(Button.EventType.CLICK, options.onClick);
     }
     return { node, button, label };
+}
+
+function createSpriteNode(
+    parent: Node,
+    name: string,
+    frame: SpriteFrame,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+): Sprite {
+    const node = new Node(name);
+    node.layer = parent.layer;
+    parent.addChild(node);
+    node.setPosition(x, y, 0);
+    const transform = node.addComponent(UITransform);
+    const sprite = node.addComponent(Sprite);
+    sprite.spriteFrame = frame;
+    sprite.type = Sprite.Type.SIMPLE;
+    sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+    // 赋 SpriteFrame 时 Cocos 会先按源图像素尺寸刷新 UITransform。
+    // @3x PNG 必须在其后重新写入 375×817 基准下的逻辑显示尺寸。
+    transform.setContentSize(width, height);
+    transform.setAnchorPoint(0.5, 0.5);
+    return sprite;
+}
+
+function createSlicedSpriteNode(
+    parent: Node,
+    name: string,
+    frame: SpriteFrame,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    inset: number,
+): Node {
+    const node = new Node(name);
+    node.layer = parent.layer;
+    parent.addChild(node);
+    node.setPosition(x, y, 0);
+    const transform = node.addComponent(UITransform);
+    const sprite = node.addComponent(Sprite);
+    frame.insetLeft = inset;
+    frame.insetRight = inset;
+    frame.insetTop = inset;
+    frame.insetBottom = inset;
+    sprite.spriteFrame = frame;
+    sprite.type = Sprite.Type.SLICED;
+    sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+    // 九宫格赋值同样会写入源图尺寸，逻辑面板尺寸必须最后设置。
+    transform.setContentSize(width, height);
+    transform.setAnchorPoint(0.5, 0.5);
+    return node;
+}
+
+function loadSpriteFrame(path: string): Promise<SpriteFrame> {
+    const bundle = assetManager.getBundle('camp');
+    if (!bundle) {
+        return Promise.reject(new Error('camp Bundle 尚未加载'));
+    }
+    return new Promise((resolve, reject) => {
+        bundle.load(path, SpriteFrame, (error, frame) => {
+            if (error || !frame) {
+                reject(error ?? new Error(`找不到 SpriteFrame ${path}`));
+                return;
+            }
+            resolve(frame);
+        });
+    });
+}
+
+async function loadOptionalSpriteFrame(path: string): Promise<SpriteFrame | null> {
+    try {
+        return await loadSpriteFrame(path);
+    } catch (error) {
+        console.warn(`[入山整备] 暂时无法加载美术素材 ${path}`, error);
+        return null;
+    }
 }
 
 function createSilhouette(

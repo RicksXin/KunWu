@@ -67,15 +67,25 @@ export const GRADE_BASE_PERCENT: Readonly<Record<HeroGrade, number>> = {
 /** 成长率的千分位基数：3000 表示每级 +3.0 点。 */
 export const GROWTH_RATE_SCALE = 1000;
 
-/** 境界（PRD-03 §9）。 */
-export const REALMS = ['zhu_ji', 'jie_dan', 'yuan_ying'] as const;
+/** 当前 `Lv60` 范围内的境界（PRD-03 §9）；合体、大乘待等级上限开放后加入。 */
+export const REALMS = [
+    'lian_qi',
+    'zhu_ji',
+    'jie_dan',
+    'yuan_ying',
+    'hua_shen',
+    'lian_xu',
+] as const;
 export type Realm = (typeof REALMS)[number];
 
 /** 各境界的等级区间（PRD-03 §9）。 */
 export const REALM_LEVEL_RANGES: Readonly<Record<Realm, { min: number; max: number }>> = {
-    zhu_ji: { min: 1, max: 20 },
-    jie_dan: { min: 21, max: 40 },
-    yuan_ying: { min: 41, max: 60 },
+    lian_qi: { min: 1, max: 10 },
+    zhu_ji: { min: 11, max: 20 },
+    jie_dan: { min: 21, max: 30 },
+    yuan_ying: { min: 31, max: 40 },
+    hua_shen: { min: 41, max: 50 },
+    lian_xu: { min: 51, max: 60 },
 };
 
 /** MVP 等级上限。 */

@@ -31,7 +31,7 @@ import {
 } from '../domain/CampBottomHud';
 import type { CampSystemEntryId } from '../domain/CampBottomHud';
 import { CampExpeditionPresenter } from './CampExpeditionPresenter';
-import { applyCampBuildingSprite } from './CampViewUtils';
+import { applyCampBuildingVisualState } from './CampViewUtils';
 
 const { ccclass, property } = _decorator;
 
@@ -294,7 +294,7 @@ export class CampPresenter extends Component {
             if (button) {
                 button.interactable = true;
             }
-            applyCampBuildingSprite(node, buildingId, states[buildingId]);
+            applyCampBuildingVisualState(node, buildingId, states[buildingId]);
             const stateLabel = this.buildingStateLabels[index];
             if (stateLabel) {
                 stateLabel.string = BUILDING_STATE_NAMES[states[buildingId]];
@@ -670,7 +670,7 @@ export class CampPresenter extends Component {
         this.buildingNodes.forEach((node, index) => check(node, `建筑按钮 ${index}`));
         check(this.avatarButton, '玩家头像');
         check(this.mainTaskButton, '主线提示');
-        check(this.expeditionButton, '出征入口');
+        check(this.expeditionButton, '入山入口');
         check(this.cenShouyiButton, '岑守一人物项');
         check(this.npcListBackButton, '人物列表返回');
         check(this.npcDialogBackButton, '对话返回');
@@ -690,7 +690,7 @@ function currentMainTaskObjective(storyFlags: Readonly<Record<string, boolean>>)
         return null;
     }
     if (storyFlags.met_cen_shou_yi === true) {
-        return '整备营地，准备首次出征';
+        return '整备营地，准备首次入山';
     }
     return '前往议事殿，与岑守一交谈';
 }
@@ -738,5 +738,5 @@ const NAV_FEEDBACK: Readonly<Record<BottomNavItem, string>> = {
     heroes: '修士页面尚未开放',
     inventory: '背包页面尚未开放',
     quests: '任务页面尚未开放',
-    expedition: '请点击营地传送阵打开出征准备面板',
+    expedition: '请点击营地传送阵打开入山整备面板',
 };

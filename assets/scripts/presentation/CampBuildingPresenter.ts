@@ -15,7 +15,7 @@ import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
 import { CampPanoramaController } from './CampPanoramaController';
 import { CampExpeditionPresenter } from './CampExpeditionPresenter';
 import {
-    applyCampBuildingSprite,
+    applyCampBuildingVisualState,
     bindCampButton,
     campLabel,
     campNode,
@@ -54,7 +54,7 @@ export class CampBuildingPresenter extends Component {
         });
         const expedition = campNode(this.node, CAMP_BUILDING_PATHS.expedition);
         bindCampButton(this, expedition, () => this.activateExpedition(), this.disposers);
-        warnCampTouchTarget(expedition, '出征入口');
+        warnCampTouchTarget(expedition, '入山入口');
     }
 
     protected override start(): void {
@@ -88,7 +88,7 @@ export class CampBuildingPresenter extends Component {
         );
         for (const buildingId of BUILDING_IDS) {
             const node = campNode(this.node, campBuildingPath(buildingId));
-            node && applyCampBuildingSprite(node, buildingId, this.buildingStates[buildingId]);
+            node && applyCampBuildingVisualState(node, buildingId, this.buildingStates[buildingId]);
             const button = node?.getComponent(Button);
             button && (button.interactable = true);
             const label = campLabel(this.node, campBuildingPath(buildingId, 'State'));

@@ -1,4 +1,5 @@
 import { assetManager, Button, Component, Label, Node, Sprite, SpriteFrame, UITransform } from 'cc';
+import { CAMP_BUILDING_CHILD_NAMES } from 'db://assets/scripts/domain/CampSceneContract';
 import type { BuildingId, BuildingState } from 'db://assets/scripts/domain/HallBadges';
 import { meetsTouchTarget, MIN_TOUCH_TARGET_DP } from 'db://assets/scripts/domain/ViewportLayout';
 
@@ -44,11 +45,18 @@ export function campLabel(root: Node, path: string): Label | null {
  * 普通图在节点首次渲染时缓存；异步加载完成前若状态已经变化，回调不会用旧状态
  * 覆盖新画面。AVAILABLE 代表已满足解锁条件，因此应展示普通建筑而不是 locked 图。
  */
-export function applyCampBuildingSprite(
+export function applyCampBuildingVisualState(
     node: Node,
     buildingId: BuildingId,
     state: BuildingState,
 ): void {
+    const nameNode = node.getChildByName(CAMP_BUILDING_CHILD_NAMES.name);
+    if (nameNode) {
+        nameNode.active = state !== 'LOCKED';
+    } else {
+        console.error(`[CampView] 建筑 ${buildingId} 缺少名称节点`);
+    }
+
     const sprite = node.getComponent(Sprite);
     if (!sprite) {
         console.error(`[CampView] 建筑 ${buildingId} 缺少 Sprite`);

@@ -101,7 +101,7 @@ function currentMainTaskObjective(storyFlags: Readonly<Record<string, boolean>>)
         return null;
     }
     if (storyFlags.met_cen_shou_yi === true) {
-        return '整备营地，准备首次出征';
+        return '整备营地，准备首次入山';
     }
     return '前往议事殿，与岑守一交谈';
 }

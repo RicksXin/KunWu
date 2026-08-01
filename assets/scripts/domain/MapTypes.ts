@@ -82,7 +82,7 @@ export interface MapDefinition {
     readonly nameKey: string;
     readonly width: number;
     readonly height: number;
-    /** 出征起始格。 */
+    /** 入山起始格。 */
     readonly entryX: number;
     readonly entryY: number;
     readonly objects: readonly MapObjectDefinition[];

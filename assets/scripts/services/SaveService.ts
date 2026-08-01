@@ -14,7 +14,7 @@ export type SaveStore = (typeof SAVE_STORES)[number];
  *
  * v3：roster 的 attributes 与 maxHp 按 Docs/13 §3 的新成长曲线重算
  *     （七维全维成长、品级同时影响初始值）。见 ProfileCodec.migrateProfileV2ToV3。
- * v4：增加英雄精力、队伍预设、出征携带物与自然恢复结算锚点。
+ * v4：增加修士灵息、队伍预设、入山携带物与自然恢复结算锚点。
  */
 export const CURRENT_SCHEMA_VERSION = 4;
 

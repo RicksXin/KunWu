@@ -47,14 +47,20 @@ describe('品级（PRD-03 §3）', () => {
 });
 
 describe('境界（PRD-03 §9）', () => {
-    test('三个境界', () => {
-        assert.deepEqual([...REALMS], ['zhu_ji', 'jie_dan', 'yuan_ying']);
+    test('当前等级上限覆盖六个境界', () => {
+        assert.deepEqual(
+            [...REALMS],
+            ['lian_qi', 'zhu_ji', 'jie_dan', 'yuan_ying', 'hua_shen', 'lian_xu'],
+        );
     });
 
-    test('区间为 1-20 / 21-40 / 41-60', () => {
-        assert.deepEqual(REALM_LEVEL_RANGES.zhu_ji, { min: 1, max: 20 });
-        assert.deepEqual(REALM_LEVEL_RANGES.jie_dan, { min: 21, max: 40 });
-        assert.deepEqual(REALM_LEVEL_RANGES.yuan_ying, { min: 41, max: 60 });
+    test('炼气至炼虚每境界十级', () => {
+        assert.deepEqual(REALM_LEVEL_RANGES.lian_qi, { min: 1, max: 10 });
+        assert.deepEqual(REALM_LEVEL_RANGES.zhu_ji, { min: 11, max: 20 });
+        assert.deepEqual(REALM_LEVEL_RANGES.jie_dan, { min: 21, max: 30 });
+        assert.deepEqual(REALM_LEVEL_RANGES.yuan_ying, { min: 31, max: 40 });
+        assert.deepEqual(REALM_LEVEL_RANGES.hua_shen, { min: 41, max: 50 });
+        assert.deepEqual(REALM_LEVEL_RANGES.lian_xu, { min: 51, max: 60 });
     });
 
     test('区间连续无空隙', () => {
@@ -66,12 +72,18 @@ describe('境界（PRD-03 §9）', () => {
     });
 
     test('边界等级归属正确', () => {
-        assert.equal(realmOf(1), 'zhu_ji');
+        assert.equal(realmOf(1), 'lian_qi');
+        assert.equal(realmOf(10), 'lian_qi');
+        assert.equal(realmOf(11), 'zhu_ji');
         assert.equal(realmOf(20), 'zhu_ji');
         assert.equal(realmOf(21), 'jie_dan');
-        assert.equal(realmOf(40), 'jie_dan');
-        assert.equal(realmOf(41), 'yuan_ying');
-        assert.equal(realmOf(60), 'yuan_ying');
+        assert.equal(realmOf(30), 'jie_dan');
+        assert.equal(realmOf(31), 'yuan_ying');
+        assert.equal(realmOf(40), 'yuan_ying');
+        assert.equal(realmOf(41), 'hua_shen');
+        assert.equal(realmOf(50), 'hua_shen');
+        assert.equal(realmOf(51), 'lian_xu');
+        assert.equal(realmOf(60), 'lian_xu');
     });
 
     test('1–60 全部有归属', () => {

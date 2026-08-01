@@ -60,7 +60,7 @@ describe('PageStack replaceRoot', () => {
 
         stack.replaceRoot({ pageId: 'map' });
 
-        // 出征后按返回不该退回营地大厅的旧实例
+        // 入山后按返回不该退回营地大厅的旧实例
         assert.equal(stack.depth(), 1);
         assert.equal(stack.current()?.pageId, 'map');
         assert.equal(stack.pop(), null);

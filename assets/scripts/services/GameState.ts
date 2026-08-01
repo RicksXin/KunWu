@@ -52,17 +52,17 @@ export interface HeroInstance {
     readonly skillIds: readonly string[];
     /** 阵亡后进入还魂名单。 */
     isDead: boolean;
-    /** 出征消耗；营地中按配置周期自然恢复，范围 0–100。 */
+    /** 入山消耗；营地中按配置周期自然恢复，范围 0–100。 */
     stamina: number;
 }
 
-/** 出征准备面板的持久状态；不是独立页面状态。 */
+/** 入山整备面板的持久状态；不是独立页面状态。 */
 export interface ExpeditionPreparationState {
     /** 只保存已解锁队伍；新档仅第 1 队。 */
     partyPresets: PartyPreset[];
     activePresetId: string;
     loadout: ExpeditionLoadout;
-    /** 上次精力自然恢复结算锚点（UTC 秒）。 */
+    /** 上次灵息自然恢复结算锚点（UTC 秒）。 */
     lastStaminaSettledAtUtc: number;
 }
 
@@ -72,7 +72,7 @@ export interface ExpeditionState {
     remainingGrain: number;
     /** 已揭露格，用位集或坐标键集合保存（技术方案 §9.3）。 */
     readonly revealedTiles: Set<string>;
-    /** 本次出征的临时战利品，战败会遗失。 */
+    /** 本次入山的临时战利品，战败会遗失。 */
     readonly temporaryLoot: Record<string, number>;
 }
 

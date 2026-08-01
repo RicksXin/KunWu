@@ -140,10 +140,10 @@ const expeditionConfigPath = path.join(
 try {
     const table = JSON.parse(readFileSync(expeditionConfigPath, 'utf8'));
     parseExpeditionPreparationConfig(table.expedition_preparation);
-    console.log('出征准备数值配置校验通过');
+    console.log('入山整备数值配置校验通过');
 } catch (error) {
     expeditionConfigError = error;
-    console.error(`出征准备数值配置校验失败：${error.message}`);
+    console.error(`入山整备数值配置校验失败：${error.message}`);
 }
 
 // 平衡数值表（Docs/13 §5）。与运行时共用 BalanceTables 的解析函数，

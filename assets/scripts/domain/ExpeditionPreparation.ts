@@ -1,8 +1,8 @@
 /**
- * 出征准备领域规则（PRD-04 §2、PRD-05 §6、PRD-09 §6.2）。
+ * 入山整备领域规则（PRD-04 §2、PRD-05 §6、PRD-09 §6.2）。
  *
- * 纯 TypeScript、无引擎依赖。负责精力自然恢复、出征负重、携带物资与地图门槛；
- * 表现层只消费这里的计算结果，不得自行决定能否出征。
+ * 纯 TypeScript、无引擎依赖。负责灵息自然恢复、入山负重、携带物资与地图门槛；
+ * 表现层只消费这里的计算结果，不得自行决定能否入山。
  */
 
 import { MAX_PARTY_SIZE } from './CombatTypes';
@@ -101,7 +101,7 @@ function nullableStringOf(value: unknown, path: string): string | null {
 
 function itemIdOf(value: unknown, path: string): ExpeditionItemId {
     if (!(EXPEDITION_ITEM_IDS as readonly unknown[]).includes(value)) {
-        throw new Error(`${path} 不是合法的出征物品 ID`);
+        throw new Error(`${path} 不是合法的入山物品 ID`);
     }
     return value as ExpeditionItemId;
 }
@@ -243,7 +243,7 @@ export function partyBurdenLimit(
 }
 
 /**
- * 在营地按完整周期恢复精力；野外时完全暂停。
+ * 在营地按完整周期恢复灵息；禁地内完全暂停。
  * 返回新值而不修改入参，便于存档层原子应用。
  */
 export function settleNaturalStamina(input: {
@@ -323,7 +323,7 @@ export function validateExpeditionReadiness(input: {
         } else if (hero.isDead) {
             problems.push(`修士 ${id} 已阵亡`);
         } else if (hero.stamina < input.map.staminaCost) {
-            problems.push(`有修士精力不足（需要 ${input.map.staminaCost}）`);
+            problems.push(`有修士灵息不足（需要 ${input.map.staminaCost}）`);
         }
     }
     if (input.loadout.spiritGrain < input.map.minimumCarriedGrain) {

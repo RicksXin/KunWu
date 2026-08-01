@@ -56,7 +56,7 @@ const HEROES: readonly ExpeditionHeroSnapshot[] = [
     },
 ];
 
-describe('出征准备配置', () => {
+describe('入山整备配置', () => {
     test('三种携带物与五张地图齐全', () => {
         assert.deepEqual(Object.keys(CONFIG.items).sort(), ['lens', 'pickaxe', 'spiritGrain']);
         assert.equal(CONFIG.maps.length, 5);
@@ -65,7 +65,7 @@ describe('出征准备配置', () => {
     });
 });
 
-describe('精力自然恢复', () => {
+describe('灵息自然恢复', () => {
     test('营地中只结算完整周期并钳制到 100', () => {
         const result = settleNaturalStamina({
             heroes: [
@@ -98,8 +98,8 @@ describe('精力自然恢复', () => {
     });
 });
 
-describe('负重与出征门槛', () => {
-    test('灵粮、十字镐和透镜都计入负重', () => {
+describe('负重与入山门槛', () => {
+    test('灵粮、开山镐和探灵镜都计入负重', () => {
         assert.equal(
             loadoutWeight({ spiritGrain: 20, pickaxe: 2, lens: 1 }, CONFIG),
             20 + CONFIG.items.pickaxe.weight * 2 + CONFIG.items.lens.weight,
@@ -115,7 +115,7 @@ describe('负重与出征门槛', () => {
         );
     });
 
-    test('任一上阵修士精力不足时拒绝地图', () => {
+    test('任一上阵修士灵息不足时拒绝地图', () => {
         const map = CONFIG.maps[0]!;
         const result = validateExpeditionReadiness({
             slots: ['h1', 'h2', null, null],
@@ -125,10 +125,10 @@ describe('负重与出征门槛', () => {
             config: CONFIG,
         });
         assert.equal(result.isReady, false);
-        assert.ok(result.problems.some((problem) => /精力不足/.test(problem)));
+        assert.ok(result.problems.some((problem) => /灵息不足/.test(problem)));
     });
 
-    test('存活队伍、精力、灵粮和负重均满足时通过', () => {
+    test('存活队伍、灵息、灵粮和负重均满足时通过', () => {
         const map = CONFIG.maps[0]!;
         const result = validateExpeditionReadiness({
             slots: ['h1', null, null, null],

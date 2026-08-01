@@ -19,7 +19,7 @@ export interface SceneRouterApi {
     push(entry: RouteEntry): Promise<void>;
     /** 返回上一页。栈底页面不可弹出。 */
     pop(): Promise<void>;
-    /** 清栈并跳转，用于出征/回城这类不应保留历史的切换。 */
+    /** 清栈并跳转，用于入山/回城这类不应保留历史的切换。 */
     replaceRoot(entry: RouteEntry): Promise<void>;
     current(): RouteEntry | null;
     depth(): number;

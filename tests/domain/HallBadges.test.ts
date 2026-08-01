@@ -30,7 +30,7 @@ describe('营地结构（PRD-01 §2）', () => {
         assert.equal(BUILDING_IDS.length, 7);
     });
 
-    test('底部导航五项，顺序为营地/修士/背包/任务/出征', () => {
+    test('底部导航五项，顺序为营地/修士/背包/任务/入山', () => {
         assert.deepEqual(
             [...BOTTOM_NAV_ITEMS],
             ['camp', 'heroes', 'inventory', 'quests', 'expedition'],

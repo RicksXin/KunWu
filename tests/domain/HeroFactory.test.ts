@@ -414,7 +414,7 @@ describe('转战斗单位', () => {
         assert.equal(unit.isDead, false);
     });
 
-    test('可指定当前血量（带伤出征）', () => {
+    test('可指定当前血量（带伤入山）', () => {
         const instance = instantiateHero(startingHeroes[0]!, careerMap, balance);
         const unit = toCombatUnit(instance, 1, 'ally', 30);
         assert.equal(unit.currentHp, 30);

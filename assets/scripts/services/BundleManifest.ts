@@ -39,7 +39,7 @@ export const BOOT_BUNDLES: readonly BundleName[] = ['shared'];
  * 预载规则：进入某个场景后应在后台预载哪些包。
  *
  * 键为触发点，值为待预载包。营地加载后预载 map_01（PRD-10 §3），
- * 使玩家点「出征」时地图已就绪（地图加载 < 2 秒预算）。
+ * 使玩家点「入山」时地图已就绪（地图加载 < 2 秒预算）。
  */
 export const PRELOAD_RULES: Readonly<Record<string, readonly BundleName[]>> = {
     camp: ['map_01'],

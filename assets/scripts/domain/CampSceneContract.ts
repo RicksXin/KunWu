@@ -53,8 +53,18 @@ export const CAMP_HIDDEN_PANELS = ['NpcListPanel', 'NpcDialogPanel', 'SettingsPa
 
 // ── 各 Presenter 实际使用的节点路径。Presenter 必须从这里取，不得内联字符串。
 
+/** 建筑内部节点名。表现层不得自行复制这些字符串。 */
+export const CAMP_BUILDING_CHILD_NAMES = Object.freeze({
+    name: 'Name',
+    state: 'State',
+    badge: 'Badge',
+} as const);
+
+type CampBuildingChildName =
+    (typeof CAMP_BUILDING_CHILD_NAMES)[keyof typeof CAMP_BUILDING_CHILD_NAMES];
+
 /** 建筑内部节点路径。BuildingLayer 下每座建筑一组。 */
-export function campBuildingPath(buildingId: BuildingId, child?: 'State' | 'Badge'): string {
+export function campBuildingPath(buildingId: BuildingId, child?: CampBuildingChildName): string {
     return child ? `${buildingId}/${child}` : buildingId;
 }
 

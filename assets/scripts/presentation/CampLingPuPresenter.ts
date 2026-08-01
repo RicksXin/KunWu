@@ -227,7 +227,8 @@ export class CampLingPuPresenter extends Component {
     private confirmationMode: ConfirmationMode | null = null;
     private confirmationActionLocked = false;
 
-    private actionButtonFrame: SpriteFrame | null = null;
+    private inlineActionButtonFrame: SpriteFrame | null = null;
+    private footerActionButtonFrame: SpriteFrame | null = null;
     private plusFrame: SpriteFrame | null = null;
     private minusFrame: SpriteFrame | null = null;
     private operationQueue: Promise<void> = Promise.resolve();
@@ -946,7 +947,8 @@ export class CampLingPuPresenter extends Component {
             const [
                 panel,
                 row,
-                action,
+                inlineAction,
+                footerAction,
                 plus,
                 minus,
                 track,
@@ -963,7 +965,11 @@ export class CampLingPuPresenter extends Component {
                     loadSpriteFrame('camp', 'ui/ling_pu/ui_ling_pu_resource_row/spriteFrame'),
                     loadSpriteFrame(
                         'camp',
-                        'ui/ling_pu/ui_ling_pu_action_button_normal/spriteFrame',
+                        'ui/common/ui_common_button_inline_normal/spriteFrame',
+                    ),
+                    loadSpriteFrame(
+                        'camp',
+                        'ui/common/ui_common_button_footer_normal/spriteFrame',
                     ),
                     loadSpriteFrame('camp', 'ui/ling_pu/icon_action_plus/spriteFrame'),
                     loadSpriteFrame('camp', 'ui/ling_pu/icon_action_minus/spriteFrame'),
@@ -985,7 +991,8 @@ export class CampLingPuPresenter extends Component {
             if (this.destroyed) {
                 return;
             }
-            this.actionButtonFrame = action;
+            this.inlineActionButtonFrame = inlineAction;
+            this.footerActionButtonFrame = footerAction;
             this.plusFrame = plus;
             this.minusFrame = minus;
             this.resourceIconFrames.set('spiritGrain', grain);
@@ -1025,8 +1032,8 @@ export class CampLingPuPresenter extends Component {
     }
 
     private applyButtonFrames(row: ResourceRowView): void {
-        if (this.actionButtonFrame) {
-            applySlicedFrame(row.upgrade.visual, this.actionButtonFrame, 24);
+        if (this.inlineActionButtonFrame) {
+            applySlicedFrame(row.upgrade.visual, this.inlineActionButtonFrame, 24, 18);
         }
         if (this.minusFrame) {
             applySimpleFrame(row.minus.visual, this.minusFrame);
@@ -1037,7 +1044,7 @@ export class CampLingPuPresenter extends Component {
     }
 
     private applyAllActionButtonFrames(): void {
-        if (!this.actionButtonFrame) {
+        if (!this.footerActionButtonFrame) {
             return;
         }
         for (const view of [
@@ -1047,7 +1054,7 @@ export class CampLingPuPresenter extends Component {
             this.confirmationCancel,
         ]) {
             if (view) {
-                applySlicedFrame(view.visual, this.actionButtonFrame, 24);
+                applySlicedFrame(view.visual, this.footerActionButtonFrame, 96, 32);
             }
         }
     }
@@ -1086,12 +1093,13 @@ function applySimpleFrame(target: VisualBackground, frame: SpriteFrame): void {
 function applySlicedFrame(
     target: VisualBackground,
     frame: SpriteFrame,
-    inset: number,
+    horizontalInset: number,
+    verticalInset: number = horizontalInset,
 ): void {
-    frame.insetLeft = inset;
-    frame.insetRight = inset;
-    frame.insetTop = inset;
-    frame.insetBottom = inset;
+    frame.insetLeft = horizontalInset;
+    frame.insetRight = horizontalInset;
+    frame.insetTop = verticalInset;
+    frame.insetBottom = verticalInset;
     target.sprite.spriteFrame = frame;
     target.sprite.type = Sprite.Type.SLICED;
     target.sprite.sizeMode = Sprite.SizeMode.CUSTOM;

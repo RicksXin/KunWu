@@ -68,7 +68,7 @@ export interface SkillData {
     };
 }
 
-/** 修士实例，对应 starting_heroes.json 与存档中的英雄。 */
+/** 修士实例，对应 starting_heroes.json 与存档中的修士。 */
 export interface HeroData {
     readonly instanceId: string;
     readonly nameKey: string;
