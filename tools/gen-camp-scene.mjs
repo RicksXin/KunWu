@@ -168,8 +168,8 @@ const BUILDING_POSITIONS = Object.fromEntries(
  * 键即模块 id，避免这里再抄一份文件名。
  */
 const REQUIRED_SCRIPTS = {
-    resourceBar: 'assets/scripts/presentation/ResourceBar.ts',
-    viewportAdapter: 'assets/scripts/presentation/ViewportAdapter.ts',
+    resourceBar: 'assets/scripts/presentation/camp/hall/ResourceBar.ts',
+    viewportAdapter: 'assets/scripts/presentation/core/ViewportAdapter.ts',
     ...Object.fromEntries(CAMP_MODULES.map((module) => [module.id, module.presenter])),
 };
 

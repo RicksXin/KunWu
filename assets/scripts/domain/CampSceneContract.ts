@@ -18,6 +18,26 @@ import { BUILDING_IDS } from './HallBadges';
 import type { BuildingId } from './HallBadges';
 import { CAMP_SYSTEM_ENTRY_IDS } from './CampBottomHud';
 import type { CampSystemEntryId } from './CampBottomHud';
+import {
+    CAMP_EXPEDITION_PATHS,
+    CAMP_LING_PU_PATHS,
+    CAMP_LING_PU_RESOURCE_ROW_IDS,
+    CAMP_LING_PU_ROW_CHILD_PATHS,
+    campLingPuResourceRowPath,
+} from './camp/CampPagePaths';
+import type { CampLingPuRowChild } from './camp/CampPagePaths';
+
+export {
+    CAMP_EXPEDITION_PATHS,
+    CAMP_LING_PU_PATHS,
+    CAMP_LING_PU_RESOURCE_ROW_IDS,
+    CAMP_LING_PU_ROW_CHILD_PATHS,
+    campLingPuResourceRowPath,
+} from './camp/CampPagePaths';
+export type {
+    CampLingPuResourceRowId,
+    CampLingPuRowChild,
+} from './camp/CampPagePaths';
 
 /** 顶部五资源的节点名，顺序即从左到右的显示顺序。 */
 export const CAMP_RESOURCE_NODE_NAMES = [
@@ -48,8 +68,28 @@ export const CAMP_SYSTEM_ENTRY_NODE_NAMES: Readonly<Record<CampSystemEntryId, st
     dailyProgress: 'DailyProgressButton',
 };
 
+export const CAMP_EXPEDITION_ROOT_NODE = 'CampExpeditionPage';
+
+/** Camp.scene 顶层节点名与旧场景兼容安装路径。 */
+export const CAMP_SCENE_NODE_NAMES = Object.freeze({
+    canvas: 'Canvas',
+    safeAreaRoot: 'SafeAreaRoot',
+});
+
+export const CAMP_HALL_INSTALL_PATHS = Object.freeze({
+    panorama: 'WorldViewport',
+    buildings: 'WorldViewport/PanoramaContent/BuildingLayer',
+    safeAreaRoot: CAMP_SCENE_NODE_NAMES.safeAreaRoot,
+    topHud: `${CAMP_SCENE_NODE_NAMES.safeAreaRoot}/TopHUD`,
+    bottomHud: `${CAMP_SCENE_NODE_NAMES.safeAreaRoot}/BottomHUD`,
+});
+
 /** 默认隐藏的编辑器内全屏面板：漏掉 active=false 会挡住整个大厅。 */
-export const CAMP_HIDDEN_PANELS = ['NpcListPanel', 'NpcDialogPanel', 'SettingsPanel'] as const;
+export const CAMP_HIDDEN_PANELS = [
+    'NpcListPanel',
+    'NpcDialogPanel',
+    'SettingsPanel',
+] as const;
 
 // ── 各 Presenter 实际使用的节点路径。Presenter 必须从这里取，不得内联字符串。
 
@@ -117,87 +157,6 @@ export const CAMP_SETTINGS_PATHS = Object.freeze({
     back: 'SettingsPanel/SettingsBackButton',
 });
 
-/** 灵圃面板固定展示的五种资源；P1 后两行保留为 P2 锁定态。 */
-export const CAMP_LING_PU_RESOURCE_ROW_IDS = [
-    'spiritGrain',
-    'spiritWood',
-    'darkIron',
-    'spiritCrystal',
-    'gengJing',
-] as const;
-export type CampLingPuResourceRowId =
-    (typeof CAMP_LING_PU_RESOURCE_ROW_IDS)[number];
-
-export const CAMP_LING_PU_ROW_CHILD_PATHS = Object.freeze({
-    background: 'Background',
-    warningOutline: 'WarningOutline',
-    icon: 'ResourceIcon',
-    name: 'ResourceName',
-    stock: 'Stock',
-    rate: 'Rate',
-    workers: 'Workers',
-    status: 'Status',
-    minus: 'MinusButton',
-    minusVisual: 'MinusButton/Visual',
-    plus: 'PlusButton',
-    plusVisual: 'PlusButton/Visual',
-    upgrade: 'UpgradeButton',
-    upgradeVisual: 'UpgradeButton/Visual',
-    upgradeLabel: 'UpgradeButton/Visual/Label',
-});
-export type CampLingPuRowChild = keyof typeof CAMP_LING_PU_ROW_CHILD_PATHS;
-
-const CAMP_LING_PU_PANEL_ROOT = 'ContentMount/LingPuPanel';
-const CAMP_LING_PU_MAIN_PANEL = `${CAMP_LING_PU_PANEL_ROOT}/MainPanel`;
-const CAMP_LING_PU_CONFIRM_OVERLAY = `${CAMP_LING_PU_PANEL_ROOT}/ConfirmOverlay`;
-
-/** CampLingPuPresenter 使用的静态 Prefab 节点。 */
-export const CAMP_LING_PU_PATHS = Object.freeze({
-    mount: 'ContentMount',
-    panel: CAMP_LING_PU_PANEL_ROOT,
-    backdrop: `${CAMP_LING_PU_PANEL_ROOT}/Backdrop`,
-    mainPanel: CAMP_LING_PU_MAIN_PANEL,
-    panelFrame: `${CAMP_LING_PU_MAIN_PANEL}/PanelFrame`,
-    title: `${CAMP_LING_PU_MAIN_PANEL}/Title`,
-    resourceRows: `${CAMP_LING_PU_MAIN_PANEL}/ResourceRows`,
-    timerLabel: `${CAMP_LING_PU_MAIN_PANEL}/TimerLabel`,
-    progressTrack: `${CAMP_LING_PU_MAIN_PANEL}/ProgressTrack`,
-    progressFill: `${CAMP_LING_PU_MAIN_PANEL}/ProgressTrack/ProgressFill`,
-    recruitButton: `${CAMP_LING_PU_MAIN_PANEL}/RecruitButton`,
-    recruitVisual: `${CAMP_LING_PU_MAIN_PANEL}/RecruitButton/Visual`,
-    recruitLabel: `${CAMP_LING_PU_MAIN_PANEL}/RecruitButton/Visual/Label`,
-    closeButton: `${CAMP_LING_PU_MAIN_PANEL}/CloseButton`,
-    closeVisual: `${CAMP_LING_PU_MAIN_PANEL}/CloseButton/Visual`,
-    closeLabel: `${CAMP_LING_PU_MAIN_PANEL}/CloseButton/Visual/Label`,
-    confirmation: CAMP_LING_PU_CONFIRM_OVERLAY,
-    confirmationBackdrop: `${CAMP_LING_PU_CONFIRM_OVERLAY}/ConfirmBackdrop`,
-    confirmationPanel: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel`,
-    confirmationFrame: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/DialogFrame`,
-    confirmationTitle: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/DialogTitle`,
-    confirmationIcon: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/CostIcon`,
-    confirmationMessage: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/Message`,
-    confirmationDetail: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/Detail`,
-    confirmationError: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/Error`,
-    confirmationPrimary: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/PrimaryButton`,
-    confirmationPrimaryVisual:
-        `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/PrimaryButton/Visual`,
-    confirmationPrimaryLabel:
-        `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/PrimaryButton/Visual/Label`,
-    confirmationCancel: `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/CancelButton`,
-    confirmationCancelVisual:
-        `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/CancelButton/Visual`,
-    confirmationCancelLabel:
-        `${CAMP_LING_PU_CONFIRM_OVERLAY}/DialogPanel/CancelButton/Visual/Label`,
-});
-
-export function campLingPuResourceRowPath(
-    resourceId: CampLingPuResourceRowId,
-    child?: CampLingPuRowChild,
-): string {
-    const row = `${CAMP_LING_PU_PATHS.resourceRows}/${resourceId}Row`;
-    return child ? `${row}/${CAMP_LING_PU_ROW_CHILD_PATHS[child]}` : row;
-}
-
 /**
  * 一个营地模块：拆出的 Prefab 根、挂载的 Presenter，以及 Presenter 要用到的
  * Prefab 内部相对路径。
@@ -221,14 +180,14 @@ export interface CampModuleContract {
     readonly presenterPaths: readonly string[];
 }
 
-/** 七个营地模块。顺序即 Camp.scene 中期望的层级顺序。 */
+/** 营地模块。顺序即 Camp.scene 中期望的层级顺序。 */
 export const CAMP_MODULES: readonly CampModuleContract[] = [
     {
         id: 'panorama',
         prefabPath: 'assets/bundles/camp/prefabs/CampPanorama.prefab',
         rootNode: 'WorldViewport',
         sceneParent: 'Canvas',
-        presenter: 'assets/scripts/presentation/CampPanoramaController.ts',
+        presenter: 'assets/scripts/presentation/camp/hall/CampPanoramaController.ts',
         presenterPaths: Object.values(CAMP_PANORAMA_PATHS),
     },
     {
@@ -236,7 +195,7 @@ export const CAMP_MODULES: readonly CampModuleContract[] = [
         prefabPath: 'assets/bundles/camp/prefabs/CampPanorama.prefab',
         rootNode: 'BuildingLayer',
         sceneParent: 'PanoramaContent',
-        presenter: 'assets/scripts/presentation/CampBuildingPresenter.ts',
+        presenter: 'assets/scripts/presentation/camp/hall/CampBuildingPresenter.ts',
         presenterPaths: [
             ...BUILDING_IDS.flatMap((buildingId) => [
                 campBuildingPath(buildingId),
@@ -251,7 +210,7 @@ export const CAMP_MODULES: readonly CampModuleContract[] = [
         prefabPath: 'assets/bundles/camp/prefabs/CampTopHud.prefab',
         rootNode: 'TopHUD',
         sceneParent: 'SafeAreaRoot',
-        presenter: 'assets/scripts/presentation/CampHudPresenter.ts',
+        presenter: 'assets/scripts/presentation/camp/hall/CampHudPresenter.ts',
         presenterPaths: [
             ...Object.values(CAMP_TOP_HUD_PATHS),
             ...CAMP_RESOURCE_NODE_NAMES.flatMap((name) => [
@@ -265,7 +224,7 @@ export const CAMP_MODULES: readonly CampModuleContract[] = [
         prefabPath: 'assets/bundles/camp/prefabs/CampBottomHud.prefab',
         rootNode: 'BottomHUD',
         sceneParent: 'SafeAreaRoot',
-        presenter: 'assets/scripts/presentation/CampBottomHudPresenter.ts',
+        presenter: 'assets/scripts/presentation/camp/hall/CampBottomHudPresenter.ts',
         presenterPaths: [
             ...CAMP_SYSTEM_ENTRY_IDS.map((entryId) => campSystemEntryPath(entryId)),
             ...Object.values(CAMP_BOTTOM_HUD_PATHS),
@@ -276,7 +235,7 @@ export const CAMP_MODULES: readonly CampModuleContract[] = [
         prefabPath: 'assets/bundles/camp/prefabs/CampNpcPage.prefab',
         rootNode: 'NpcPage',
         sceneParent: 'SafeAreaRoot',
-        presenter: 'assets/scripts/presentation/CampNpcPresenter.ts',
+        presenter: 'assets/scripts/presentation/camp/hall/CampNpcPresenter.ts',
         presenterPaths: Object.values(CAMP_NPC_PATHS),
     },
     {
@@ -284,7 +243,7 @@ export const CAMP_MODULES: readonly CampModuleContract[] = [
         prefabPath: 'assets/bundles/camp/prefabs/CampSettingsPage.prefab',
         rootNode: 'SettingsPage',
         sceneParent: 'SafeAreaRoot',
-        presenter: 'assets/scripts/presentation/CampSettingsPresenter.ts',
+        presenter: 'assets/scripts/presentation/camp/hall/CampSettingsPresenter.ts',
         presenterPaths: Object.values(CAMP_SETTINGS_PATHS),
     },
     {
@@ -292,7 +251,7 @@ export const CAMP_MODULES: readonly CampModuleContract[] = [
         prefabPath: 'assets/bundles/camp/prefabs/CampLingPuPage.prefab',
         rootNode: 'CampLingPuPage',
         sceneParent: 'SafeAreaRoot',
-        presenter: 'assets/scripts/presentation/CampLingPuPresenter.ts',
+        presenter: 'assets/scripts/presentation/camp/ling_pu/CampLingPuPresenter.ts',
         presenterPaths: [
             ...Object.values(CAMP_LING_PU_PATHS),
             ...CAMP_LING_PU_RESOURCE_ROW_IDS.flatMap((resourceId) => [
@@ -305,6 +264,14 @@ export const CAMP_MODULES: readonly CampModuleContract[] = [
                 ),
             ]),
         ],
+    },
+    {
+        id: 'expeditionPage',
+        prefabPath: 'assets/bundles/camp/prefabs/CampExpeditionPage.prefab',
+        rootNode: CAMP_EXPEDITION_ROOT_NODE,
+        sceneParent: 'SafeAreaRoot',
+        presenter: 'assets/scripts/presentation/camp/expedition/CampExpeditionPresenter.ts',
+        presenterPaths: Object.values(CAMP_EXPEDITION_PATHS),
     },
 ];
 

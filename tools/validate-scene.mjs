@@ -158,8 +158,8 @@ for (const compressed of customTypes) {
 // 启动场景必须挂上的组件。缺了游戏跑不起来，故单独校验。
 const REQUIRED_SCRIPTS = [
     'assets/scripts/AppRoot.ts',
-    'assets/scripts/presentation/ViewportAdapter.ts',
-    'assets/scripts/presentation/GameBootstrap.ts',
+    'assets/scripts/presentation/core/ViewportAdapter.ts',
+    'assets/scripts/presentation/boot/GameBootstrap.ts',
 ];
 
 for (const scriptPath of REQUIRED_SCRIPTS) {
@@ -422,7 +422,7 @@ if (!existsSync(CAMP_SCENE_PATH)) {
 
     const viewportType = compressUuid(
         uuidFromMeta(
-            path.join(REPO_ROOT, 'assets/scripts/presentation/ViewportAdapter.ts.meta'),
+            path.join(REPO_ROOT, 'assets/scripts/presentation/core/ViewportAdapter.ts.meta'),
         ),
     );
     const viewportComponent = camp.find((entry) => entry.__type__ === viewportType);

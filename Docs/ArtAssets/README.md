@@ -30,15 +30,15 @@
 
 ## 2. 已生成资产与复用基线
 
-所有新 UI 在生成前必须先检查下表；能通过九宫格、Tint、Mask、Label 或组合节点复用的，不新增近似图片。当前 `assets/bundles/camp/ui/` 已有 21 张运行时 UI PNG：顶部 8 张、底部 6 张、灵圃 7 张；高清原始输出位于 `ArtSource/camp_gpt_image_20260731/raw_outputs/ui/`。另有两张全局通用按钮待生成，用于替换灵圃的旧横向按钮；它们在完成 Cocos 导入前不计入已生成数量。
+所有新 UI 在生成前必须先检查下表；能通过九宫格、Tint、Mask、Label 或组合节点复用的，不新增近似图片。当前 `assets/bundles/camp/ui/` 已有 23 张运行时 UI PNG：顶部 8 张、底部 HUD 6 张、灵圃 7 张、全局通用按钮 2 张；高清原始输出位于 `ArtSource/camp_gpt_image_20260731/raw_outputs/`。其中通用底部按钮现版未通过视觉验收，只计作已导入占位资源，不计作已完成美术。
 
 | 组件组 | 运行时文件/计划文件 | 复用原则 |
 |---|---|---|
 | 面板 | `ui/ling_pu/ui_ling_pu_panel_frame.png` | 主弹窗与二次弹窗共用；先九宫格拉伸，验收失败后才做页面专用框 |
 | 行底板 | `ui/ling_pu/ui_ling_pu_resource_row.png` | 资源行、装载行、普通列表行优先共用；状态用 Tint、描边、图标和文字叠加 |
 | 旧横向按钮（待退役） | `ui/ling_pu/ui_ling_pu_action_button_normal.png` | 仅保留给未迁移的 Prefab/场景引用；新页面不再复用 |
-| 通用行内按钮（待生成） | `ui/common/ui_common_button_inline_normal.png` | 资源行、列表行和卡片内的紧凑操作；可见高度不代替 `48dp` 热区 |
-| 通用底部按钮（待生成） | `ui/common/ui_common_button_footer_normal.png` | 主面板底部与二次确认弹窗操作；不用于行内小按钮 |
+| 通用行内按钮（已生成） | `ui/common/ui_common_button_inline_normal.png` | 资源行、列表行和卡片内的紧凑操作；可见高度不代替 `48dp` 热区 |
+| 通用底部按钮（现版退回，待重做） | `ui/common/ui_common_button_footer_normal.png` | 主面板底部与二次确认弹窗操作；当前阶梯形外轮廓不通过，不作最终视觉 |
 | 方形加减 | `ui/ling_pu/icon_action_plus.png`、`icon_action_minus.png` | 所有数量调整共用，可见图不承担触控热区 |
 | 进度条 | `ui/ling_pu/ui_production_progress_track.png`、`ui_production_progress_fill.png` | 相同粗细的计时/进度语义优先复用；不同语义需先做合成评审 |
 | 头像框 | `ui/top/ui_camp_avatar_frame.png` | `50×50` 方形头像共用；人物图片通过 Mask 裁切，不重复生成头像 |

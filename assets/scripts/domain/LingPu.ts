@@ -4,149 +4,30 @@ import {
     totalWorkers,
 } from './Production';
 import type { ProductionJob, WorkerAssignment } from './Production';
+import { P1_LING_PU_JOBS } from './production/LingPuConfig';
+import type {
+    LingPuConfig,
+    LingPuMutationResult,
+    P1LingPuJob,
+    ResourceStorageLevels,
+    StorageUpgradePreview,
+} from './production/LingPuConfig';
 
-/** P1 灵圃实际开放的三种岗位。 */
-export const P1_LING_PU_JOBS = [
-    'spiritGrain',
-    'spiritWood',
-    'darkIron',
-] as const satisfies readonly ProductionJob[];
-export type P1LingPuJob = (typeof P1_LING_PU_JOBS)[number];
-
-export const LING_PU_CONFIG_TABLE = 'ling_pu_config';
-export const LING_PU_CONFIG_ID = 'ling_pu';
-
-export interface ResourceStorageConfig {
-    /** 新档初始等级，从 1 开始。 */
-    readonly initialLevel: number;
-    /** 索引 0 对应 1 级容量。 */
-    readonly capacities: readonly number[];
-    /** 索引 0 对应 1→2 级费用，长度必须比 capacities 少 1。 */
-    readonly upgradeSpiritWoodCosts: readonly number[];
-}
-
-export interface LingPuConfig {
-    readonly initialWorkerCount: number;
-    readonly workersPerRecruit: number;
-    readonly recruitSpiritGrainCost: number;
-    readonly resources: Readonly<Record<P1LingPuJob, ResourceStorageConfig>>;
-}
-
-export type ResourceStorageLevels = Readonly<Record<string, number>>;
-
-export interface StorageUpgradePreview {
-    readonly job: P1LingPuJob;
-    readonly currentLevel: number;
-    readonly maxLevel: number;
-    readonly currentCapacity: number;
-    readonly nextCapacity: number | null;
-    readonly spiritWoodCost: number | null;
-    readonly isMaxLevel: boolean;
-    readonly canAfford: boolean;
-}
-
-export type LingPuMutationFailure =
-    | 'no_idle_worker'
-    | 'job_empty'
-    | 'insufficient_spirit_grain'
-    | 'insufficient_spirit_wood'
-    | 'max_storage_level';
-
-export interface LingPuMutationResult<T> {
-    readonly ok: boolean;
-    readonly value: T;
-    readonly failure?: LingPuMutationFailure;
-}
-
-type UnknownRecord = Record<string, unknown>;
-
-function recordOf(value: unknown, path: string): UnknownRecord {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        throw new Error(`${path} 应为对象`);
-    }
-    return value as UnknownRecord;
-}
-
-function positiveIntegerOf(value: unknown, path: string): number {
-    if (!Number.isSafeInteger(value) || (value as number) <= 0) {
-        throw new Error(`${path} 应为正安全整数`);
-    }
-    return value as number;
-}
-
-function nonNegativeIntegerOf(value: unknown, path: string): number {
-    if (!Number.isSafeInteger(value) || (value as number) < 0) {
-        throw new Error(`${path} 应为非负安全整数`);
-    }
-    return value as number;
-}
-
-function integerArrayOf(value: unknown, path: string, allowZero: boolean): number[] {
-    if (!Array.isArray(value)) {
-        throw new Error(`${path} 应为数组`);
-    }
-    return value.map((item, index) =>
-        allowZero
-            ? nonNegativeIntegerOf(item, `${path}[${index}]`)
-            : positiveIntegerOf(item, `${path}[${index}]`),
-    );
-}
-
-function resourceConfigOf(value: unknown, path: string): ResourceStorageConfig {
-    const raw = recordOf(value, path);
-    const capacities = integerArrayOf(raw.capacities, `${path}.capacities`, false);
-    const upgradeSpiritWoodCosts = integerArrayOf(
-        raw.upgradeSpiritWoodCosts,
-        `${path}.upgradeSpiritWoodCosts`,
-        false,
-    );
-    if (capacities.length === 0) {
-        throw new Error(`${path}.capacities 至少需要 1 级`);
-    }
-    if (upgradeSpiritWoodCosts.length !== capacities.length - 1) {
-        throw new Error(
-            `${path}.upgradeSpiritWoodCosts 长度应为 ${capacities.length - 1}`,
-        );
-    }
-    for (let index = 1; index < capacities.length; index += 1) {
-        if (capacities[index]! <= capacities[index - 1]!) {
-            throw new Error(`${path}.capacities 必须严格递增`);
-        }
-    }
-    const initialLevel = positiveIntegerOf(raw.initialLevel, `${path}.initialLevel`);
-    if (initialLevel > capacities.length) {
-        throw new Error(`${path}.initialLevel 超过最高等级 ${capacities.length}`);
-    }
-    return { initialLevel, capacities, upgradeSpiritWoodCosts };
-}
-
-/** 运行时与构建前共用的数据表校验。 */
-export function parseLingPuConfig(value: unknown): LingPuConfig {
-    const raw = recordOf(value, 'ling_pu');
-    const resourcesRaw = recordOf(raw.resources, 'ling_pu.resources');
-    const resources = {} as Record<P1LingPuJob, ResourceStorageConfig>;
-    for (const job of P1_LING_PU_JOBS) {
-        resources[job] = resourceConfigOf(
-            resourcesRaw[job],
-            `ling_pu.resources.${job}`,
-        );
-    }
-    return {
-        initialWorkerCount: positiveIntegerOf(
-            raw.initialWorkerCount,
-            'ling_pu.initialWorkerCount',
-        ),
-        workersPerRecruit: positiveIntegerOf(
-            raw.workersPerRecruit,
-            'ling_pu.workersPerRecruit',
-        ),
-        recruitSpiritGrainCost: positiveIntegerOf(
-            raw.recruitSpiritGrainCost,
-            'ling_pu.recruitSpiritGrainCost',
-        ),
-        resources,
-    };
-}
+export {
+    LING_PU_CONFIG_ID,
+    LING_PU_CONFIG_TABLE,
+    P1_LING_PU_JOBS,
+    parseLingPuConfig,
+} from './production/LingPuConfig';
+export type {
+    LingPuConfig,
+    LingPuMutationFailure,
+    LingPuMutationResult,
+    P1LingPuJob,
+    ResourceStorageConfig,
+    ResourceStorageLevels,
+    StorageUpgradePreview,
+} from './production/LingPuConfig';
 
 export function isP1LingPuJob(job: ProductionJob): job is P1LingPuJob {
     return (P1_LING_PU_JOBS as readonly ProductionJob[]).includes(job);

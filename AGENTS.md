@@ -167,6 +167,18 @@ tests/            单测；位于 assets/ 外，避免进入 Web 构建产物
 
 新增代码应遵守上述分层，领域逻辑不得反向依赖 Cocos 表现层。
 
+### 目录与文件拆分约定
+
+- `presentation/` 按玩家可识别的页面模块组织：`boot/`、`camp/hall/`、
+  `camp/ling_pu/`、`camp/expedition/`、`core/`、`routing/`。页面内部再按
+  协调器、节点绑定、渲染、素材和共享 UI 工具拆分。
+- `domain/`、`services/` 继续按架构职责分层。复杂公共模块采用“稳定入口文件 +
+  同名功能子目录”，避免为页面归档破坏领域边界或批量修改调用方。
+- 单个 TypeScript 文件不得超过 300 行。接近上限时按职责拆分，不得通过压缩格式、
+  合并语句或删除可读性所需空行规避。
+- 移动已有 Cocos Component 时，必须将对应 `.meta` 一起移动，保留 UUID 与场景引用。
+  新增目录、脚本和资源的 `.meta` 仍必须由 Cocos Creator 导入生成，禁止手写。
+
 ## 导入与 TypeScript 限制
 
 跨目录导入使用 Cocos 原生 `db://` 前缀，不在 `tsconfig.json` 中自定义

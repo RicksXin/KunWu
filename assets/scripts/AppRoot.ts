@@ -4,7 +4,7 @@ import { TimeService } from './services/TimeService';
 import { DataRegistry } from './services/DataRegistry';
 import { GameState } from './services/GameState';
 import { BrowserLifecycle } from './services/BrowserLifecycle';
-import { CocosSceneRouter } from './presentation/CocosSceneRouter';
+import { CocosSceneRouter } from './presentation/routing/CocosSceneRouter';
 import { SaveRepository } from './services/SaveRepository';
 import { serializeProfile } from './services/ProfileCodec';
 import { LingPuService } from './services/LingPuService';

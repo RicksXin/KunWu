@@ -197,7 +197,7 @@ function build() {
     // 用假 UUID 会生成「丢失的脚本」，不报错且极难查。
     const bootstrapMeta = path.join(
         REPO_ROOT,
-        'assets/scripts/presentation/GameBootstrap.ts.meta',
+        'assets/scripts/presentation/boot/GameBootstrap.ts.meta',
     );
     if (existsSync(bootstrapMeta)) {
         scene.addScript(splashIdx, uuidFromMeta(bootstrapMeta), {
@@ -222,7 +222,7 @@ function build() {
     );
     scene.addScript(
         appRootIdx,
-        uuidFromMeta(path.join(REPO_ROOT, 'assets/scripts/presentation/ViewportAdapter.ts')),
+        uuidFromMeta(path.join(REPO_ROOT, 'assets/scripts/presentation/core/ViewportAdapter.ts')),
         // @property(Node) safeAreaRoot
         { safeAreaRoot: { __id__: safeAreaIdx } },
     );
