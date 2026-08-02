@@ -124,6 +124,9 @@ export class CampBuildingPresenter extends Component {
     }
 
     private activateExpedition(): void {
+        if (this.panorama?.isBuildingClickSuppressed()) {
+            return;
+        }
         if (!this.activationGate.tryActivate('expedition', Date.now())) {
             return;
         }

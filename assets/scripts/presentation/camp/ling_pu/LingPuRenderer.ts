@@ -1,17 +1,8 @@
-import type { AppRoot } from 'db://assets/scripts/AppRoot';
-import {
-    P1_LING_PU_JOBS,
-    storageCapacity,
-} from 'db://assets/scripts/domain/LingPu';
-import type { LingPuConfig, P1LingPuJob } from 'db://assets/scripts/domain/LingPu';
-import {
-    createAssignment,
-    grainUpkeepPerCycle,
-    JOB_RATES,
-    resolveShutdown,
-    totalWorkers,
-} from 'db://assets/scripts/domain/Production';
-import type { Profile } from 'db://assets/scripts/services/GameState';
+import { P1_LING_PU_JOBS } from 'db://assets/scripts/domain/LingPu';
+import type {
+    LingPuTimerViewModel,
+    LingPuViewModel,
+} from 'db://assets/scripts/services/camp/CampApplicationModels';
 import {
     formatSeconds,
     RESOURCE_NAMES,
@@ -20,90 +11,90 @@ import {
 } from './LingPuViewTypes';
 import type { ConfirmationMode, LingPuView } from './LingPuViewTypes';
 
-export interface LingPuRenderContext {
-    readonly app: AppRoot;
-    readonly profile: Profile;
-    readonly config: LingPuConfig;
-}
-
 export function renderLingPuPanel(
     view: LingPuView,
-    context: LingPuRenderContext,
+    model: LingPuViewModel,
     confirmationMode: ConfirmationMode | null,
     confirmationLocked: boolean,
 ): void {
-    const { app, profile, config } = context;
-    const assignment = createAssignment(profile.camp.workerAssignments);
-    const assigned = totalWorkers(assignment);
-    const idle = Math.max(0, profile.camp.workerCount - assigned);
-    const grainProduced = assignment.spiritGrain * JOB_RATES.spiritGrain.outputPerWorker;
-    const netGrain = grainProduced - grainUpkeepPerCycle(assignment);
-    const shutdownJobs = resolveShutdown(assignment, profile.wallet.spiritGrain + grainProduced)
-        .filter((job): job is P1LingPuJob => P1_LING_PU_JOBS.includes(job as P1LingPuJob));
     for (const job of P1_LING_PU_JOBS) {
         const row = view.rows.get(job);
+        const resource = model.resources[job];
         if (!row) continue;
-        const stock = profile.wallet[job];
-        const capacity = storageCapacity(profile.camp.resourceStorageLevels, job, config);
-        const upgrade = app.lingPu.previewUpgrade(profile, config, job);
         row.renderActive({
-            stock,
-            capacity,
-            workerCount: assignment[job],
-            workerLimit: assignment[job] + idle,
-            displayedProduction: job === 'spiritGrain'
-                ? netGrain
-                : assignment[job] * JOB_RATES[job].outputPerWorker,
-            isFull: stock >= capacity,
-            isShutdown: shutdownJobs.includes(job),
-            hasIdleWorker: idle > 0,
-            isMaxLevel: upgrade.isMaxLevel,
+            stock: resource.stock,
+            capacity: resource.capacity,
+            workerCount: resource.workerCount,
+            workerLimit: resource.workerLimit,
+            displayedProduction: resource.displayedProduction,
+            isFull: resource.isFull,
+            isShutdown: resource.isShutdown,
+            hasIdleWorker: model.workerIdle > 0,
+            isMaxLevel: resource.upgrade.isMaxLevel,
         });
     }
     for (const definition of RESOURCE_ROW_DEFINITIONS) {
         if (!definition.job) view.rows.get(definition.id)?.renderLocked();
     }
-    renderLingPuTimer(view, context);
-    renderLingPuConfirmation(view, context, confirmationMode, confirmationLocked);
+    renderLingPuConfirmation(
+        view,
+        model,
+        confirmationMode,
+        confirmationLocked,
+    );
 }
 
-export function renderLingPuTimer(view: LingPuView, context: LingPuRenderContext): void {
-    const seconds = context.app.lingPu.secondsUntilNextCycle(context.profile);
-    view.timerLabel.string = `距下次结算 ${formatSeconds(seconds)}`;
-    view.progressFill.fillRange = context.app.lingPu.cycleProgress(context.profile);
+export function renderLingPuTimer(
+    view: LingPuView,
+    timer: LingPuTimerViewModel,
+): void {
+    view.timerLabel.string = `距下次结算 ${formatSeconds(timer.secondsUntilNextCycle)}`;
+    view.progressFill.fillRange = timer.cycleProgress;
 }
 
 export function renderLingPuConfirmation(
     view: LingPuView,
-    context: LingPuRenderContext,
+    model: LingPuViewModel,
     mode: ConfirmationMode | null,
     locked: boolean,
 ): void {
     if (!view.confirmationRoot.active || !mode) return;
-    const { app, profile, config } = context;
     if (mode.kind === 'recruit') {
-        const cost = config.recruitSpiritGrainCost;
-        const affordable = profile.wallet.spiritGrain >= cost;
+        const recruit = model.recruit;
         setText(view.confirmationTitle, '招募杂役');
-        setText(view.confirmationMessage, `消耗灵粮 ${cost}（当前 ${profile.wallet.spiritGrain}）`);
-        setText(view.confirmationDetail, `招募 ${config.workersPerRecruit} 名杂役`);
-        setText(view.confirmationError, affordable ? '' : '灵粮不足，无法招募');
+        setText(
+            view.confirmationMessage,
+            `消耗灵粮 ${recruit.spiritGrainCost}（当前 ${model.resources.spiritGrain.stock}）`,
+        );
+        setText(view.confirmationDetail, `招募 ${recruit.workersGranted} 名杂役`);
+        setText(view.confirmationError, recruit.canAfford ? '' : '灵粮不足，无法招募');
         view.confirmationIcon.spriteFrame = view.resourceIconFrames.get('spiritGrain') ?? null;
-        view.confirmationPrimary.button.interactable = affordable && !locked;
+        view.confirmationPrimary.button.interactable = recruit.canAfford && !locked;
         if (view.confirmationPrimary.label) view.confirmationPrimary.label.string = '招募';
         return;
     }
-    const preview = app.lingPu.previewUpgrade(profile, config, mode.job);
+    const resource = model.resources[mode.job];
+    const preview = resource.upgrade;
     const cost = preview.spiritWoodCost ?? 0;
     setText(view.confirmationTitle, `${RESOURCE_NAMES[mode.job]}储量升级`);
-    setText(view.confirmationMessage, `消耗灵木 ${cost}（当前 ${profile.wallet.spiritWood}）`);
-    setText(view.confirmationDetail, preview.nextCapacity === null
-        ? `当前最大储量 ${preview.currentCapacity}，已达最高等级`
-        : `最大储量 ${preview.currentCapacity} → ${preview.nextCapacity}`);
-    setText(view.confirmationError, preview.isMaxLevel
-        ? '已达当前版本最高等级'
-        : preview.canAfford ? '' : '灵木不足，无法升级');
+    setText(
+        view.confirmationMessage,
+        `消耗灵木 ${cost}（当前 ${model.resources.spiritWood.stock}）`,
+    );
+    setText(
+        view.confirmationDetail,
+        preview.nextCapacity === null
+            ? `当前最大储量 ${preview.currentCapacity}，已达最高等级`
+            : `最大储量 ${preview.currentCapacity} → ${preview.nextCapacity}`,
+    );
+    setText(
+        view.confirmationError,
+        preview.isMaxLevel
+            ? '已达当前版本最高等级'
+            : preview.canAfford ? '' : '灵木不足，无法升级',
+    );
     view.confirmationIcon.spriteFrame = view.resourceIconFrames.get('spiritWood') ?? null;
-    view.confirmationPrimary.button.interactable = preview.canAfford && !preview.isMaxLevel && !locked;
+    view.confirmationPrimary.button.interactable =
+        preview.canAfford && !preview.isMaxLevel && !locked;
     if (view.confirmationPrimary.label) view.confirmationPrimary.label.string = '升级';
 }

@@ -152,10 +152,9 @@ export class CampPanoramaController extends Component {
             this.velocity = 0;
             return;
         }
+        // 保留到下一次 TOUCH_START，避免依赖 Button.CLICK 与调度回调的执行顺序。
+        // 新手势开始时会清除门禁，因此拖动后的下一次正常轻点仍可进入建筑。
         this.suppressBuildingClick = true;
-        this.scheduleOnce(() => {
-            this.suppressBuildingClick = false;
-        }, 0);
     };
 
     private setX(x: number): void {

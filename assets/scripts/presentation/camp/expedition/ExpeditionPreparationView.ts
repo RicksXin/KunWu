@@ -147,7 +147,16 @@ function renderHeroCard(
     if (portrait) {
         createSpriteNode(card, 'Portrait', portrait, 0, 0, width, height);
     } else if (!hero && assets.emptyHeroFrame) {
-        createSpriteNode(card, 'EmptyPortrait', assets.emptyHeroFrame, 0, 25, 64, 112);
+        const emptyPortrait = createSpriteNode(
+            card,
+            'EmptyPortrait',
+            assets.emptyHeroFrame,
+            0,
+            15,
+            96,
+            168,
+        );
+        emptyPortrait.trim = false;
     } else {
         createSilhouette(card, 0, 25, hero === null);
     }

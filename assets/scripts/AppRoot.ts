@@ -1,24 +1,26 @@
 import { _decorator, Component, director, game, Game, Label, Node } from 'cc';
-import { EventBus } from './services/EventBus';
-import { TimeService } from './services/TimeService';
-import { DataRegistry } from './services/DataRegistry';
-import { GameState } from './services/GameState';
-import { BrowserLifecycle } from './services/BrowserLifecycle';
-import { CocosSceneRouter } from './presentation/routing/CocosSceneRouter';
-import { SaveRepository } from './services/SaveRepository';
-import { serializeProfile } from './services/ProfileCodec';
-import { LingPuService } from './services/LingPuService';
+import { EventBus } from 'db://assets/scripts/services/EventBus';
+import { TimeService } from 'db://assets/scripts/services/TimeService';
+import { DataRegistry } from 'db://assets/scripts/services/DataRegistry';
+import { GameState } from 'db://assets/scripts/services/GameState';
+import { BrowserLifecycle } from 'db://assets/scripts/services/BrowserLifecycle';
+import { CocosSceneRouter } from 'db://assets/scripts/presentation/routing/CocosSceneRouter';
+import type { SaveRepository } from 'db://assets/scripts/services/SaveRepository';
+import { serializeProfile } from 'db://assets/scripts/services/ProfileCodec';
+import { LingPuService } from 'db://assets/scripts/services/LingPuService';
+import { CampHudApplicationService } from 'db://assets/scripts/services/camp/CampHudApplicationService';
+import { LingPuApplicationService } from 'db://assets/scripts/services/camp/LingPuApplicationService';
+import { LocalCampApiAdapter } from 'db://assets/scripts/services/camp/api/LocalCampApiAdapter';
 import {
     LING_PU_CONFIG_ID,
     LING_PU_CONFIG_TABLE,
-} from './domain/LingPu';
-import type { LingPuConfig } from './domain/LingPu';
-import { BASE_CYCLE_SECONDS } from './domain/Production';
+} from 'db://assets/scripts/domain/LingPu';
+import type { LingPuConfig } from 'db://assets/scripts/domain/LingPu';
 import {
     EXPEDITION_CONFIG_ID,
     EXPEDITION_CONFIG_TABLE,
-} from './domain/ExpeditionPreparation';
-import type { ExpeditionPreparationConfig } from './domain/ExpeditionPreparation';
+} from 'db://assets/scripts/domain/ExpeditionPreparation';
+import type { ExpeditionPreparationConfig } from 'db://assets/scripts/domain/ExpeditionPreparation';
 
 const { ccclass, property } = _decorator;
 
@@ -37,7 +39,26 @@ export class AppRoot extends Component {
     readonly time = new TimeService();
     readonly data = new DataRegistry();
     readonly state = new GameState();
-    readonly lingPu = new LingPuService(this.time);
+    private readonly lingPuDomain = new LingPuService(this.time);
+    private readonly campApi = new LocalCampApiAdapter({
+        readProfile: () => this.state.require(),
+        readLingPuConfig: () => this.getLingPuConfig(),
+        lingPuDomain: this.lingPuDomain,
+        nowUtcSeconds: () => this.time.nowUtcSeconds(),
+    });
+    readonly campHud = new CampHudApplicationService({
+        api: this.campApi,
+        state: this.state,
+        events: this.events,
+        save: () => this.saveCurrentProfile(),
+    });
+    readonly lingPu = new LingPuApplicationService({
+        api: this.campApi,
+        state: this.state,
+        events: this.events,
+        time: this.time,
+        save: () => this.saveCurrentProfile(),
+    });
 
     /** 导航加载期间覆盖全屏并拦截输入。 */
     @property(Node)
@@ -54,6 +75,7 @@ export class AppRoot extends Component {
     private readonly lifecycle = new BrowserLifecycle(this.events);
     private _router: CocosSceneRouter | null = null;
     private saveRepository: SaveRepository | null = null;
+    private saveQueue: Promise<void> = Promise.resolve();
     private productionTickInFlight = false;
 
     /** 唯一的全局场景路由，生命周期与持久 AppRoot 一致。 */
@@ -100,6 +122,12 @@ export class AppRoot extends Component {
 
         // 引擎不转发 webglcontextlost 等原生事件，需自行监听（PRD-10 §8）
         this.lifecycle.start(game.canvas ?? null);
+        this.events.on('profile.loaded', () => {
+            this.campHud.invalidate();
+            this.lingPu.invalidate();
+        });
+        this.events.on('wallet.changed', () => this.campHud.invalidate());
+        this.events.on('story.changed', () => this.campHud.invalidate());
         this.schedule(this.tickCampProduction, 1);
     }
 
@@ -127,7 +155,13 @@ export class AppRoot extends Component {
     }
 
     /** 保存当前 GameState，供后续页面在状态变更后调用。 */
-    async saveCurrentProfile(): Promise<void> {
+    saveCurrentProfile(): Promise<void> {
+        const operation = this.saveQueue.then(() => this.persistCurrentProfile());
+        this.saveQueue = operation.catch(() => undefined);
+        return operation;
+    }
+
+    private async persistCurrentProfile(): Promise<void> {
         if (!this.saveRepository) {
             throw new Error('SaveRepository 尚未安装');
         }
@@ -154,15 +188,6 @@ export class AppRoot extends Component {
         );
     }
 
-    /** 灵圃操作与自动周期结算统一发这两个事件，顶部资源栏和面板不直接互相引用。 */
-    notifyLingPuChanged(): void {
-        if (!this.state.isLoaded) {
-            return;
-        }
-        this.events.emit('wallet.changed', { wallet: this.state.require().wallet });
-        this.events.emit('camp.productionChanged', {});
-    }
-
     /** 显示一条有时限的全局反馈，连续点击会刷新计时。 */
     showFeedback(message: string, durationSeconds = 2): void {
         if (this.feedbackLabel) {
@@ -183,18 +208,13 @@ export class AppRoot extends Component {
     };
 
     private onGameHide(): void {
-        void this.settleCampProduction(true);
+        void this.settleCampProduction('app_hide');
         this.events.emit('app.hide', { atUtc: this.time.nowUtcSeconds() });
     }
 
     private onGameShow(): void {
         if (this.state.isLoaded) {
-            this.lingPu.resetOnlineAnchor(this.state.require());
-            this.notifyLingPuChanged();
-            void this.saveCurrentProfile().catch((error) => {
-                console.error('[灵圃] 恢复前台保存失败', error);
-                this.showFeedback('存档失败，请稍后重试');
-            });
+            void this.resumeCampProduction();
         }
         this.events.emit('app.show', { atUtc: this.time.nowUtcSeconds() });
     }
@@ -203,37 +223,41 @@ export class AppRoot extends Component {
         if (!this.state.isLoaded || this.productionTickInFlight) {
             return;
         }
-        const profile = this.state.require();
-        const elapsed = this.time.nowUtcSeconds() - profile.camp.lastSettledAtUtc;
-        if (elapsed < BASE_CYCLE_SECONDS) {
-            return;
-        }
-        void this.settleCampProduction(true);
+        void this.settleDueCampProduction();
     };
 
-    private async settleCampProduction(save: boolean): Promise<void> {
-        const config = this.getLingPuConfig();
-        if (!this.state.isLoaded || !config || this.productionTickInFlight) {
+    private async settleDueCampProduction(): Promise<void> {
+        if (!this.state.isLoaded || this.productionTickInFlight) {
             return;
         }
         this.productionTickInFlight = true;
         try {
-            const result = this.lingPu.settleOnline(this.state.require(), config);
-            if (result.clockRolledBack) {
-                this.showFeedback('系统时间异常，生产已暂停');
-                return;
-            }
-            if (result.output.cycles > 0) {
-                this.notifyLingPuChanged();
-                if (save) {
-                    await this.saveCurrentProfile();
-                }
-            }
+            await this.lingPu.settleIfDue();
         } catch (error) {
             console.error('[灵圃] 自动结算失败', error);
             this.showFeedback('生产结算失败，请稍后重试');
         } finally {
             this.productionTickInFlight = false;
+        }
+    }
+
+    private async settleCampProduction(reason: 'app_hide'): Promise<void> {
+        if (!this.state.isLoaded) return;
+        try {
+            await this.lingPu.settle(reason);
+        } catch (error) {
+            console.error('[灵圃] 生命周期结算失败', error);
+            this.showFeedback('生产结算失败，请稍后重试');
+        }
+    }
+
+    private async resumeCampProduction(): Promise<void> {
+        if (!this.state.isLoaded) return;
+        try {
+            await this.lingPu.resumeOnlineSession();
+        } catch (error) {
+            console.error('[灵圃] 恢复前台失败', error);
+            this.showFeedback('生产状态恢复失败，请稍后重试');
         }
     }
 }

@@ -1,5 +1,5 @@
 import { Button, Color, Label, Node, Sprite, SpriteFrame } from 'cc';
-import type { LingPuMutationFailure, P1LingPuJob } from 'db://assets/scripts/domain/LingPu';
+import type { P1LingPuJob } from 'db://assets/scripts/domain/LingPu';
 
 export const TEXT_SECONDARY = new Color(188, 196, 182, 255);
 export const TEXT_WARNING = new Color(230, 132, 82, 255);
@@ -155,17 +155,6 @@ export function setText(label: Label | null, value: string): void {
 
 export function formatSeconds(value: number): string {
     return `00:${String(Math.max(0, Math.ceil(value))).padStart(2, '0')}`;
-}
-
-export function failureMessage(failure?: LingPuMutationFailure): string {
-    switch (failure) {
-        case 'no_idle_worker': return '没有空闲杂役';
-        case 'job_empty': return '该岗位当前没有杂役';
-        case 'insufficient_spirit_grain': return '灵粮不足，无法招募';
-        case 'insufficient_spirit_wood': return '灵木不足，无法升级';
-        case 'max_storage_level': return '该资源储量已满级';
-        default: return '操作未生效';
-    }
 }
 
 function signed(value: number): string {

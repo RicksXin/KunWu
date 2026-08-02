@@ -3,9 +3,9 @@ import { AppRoot } from 'db://assets/scripts/AppRoot';
 import {
     CAMP_SYSTEM_ENTRY_FEEDBACK,
     CAMP_SYSTEM_ENTRY_IDS,
-    campCurrencyBalances,
 } from 'db://assets/scripts/domain/CampBottomHud';
 import type { CampSystemEntryId } from 'db://assets/scripts/domain/CampBottomHud';
+import type { CampHudViewModel } from 'db://assets/scripts/services/camp/CampApplicationModels';
 import {
     CAMP_BOTTOM_HUD_PATHS,
     campSystemEntryPath,
@@ -17,7 +17,7 @@ import {
     campNode,
     disposeCampBindings,
     warnCampTouchTarget,
-} from '../shared/CampViewUtils';
+} from 'db://assets/scripts/presentation/camp/shared/CampViewUtils';
 
 const { ccclass } = _decorator;
 
@@ -30,11 +30,12 @@ export class CampBottomHudPresenter extends Component {
     protected override onLoad(): void {
         const app = AppRoot.instance;
         this.disposers.push(
-            app.events.on('wallet.changed', () => this.renderWallet()),
-            app.events.on('profile.loaded', () => this.renderWallet()),
+            app.events.on<CampHudViewModel>('camp.hudChanged', (model) => this.render(model)),
+            app.events.on('wallet.changed', () => this.requestRefresh()),
+            app.events.on('profile.loaded', () => this.requestRefresh()),
             app.events.on<{ pageId: string }>('router.pageChanged', ({ pageId }) => {
                 if (pageId === 'camp') {
-                    this.renderWallet();
+                    this.requestRefresh();
                 }
             }),
         );
@@ -48,7 +49,8 @@ export class CampBottomHudPresenter extends Component {
     }
 
     protected override start(): void {
-        this.renderWallet();
+        this.render(null);
+        this.requestRefresh();
     }
 
     protected override onDestroy(): void {
@@ -60,6 +62,19 @@ export class CampBottomHudPresenter extends Component {
             return null;
         }
         const app = AppRoot.instance;
+        const entry = app.campHud.current?.systemEntries[entryId] ?? null;
+        if (!entry) {
+            app.showFeedback('入口状态尚未加载');
+            this.requestRefresh();
+            return null;
+        }
+        if (!entry.enabled) {
+            const fallback = entryId === 'settings'
+                ? '设置暂不可用'
+                : CAMP_SYSTEM_ENTRY_FEEDBACK[entryId];
+            app.showFeedback(entry.unavailableReason ?? fallback);
+            return entryId;
+        }
         if (entryId === 'settings') {
             app.events.emit('camp.settingsRequested', {});
             return entryId;
@@ -68,17 +83,29 @@ export class CampBottomHudPresenter extends Component {
         return entryId;
     }
 
-    private renderWallet(): void {
+    private render(model: CampHudViewModel | null): void {
+        for (const entryId of CAMP_SYSTEM_ENTRY_IDS) {
+            const entryNode = campNode(this.node, campSystemEntryPath(entryId));
+            if (entryNode) {
+                entryNode.active = model
+                    ? !model.systemEntries[entryId].hidden
+                    : entryId === 'settings';
+            }
+        }
         const label = campLabel(this.node, CAMP_BOTTOM_HUD_PATHS.immortalCoinValue);
         if (!label) {
             return;
         }
-        const app = AppRoot.instance;
-        if (!app.state.isLoaded) {
+        if (!model) {
             label.string = '--';
             return;
         }
-        const balances = campCurrencyBalances(app.state.require().wallet);
-        label.string = String(Math.trunc(balances.bottomSpiritStone));
+        label.string = String(Math.trunc(model.spiritStoneBalance));
+    }
+
+    private requestRefresh(): void {
+        void AppRoot.instance.campHud.refresh().catch((error) => {
+            console.error('[底部 HUD] 数据刷新失败', error);
+        });
     }
 }

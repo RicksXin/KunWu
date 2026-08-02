@@ -1,13 +1,12 @@
 import { _decorator, Component, Label } from 'cc';
-import type { Wallet } from 'db://assets/scripts/services/GameState';
+import type { CampTopResourcesViewModel } from 'db://assets/scripts/services/camp/CampApplicationModels';
 
 const { ccclass, property } = _decorator;
 
 /**
  * 常驻顶部资源栏（PRD-01 §2、任务 P0-HALL-001）。
  *
- * 职责边界：只把 Wallet 的数值显示出来，不做生产结算也不改数据。
- * 数值来源是 GameState，变更经 EventBus 通知——本组件不主动轮询。
+ * 职责边界：只渲染 Application Service 产出的 ViewModel，不读取存档或 DTO。
  *
  * 常驻顺序为灵粮、灵木、玄铁、灵晶、庚精。
  * 底部灵石（Wallet.immortalCoin）由 CampBottomHudPresenter 独立接线，
@@ -35,12 +34,12 @@ export class ResourceBar extends Component {
     }
 
     /** 刷新显示。由 Presenter 在 Wallet 变更时调用。 */
-    render(wallet: Wallet): void {
-        setLabel(this.spiritGrainLabel, wallet.spiritGrain);
-        setLabel(this.spiritWoodLabel, wallet.spiritWood);
-        setLabel(this.darkIronLabel, wallet.darkIron);
-        setLabel(this.spiritStoneLabel, wallet.spiritStone);
-        setLabel(this.gengJingLabel, wallet.gengJing);
+    render(resources: CampTopResourcesViewModel): void {
+        setLabel(this.spiritGrainLabel, resources.spiritGrain);
+        setLabel(this.spiritWoodLabel, resources.spiritWood);
+        setLabel(this.darkIronLabel, resources.darkIron);
+        setLabel(this.spiritStoneLabel, resources.spiritCrystal);
+        setLabel(this.gengJingLabel, resources.gengJing);
     }
 
     /** 存档未就绪时显示占位符，禁止闪过场景假数值。 */

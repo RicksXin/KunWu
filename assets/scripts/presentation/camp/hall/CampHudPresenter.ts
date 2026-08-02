@@ -2,6 +2,8 @@ import { _decorator, Component } from 'cc';
 import { AppRoot } from 'db://assets/scripts/AppRoot';
 import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
 import { CAMP_TOP_HUD_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
+import { CampApplicationError } from 'db://assets/scripts/services/camp/CampApplicationError';
+import type { CampHudViewModel } from 'db://assets/scripts/services/camp/CampApplicationModels';
 import { ResourceBar } from './ResourceBar';
 import {
     bindCampButton,
@@ -9,7 +11,7 @@ import {
     campNode,
     disposeCampBindings,
     warnCampTouchTarget,
-} from '../shared/CampViewUtils';
+} from 'db://assets/scripts/presentation/camp/shared/CampViewUtils';
 
 const { ccclass } = _decorator;
 
@@ -22,15 +24,16 @@ export class CampHudPresenter extends Component {
     protected override onLoad(): void {
         const app = AppRoot.instance;
         this.disposers.push(
-            app.events.on('wallet.changed', () => this.renderWallet()),
-            app.events.on('profile.loaded', () => this.renderAll()),
-            app.events.on('story.changed', () => this.renderMainTask()),
+            app.events.on<CampHudViewModel>('camp.hudChanged', (model) => this.renderAll(model)),
+            app.events.on('wallet.changed', () => this.requestRefresh()),
+            app.events.on('profile.loaded', () => this.requestRefresh()),
+            app.events.on('story.changed', () => this.requestRefresh()),
             app.events.on<{ pageId: string }>('router.pageChanged', ({ pageId }) => {
                 if (pageId === 'camp') {
-                    this.renderAll();
+                    this.requestRefresh();
                 }
             }),
-            app.events.on('expedition.settlementClosed', () => this.renderAll()),
+            app.events.on('expedition.settlementClosed', () => this.requestRefresh()),
         );
 
         const avatar = campNode(this.node, CAMP_TOP_HUD_PATHS.avatar);
@@ -52,16 +55,17 @@ export class CampHudPresenter extends Component {
     }
 
     protected override start(): void {
-        this.renderAll();
+        this.renderAll(null);
+        this.requestRefresh();
     }
 
     protected override onDestroy(): void {
         disposeCampBindings(this.disposers);
     }
 
-    private renderAll(): void {
-        this.renderWallet();
-        this.renderMainTask();
+    private renderAll(model: CampHudViewModel | null): void {
+        this.renderWallet(model);
+        this.renderMainTask(model);
     }
 
     private showPlaceholder(entryId: string): void {
@@ -70,40 +74,38 @@ export class CampHudPresenter extends Component {
         }
     }
 
-    private renderWallet(): void {
-        const app = AppRoot.instance;
+    private renderWallet(model: CampHudViewModel | null): void {
         const bar =
             campNode(this.node, CAMP_TOP_HUD_PATHS.resourceBar)?.getComponent(ResourceBar) ?? null;
-        if (!app.state.isLoaded) {
+        if (!model) {
             bar?.renderPlaceholder();
             return;
         }
-        bar?.render(app.state.require().wallet);
+        bar?.render(model.resources);
     }
 
-    private renderMainTask(): void {
+    private renderMainTask(model: CampHudViewModel | null): void {
         const label = campLabel(this.node, CAMP_TOP_HUD_PATHS.mainTaskObjective);
         if (!label) {
             return;
         }
-        const app = AppRoot.instance;
-        if (!app.state.isLoaded) {
+        if (!model) {
             label.string = '主线：--';
             return;
         }
-        const objective = currentMainTaskObjective(app.state.require().storyFlags);
+        const objective = model.mainTaskObjective;
         label.string = objective ? `主线：${truncateLine(objective)}` : '暂无主线任务';
     }
-}
 
-function currentMainTaskObjective(storyFlags: Readonly<Record<string, boolean>>): string | null {
-    if (storyFlags.main_story_complete === true) {
-        return null;
+    private requestRefresh(): void {
+        void AppRoot.instance.campHud.refresh().catch((error) => {
+            console.error('[顶部 HUD] 数据刷新失败', error);
+            const message = error instanceof CampApplicationError
+                ? error.message
+                : '顶部信息加载失败，请稍后重试';
+            AppRoot.instance.showFeedback(message);
+        });
     }
-    if (storyFlags.met_cen_shou_yi === true) {
-        return '整备营地，准备首次入山';
-    }
-    return '前往议事殿，与岑守一交谈';
 }
 
 function truncateLine(text: string, maxCharacters = 24): string {

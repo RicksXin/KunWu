@@ -192,6 +192,42 @@ tests/            单测；位于 assets/ 外，避免进入 Web 构建产物
 - 移动已有 Cocos Component 时，必须将对应 `.meta` 一起移动，保留 UUID 与场景引用。
   新增目录、脚本和资源的 `.meta` 仍必须由 Cocos Creator 导入生成，禁止手写。
 
+## 服务端预留与 API First
+
+所有新需求都按未来存在独立服务端进行设计，即使当前尚未创建 Server 项目。需求梳理完成、
+进入实现前，必须同步产出并互相链接以下内容：
+
+1. 客户端技术设计：页面组件、状态流、Service、缓存、异常与离线处理。
+2. 服务端技术设计：服务职责、数据模型、事务、权限、幂等和权威数据范围。
+3. API 契约：接口路径与方法、鉴权、请求/响应 DTO、错误码、版本、时间字段和事件。
+4. 本地接口实现与验收清单：正常、超时、断网、重复提交、冲突和失败恢复。
+
+文档统一放在 `Docs/` 下，以需求或模块 ID 命名；PRD 只描述产品规则，前后端实现与 API
+细节不得写回 PRD。相关文档必须从对应 PRD 或开发待办中可以追溯。
+
+客户端固定调用链为：
+
+```text
+Presenter → Application Service → API Port
+          → Local Adapter（当前）/ HTTP Adapter（未来）
+          → Response → Service 更新 GameState 并发出应用事件 → Presenter 刷新
+```
+
+- Presenter 不得直接调用 `fetch`、直接拼装服务端 DTO，或代替 Service 修改权威业务状态。
+- 领域层保持纯 TypeScript，不依赖网络、HTTP、服务端 DTO 或事件总线。
+- API Port、请求/响应 DTO 与错误类型必须独立于具体传输实现；本地和 HTTP Adapter 实现
+  同一接口，以依赖注入方式切换。
+- 当前没有服务端时使用 Local Adapter。它必须保持异步 `Promise` 语义，并可模拟服务端
+  成功、业务失败、超时与冲突；不得直接操作 Cocos 节点或绕过 Service 向页面发事件。
+- Service 在收到响应后负责更新 `GameState`、持久化并发出应用事件。实时推送类接口除外，
+  但其事件也必须先经过 Service 或专门的同步服务转换。
+- API DTO 与领域模型、存档模型分离，通过 Repository/Mapper 转换，避免服务端字段变化
+  扩散到页面和领域层。
+- 每份服务端技术设计必须明确数据权威方。账号、付费货币、交易、排行榜和联网战斗结算
+  默认由服务端权威；页面状态、动画、音效和本地展示偏好由客户端负责。
+- 既有模块不要求一次性整体改造；新需求直接遵守，修改旧模块时同步补齐其 API Port、
+  Local Adapter 与上述文档。
+
 ## 导入与 TypeScript 限制
 
 跨目录导入使用 Cocos 原生 `db://` 前缀，不在 `tsconfig.json` 中自定义 `paths`：

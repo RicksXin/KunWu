@@ -39,7 +39,19 @@ export function drawSolidBackground(node: Node, color: Color): void {
     if (sprite) {
         sprite.enabled = false;
     }
-    const graphics = node.getComponent(Graphics) ?? node.addComponent(Graphics);
+
+    let fillNode = node.getChildByName('SolidFill');
+    if (!fillNode) {
+        fillNode = new Node('SolidFill');
+        node.addChild(fillNode);
+    }
+    fillNode.layer = node.layer;
+    fillNode.setPosition(0, 0, 0);
+    fillNode.setSiblingIndex(0);
+    const fillTransform = fillNode.getComponent(UITransform) ?? fillNode.addComponent(UITransform);
+    fillTransform.setContentSize(width, height);
+    fillTransform.setAnchorPoint(0.5, 0.5);
+    const graphics = fillNode.getComponent(Graphics) ?? fillNode.addComponent(Graphics);
     graphics.clear();
     graphics.fillColor = color.clone();
     graphics.rect(-width / 2, -height / 2, width, height);
