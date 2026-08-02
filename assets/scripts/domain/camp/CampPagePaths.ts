@@ -33,6 +33,22 @@ export const CAMP_EXPEDITION_PATHS = Object.freeze({
     mapSelectionClose: 'MapSelectionLayer/MapSelectionCloseButton',
 });
 
+/** 入山整备业务内容挂入共享面板后，以 ContentMount 为起点访问的相对路径。 */
+export const CAMP_EXPEDITION_CONTENT_PATHS = Object.freeze({
+    title: 'Title',
+    heroCards: 'HeroCards',
+    toolbar: 'Toolbar',
+    editParty: 'Toolbar/EditPartyButton',
+    partyTabs: 'Toolbar/PartyTabs',
+    restoreStamina: 'Toolbar/RestoreStaminaButton',
+    burdenRow: 'BurdenRow',
+    burdenLabel: 'BurdenRow/BurdenLabel',
+    loadoutRows: 'LoadoutRows',
+    spiritGrainRow: 'LoadoutRows/SpiritGrainRow',
+    pickaxeRow: 'LoadoutRows/PickaxeRow',
+    lensRow: 'LoadoutRows/LensRow',
+});
+
 /** 灵圃面板固定展示的五种资源；P1 后两行保留为 P2 锁定态。 */
 export const CAMP_LING_PU_RESOURCE_ROW_IDS = [
     'spiritGrain',

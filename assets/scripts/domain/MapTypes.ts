@@ -14,6 +14,7 @@ export const MAP_OBJECT_KINDS = [
     'boss_field',
     'resource_node',
     'treasure_chest',
+    'story_event',
     'attribute_check',
     'npc',
     'temp_camp',

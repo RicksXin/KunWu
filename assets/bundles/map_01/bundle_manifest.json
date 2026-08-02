@@ -1,5 +1,8 @@
 {
   "bundleId": "map_01",
   "schemaVersion": 1,
-  "status": "placeholder"
+  "status": "d0_demo",
+  "scene": "Map",
+  "mapData": "map_01_demo",
+  "artLicense": "CC0-1.0"
 }

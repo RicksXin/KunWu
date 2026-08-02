@@ -1,8 +1,9 @@
 import { ATTRIBUTE_KEYS } from 'db://assets/scripts/domain/Attributes';
-import type { HeroGrade } from 'db://assets/scripts/domain/HeroGrowth';
 import { migratedWorkerCount } from 'db://assets/scripts/domain/LingPu';
 import { recordOf } from './ProfileValueReaders';
 import type { UnknownRecord } from './ProfileValueReaders';
+
+type LegacyHeroGrade = 'D' | 'C' | 'B' | 'A' | 'S' | 'SS' | 'SSS';
 
 /** v1 → v2：补充杂役总数和三种基础资源的独立存储等级。 */
 export function migrateProfileV1ToV2(payload: Record<string, unknown>): Record<string, unknown> {
@@ -28,11 +29,11 @@ export function migrateProfileV1ToV2(payload: Record<string, unknown>): Record<s
 /**
  * v3 发布时的成长曲线快照。迁移必须保持历史确定性，不能引用运行时平衡表。
  */
-const V3_BASE_PERCENT: Readonly<Record<HeroGrade, number>> = {
+const V3_BASE_PERCENT: Readonly<Record<LegacyHeroGrade, number>> = {
     D: 100, C: 108, B: 116, A: 124, S: 133, SS: 142, SSS: 152,
 };
 
-const V3_GROWTH_PERCENT: Readonly<Record<HeroGrade, number>> = {
+const V3_GROWTH_PERCENT: Readonly<Record<LegacyHeroGrade, number>> = {
     D: 100, C: 110, B: 122, A: 136, S: 152, SS: 170, SSS: 190,
 };
 
@@ -67,7 +68,7 @@ export function migrateProfileV2ToV3(payload: Record<string, unknown>): Record<s
         if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
         const hero = entry as UnknownRecord;
         const careerId = typeof hero.careerId === 'string' ? hero.careerId : '';
-        const grade = hero.grade as HeroGrade;
+        const grade = hero.grade as LegacyHeroGrade;
         const level = typeof hero.level === 'number' ? hero.level : 1;
         const careerBase = V3_CAREER_BASE[careerId];
         const rates = V3_GROWTH_RATES[careerId];
@@ -132,5 +133,102 @@ export function migrateProfileV3ToV4(payload: Record<string, unknown>): Record<s
             loadout: { spiritGrain: 60, pickaxe: 0, lens: 0 },
             lastStaminaSettledAtUtc: recoveryAnchor,
         },
+    };
+}
+
+const V5_ROOT_BY_LEGACY_GRADE: Readonly<Record<LegacyHeroGrade, string>> = {
+    D: 'mixed_root',
+    C: 'pseudo_root',
+    B: 'triple_root',
+    A: 'dual_root',
+    S: 'heavenly_root',
+    SS: 'variant_root',
+    SSS: 'variant_root',
+};
+
+const V5_BASE_PERCENT: Readonly<Record<string, number>> = {
+    mixed_root: 100,
+    pseudo_root: 108,
+    triple_root: 116,
+    dual_root: 124,
+    heavenly_root: 133,
+    variant_root: 152,
+};
+
+const V5_GROWTH_PERCENT: Readonly<Record<string, number>> = {
+    mixed_root: 100,
+    pseudo_root: 110,
+    triple_root: 122,
+    dual_root: 136,
+    heavenly_root: 152,
+    variant_root: 190,
+};
+
+function v5RealmId(level: number): string | null {
+    if (!Number.isInteger(level) || level < 1 || level > 80) return null;
+    const ids = [
+        'lian_qi', 'zhu_ji', 'jie_dan', 'yuan_ying',
+        'hua_shen', 'lian_xu', 'he_ti', 'da_cheng',
+    ] as const;
+    return ids[Math.floor((level - 1) / 10)] ?? null;
+}
+
+/** v4 → v5：旧七档品级迁移为六档灵根，并冻结稳定境界 ID。 */
+export function migrateProfileV4ToV5(payload: Record<string, unknown>): Record<string, unknown> {
+    const profile = recordOf(payload, 'profile');
+    if (!Array.isArray(profile.roster)) return { ...profile };
+    const roster = profile.roster.map((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+        const hero = entry as UnknownRecord;
+        const legacyGrade = hero.grade as LegacyHeroGrade;
+        const spiritualRootId = typeof hero.spiritualRootId === 'string'
+            ? hero.spiritualRootId
+            : V5_ROOT_BY_LEGACY_GRADE[legacyGrade];
+        const level = typeof hero.level === 'number' ? hero.level : 1;
+        const realmId = typeof hero.realmId === 'string' ? hero.realmId : v5RealmId(level);
+        const { grade: _legacyGrade, ...withoutLegacyGrade } = hero;
+        const careerId = typeof hero.careerId === 'string' ? hero.careerId : '';
+        const careerBase = V3_CAREER_BASE[careerId];
+        const rates = V3_GROWTH_RATES[careerId];
+        const basePercent = spiritualRootId ? V5_BASE_PERCENT[spiritualRootId] : undefined;
+        const growthPercent = spiritualRootId ? V5_GROWTH_PERCENT[spiritualRootId] : undefined;
+        if (!spiritualRootId || !realmId || !careerBase || !rates
+            || basePercent === undefined || growthPercent === undefined) {
+            return { ...withoutLegacyGrade, spiritualRootId, realmId };
+        }
+
+        const levelsGained = Math.max(0, level - 1);
+        const attributes: Record<string, number> = {};
+        for (const key of ATTRIBUTE_KEYS) {
+            const base = Math.floor(((careerBase.attrs[key] ?? 0) * basePercent) / 100);
+            const growth = Math.floor(
+                (levelsGained * (rates[key] ?? 0) * growthPercent)
+                / (V3_GROWTH_RATE_SCALE * 100),
+            );
+            attributes[key] = Math.max(0, base + growth);
+        }
+        const maxHp = Math.max(
+            1,
+            careerBase.hp + attributes.constitution! * V3_CONSTITUTION_HP_FACTOR,
+        );
+        const previousHp = typeof hero.currentHp === 'number' ? hero.currentHp : maxHp;
+        return {
+            ...withoutLegacyGrade,
+            spiritualRootId,
+            realmId,
+            attributes,
+            maxHp,
+            currentHp: Math.max(0, Math.min(previousHp, maxHp)),
+        };
+    });
+    return { ...profile, roster };
+}
+
+/** v5 → v6：持久保存已经完成的一次性地图对象。 */
+export function migrateProfileV5ToV6(payload: Record<string, unknown>): Record<string, unknown> {
+    const profile = recordOf(payload, 'profile');
+    return {
+        ...profile,
+        completedMapObjects: profile.completedMapObjects ?? {},
     };
 }

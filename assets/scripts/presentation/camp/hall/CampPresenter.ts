@@ -3,9 +3,7 @@ import { CAMP_HALL_INSTALL_PATHS } from 'db://assets/scripts/domain/CampSceneCon
 import { CampBottomHudPresenter } from './CampBottomHudPresenter';
 import { CampBuildingPresenter } from './CampBuildingPresenter';
 import { CampHudPresenter } from './CampHudPresenter';
-import { CampNpcPresenter } from './CampNpcPresenter';
 import { CampPanoramaController } from './CampPanoramaController';
-import { CampSettingsPresenter } from './CampSettingsPresenter';
 import { campNode } from '../shared/CampViewUtils';
 
 const { ccclass } = _decorator;
@@ -13,15 +11,14 @@ const { ccclass } = _decorator;
 /**
  * 旧 Camp.scene 的兼容安装器。
  *
- * 正式职责已经拆给六个页面组件；这里保留原脚本 UUID，让尚未完成 Prefab 迁移的
- * Camp.scene 无需重绑组件。等场景改为独立 Prefab 后可从 Canvas 移除此组件。
+ * 正式职责已经拆给独立页面组件；这里保留原脚本 UUID，只为旧场景安装大厅内的
+ * 四个组件。NPC 与设置 Presenter 已挂在各自 Prefab 根节点，不能再装到 SafeAreaRoot。
  */
 @ccclass('CampPresenter')
 export class CampPresenter extends Component {
     protected override onLoad(): void {
         const worldViewport = campNode(this.node, CAMP_HALL_INSTALL_PATHS.panorama);
         const buildingLayer = campNode(this.node, CAMP_HALL_INSTALL_PATHS.buildings);
-        const safeAreaRoot = campNode(this.node, CAMP_HALL_INSTALL_PATHS.safeAreaRoot);
         const topHud = campNode(this.node, CAMP_HALL_INSTALL_PATHS.topHud);
         const bottomHud = campNode(this.node, CAMP_HALL_INSTALL_PATHS.bottomHud);
 
@@ -36,12 +33,6 @@ export class CampPresenter extends Component {
         }
         if (bottomHud && !bottomHud.getComponent(CampBottomHudPresenter)) {
             bottomHud.addComponent(CampBottomHudPresenter);
-        }
-        if (safeAreaRoot && !safeAreaRoot.getComponent(CampNpcPresenter)) {
-            safeAreaRoot.addComponent(CampNpcPresenter);
-        }
-        if (safeAreaRoot && !safeAreaRoot.getComponent(CampSettingsPresenter)) {
-            safeAreaRoot.addComponent(CampSettingsPresenter);
         }
     }
 }

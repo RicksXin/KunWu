@@ -1,0 +1,6 @@
+# KunWu-only official Figma MCP connection.
+# The unique server id keeps this OAuth login separate from other Figma projects.
+[mcp_servers.figma_kunwu]
+url = "https://mcp.figma.com/mcp"
+auth = "oauth"
+

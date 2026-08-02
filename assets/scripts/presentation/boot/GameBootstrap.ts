@@ -1,6 +1,7 @@
 import { _decorator, assetManager, Component, JsonAsset, Label, Node } from 'cc';
 import { AppRoot } from 'db://assets/scripts/AppRoot';
 import { BundleLoader } from 'db://assets/scripts/services/BundleLoader';
+import { isMapBundle } from 'db://assets/scripts/services/BundleManifest';
 import { CocosBundleHost } from 'db://assets/scripts/presentation/routing/CocosBundleHost';
 import { runBootSequence, BOOT_STAGE_MESSAGE_KEYS } from 'db://assets/scripts/services/BootSequence';
 import type { BootStage, BootFailure } from 'db://assets/scripts/services/BootSequence';
@@ -14,6 +15,8 @@ import {
     migrateProfileV1ToV2,
     migrateProfileV2ToV3,
     migrateProfileV3ToV4,
+    migrateProfileV4ToV5,
+    migrateProfileV5ToV6,
     serializeProfile,
 } from 'db://assets/scripts/services/ProfileCodec';
 import {
@@ -68,7 +71,21 @@ export class GameBootstrap extends Component {
             loadBundle: (name) => loader.load(name),
             preloadFor: (id) => loader.preloadFor(id),
             loadSave: () => this.loadAndPrepareProfile(saves),
-            enterCamp: () => app.router.replaceRoot({ pageId: 'camp' }),
+            enterCamp: async () => {
+                const expedition = app.state.require().expedition;
+                if (!expedition) {
+                    await app.router.replaceRoot({ pageId: 'camp' });
+                    return;
+                }
+                if (!isMapBundle(expedition.mapId)) {
+                    throw new Error(`存档引用了未知地图 ${expedition.mapId}`);
+                }
+                await loader.load(expedition.mapId);
+                await app.router.replaceRoot({
+                    pageId: 'map',
+                    params: { mapId: expedition.mapId },
+                });
+            },
             onStage: (stage) => this.showStage(stage),
             onSaveDiagnostics: (diagnostics) => {
                 // 坏档不阻断启动，但要留痕——玩家可据此决定是否导出备份
@@ -100,6 +117,8 @@ export class GameBootstrap extends Component {
                 [1, migrateProfileV1ToV2],
                 [2, migrateProfileV2ToV3],
                 [3, migrateProfileV3ToV4],
+                [4, migrateProfileV4ToV5],
+                [5, migrateProfileV5ToV6],
             ]),
         };
 

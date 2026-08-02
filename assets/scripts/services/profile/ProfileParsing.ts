@@ -1,7 +1,15 @@
 import { ATTRIBUTE_KEYS } from 'db://assets/scripts/domain/Attributes';
 import type { Attributes, MutableAttributes } from 'db://assets/scripts/domain/Attributes';
-import { HERO_GRADES } from 'db://assets/scripts/domain/HeroGrowth';
-import type { HeroGrade } from 'db://assets/scripts/domain/HeroGrowth';
+import {
+    MAX_LEVEL,
+    REALM_IDS,
+    SPIRITUAL_ROOT_IDS,
+    realmIdOf,
+} from 'db://assets/scripts/domain/HeroGrowth';
+import type {
+    RealmId,
+    SpiritualRootId,
+} from 'db://assets/scripts/domain/HeroGrowth';
 import { GridCoord } from 'db://assets/scripts/domain/GridCoord';
 import { EXPEDITION_ITEM_IDS } from 'db://assets/scripts/domain/ExpeditionPreparation';
 import type { ExpeditionLoadout } from 'db://assets/scripts/domain/ExpeditionPreparation';
@@ -48,11 +56,18 @@ function attributesOf(value: unknown, path: string): Attributes {
     return result;
 }
 
-function gradeOf(value: unknown, path: string): HeroGrade {
-    if (!(HERO_GRADES as readonly unknown[]).includes(value)) {
-        throw new Error(`${path} 不是合法品级`);
+function spiritualRootIdOf(value: unknown, path: string): SpiritualRootId {
+    if (!(SPIRITUAL_ROOT_IDS as readonly unknown[]).includes(value)) {
+        throw new Error(`${path} 不是合法灵根资质`);
     }
-    return value as HeroGrade;
+    return value as SpiritualRootId;
+}
+
+function persistedRealmIdOf(value: unknown, path: string): RealmId {
+    if (!(REALM_IDS as readonly unknown[]).includes(value)) {
+        throw new Error(`${path} 不是合法境界`);
+    }
+    return value as RealmId;
 }
 
 function heroOf(value: unknown, index: number): HeroInstance {
@@ -65,13 +80,24 @@ function heroOf(value: unknown, index: number): HeroInstance {
     if (skillIds.length !== 3) throw new Error(`${path}.skillIds 必须恰好包含 3 个技能`);
     const stamina = integerOf(raw.stamina, `${path}.stamina`);
     if (stamina > 100) throw new Error(`${path}.stamina 不得超过 100`);
+    const level = integerOf(raw.level, `${path}.level`, 1);
+    if (level > MAX_LEVEL) throw new Error(`${path}.level 不得超过当前上限 ${MAX_LEVEL}`);
+    const realmId = persistedRealmIdOf(raw.realmId, `${path}.realmId`);
+    const expectedRealmId = realmIdOf(level);
+    if (realmId !== expectedRealmId) {
+        throw new Error(`${path}.realmId ${realmId} 与等级 ${level} 不一致，应为 ${expectedRealmId}`);
+    }
     return {
         instanceId: stringOf(raw.instanceId, `${path}.instanceId`),
         definitionId: stringOf(raw.definitionId, `${path}.definitionId`),
         nameKey: stringOf(raw.nameKey, `${path}.nameKey`),
         careerId: stringOf(raw.careerId, `${path}.careerId`),
-        grade: gradeOf(raw.grade, `${path}.grade`),
-        level: integerOf(raw.level, `${path}.level`, 1),
+        spiritualRootId: spiritualRootIdOf(
+            raw.spiritualRootId,
+            `${path}.spiritualRootId`,
+        ),
+        realmId,
+        level,
         attributes: attributesOf(raw.attributes, `${path}.attributes`),
         maxHp,
         currentHp,
@@ -201,6 +227,10 @@ export function parseProfile(value: unknown, defaultSettledAtUtc?: number): Prof
         roster,
         inventory: numberRecordOf(raw.inventory, 'profile.inventory'),
         storyFlags: booleanRecordOf(raw.storyFlags, 'profile.storyFlags'),
+        completedMapObjects: booleanRecordOf(
+            raw.completedMapObjects,
+            'profile.completedMapObjects',
+        ),
         expeditionPreparation,
         expedition: expeditionOf(raw.expedition),
     };

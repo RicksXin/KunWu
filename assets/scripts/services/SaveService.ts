@@ -13,10 +13,12 @@ export type SaveStore = (typeof SAVE_STORES)[number];
  * 当前存档结构版本。每次改变 Schema 递增，并新增迁移函数。
  *
  * v3：roster 的 attributes 与 maxHp 按 Docs/13 §3 的新成长曲线重算
- *     （七维全维成长、品级同时影响初始值）。见 ProfileCodec.migrateProfileV2ToV3。
+ *     （七维全维成长、旧品级同时影响初始值）。见 migrateProfileV2ToV3。
  * v4：增加修士灵息、队伍预设、入山携带物与自然恢复结算锚点。
+ * v5：旧七档品级迁移为六档 spiritualRootId，并为修士保存稳定 realmId。
+ * v6：增加永久地图对象完成状态，防止事件和宝箱重复触发、重复领奖。
  */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 export interface SaveEnvelope {
     readonly schema_version: number;

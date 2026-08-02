@@ -8,10 +8,11 @@
  * PRD-09 §9 要求两者行为一致，各写一套迟早会分叉。
  */
 
-import { director } from 'cc';
+import { assetManager, director } from 'cc';
 import { PageStack } from 'db://assets/scripts/services/PageStack';
 import type { BackResult, ModalEntry } from 'db://assets/scripts/services/PageStack';
 import type { PageId, RouteEntry, SceneRouterApi } from 'db://assets/scripts/services/SceneRouter';
+import { isMapBundle } from 'db://assets/scripts/services/BundleManifest';
 
 /** 页面 ID → 场景名。场景须在对应 Bundle 内。 */
 export const PAGE_SCENE_NAMES: Readonly<Record<PageId, string>> = {
@@ -124,14 +125,18 @@ export class CocosSceneRouter implements SceneRouterApi {
         this.loading = true;
         this.events.onLoadingChanged?.(true);
         try {
+            await this.ensurePageBundle(entry);
             await new Promise<void>((resolve, reject) => {
-                director.loadScene(sceneName, (error) => {
+                const accepted = director.loadScene(sceneName, (error) => {
                     if (error) {
                         reject(error);
                         return;
                     }
                     resolve();
                 });
+                if (!accepted) {
+                    reject(new Error(`场景 ${sceneName} 未注册或已有场景正在加载`));
+                }
             });
             this.events.onPageChanged?.(entry);
         } finally {
@@ -140,5 +145,24 @@ export class CocosSceneRouter implements SceneRouterApi {
             this.loading = false;
             this.events.onLoadingChanged?.(false);
         }
+    }
+
+    /** 地图场景位于独立 Bundle；主动进入时不能只依赖后台预载是否及时完成。 */
+    private async ensurePageBundle(entry: RouteEntry): Promise<void> {
+        if (entry.pageId !== 'map') return;
+        const mapId = entry.params?.mapId;
+        if (typeof mapId !== 'string' || !isMapBundle(mapId)) {
+            throw new Error(`无效的地图 Bundle：${String(mapId)}`);
+        }
+        if (assetManager.getBundle(mapId)) return;
+        await new Promise<void>((resolve, reject) => {
+            assetManager.loadBundle(mapId, (error) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                resolve();
+            });
+        });
     }
 }

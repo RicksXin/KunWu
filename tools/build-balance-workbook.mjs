@@ -26,7 +26,7 @@ import {
     ATTRIBUTE_LABELS,
     CAREER_LABELS,
     JOB_LABELS,
-    GRADES,
+    SPIRITUAL_ROOT_IDS,
     SAMPLE_LEVELS,
     TICK_HZ,
 } from './balance-model.mjs';
@@ -59,10 +59,10 @@ function sheetReadme() {
             ['七维字段名', 'strength magic technique speed constitution armor resistance（已冻结，见技术方案 §6）'],
             ['', ''],
             ['成长率表', '每个职业每级涨几点。看职业性格'],
-            ['品级倍率', '初始倍率与成长倍率两条。看品级差是否过大'],
-            ['职业初始值', 'careers/*.json 的 1 级裸值，未乘品级倍率'],
+            ['灵根倍率', '初始倍率与成长倍率两条。看资质差是否过大'],
+            ['职业初始值', 'careers/*.json 的 1 级裸值，未乘灵根倍率'],
             ['面板推演', '各等级的七维、生命、伤害、减伤。看曲线是否合理'],
-            ['单挑 TTK', '同级同品 1v1 几秒打死。看是否存在一击秒杀'],
+            ['单挑 TTK', '同级同灵根 1v1 几秒打死。看是否存在一击秒杀'],
             ['续航核算', '医修奶量对比承伤。看治疗是否够用'],
             ['技能表', '18 个技能的倍率与间隔'],
             ['灵圃经济', '各杂役数下的可行岗位配置。看是否只有一个最优解'],
@@ -111,15 +111,15 @@ function sheetGrowthRates() {
     };
 }
 
-/** sheet 3：品级倍率。 */
-function sheetGrades() {
+/** sheet 3：灵根倍率。 */
+function sheetSpiritualRoots() {
     const wuBase = tables.careers.wu_xiu.baseAttributes.strength;
-    const rows = GRADES.map((grade) => {
-        const m = tables.gradeMultipliers[grade];
-        const lv1 = attributesAt(tables, 'wu_xiu', 1, grade);
-        const lv60 = attributesAt(tables, 'wu_xiu', 60, grade);
+    const rows = SPIRITUAL_ROOT_IDS.map((rootId) => {
+        const m = tables.spiritualRootMultipliers[rootId];
+        const lv1 = attributesAt(tables, 'wu_xiu', 1, rootId);
+        const lv60 = attributesAt(tables, 'wu_xiu', 60, rootId);
         return [
-            grade,
+            rootId,
             m.basePercent,
             m.growthPercent,
             lv1.strength,
@@ -128,22 +128,22 @@ function sheetGrades() {
         ];
     });
 
-    const dLv60 = attributesAt(tables, 'wu_xiu', 60, 'D').strength;
-    const sssLv60 = attributesAt(tables, 'wu_xiu', 60, 'SSS').strength;
+    const mixedRootLv60 = attributesAt(tables, 'wu_xiu', 60, 'mixed_root').strength;
+    const variantRootLv60 = attributesAt(tables, 'wu_xiu', 60, 'variant_root').strength;
     rows.push([]);
     rows.push([
-        'D : SSS',
+        '杂灵根 : 异灵根',
         '',
         '',
         '',
-        `${round1(sssLv60 / dLv60)}x`,
-        'PRD-03 §3 要求 D 级可通关，上限 2.0x',
+        `${round1(variantRootLv60 / mixedRootLv60)}x`,
+        'PRD-03 §3 要求杂灵根可通关，上限 2.0x',
     ]);
 
     return {
-        name: '品级倍率',
+        name: '灵根倍率',
         header: [
-            '品级',
+            '灵根 ID',
             '初始倍率 %',
             '成长倍率 %',
             `武修 1 级力道\n(裸值 ${wuBase})`,
@@ -193,7 +193,7 @@ function sheetProfiles() {
             ...Array.from({ length: 13 }, () => null),
         ]);
         for (const id of careerIds) {
-            const p = profileOf(tables, id, level, 'C');
+            const p = profileOf(tables, id, level, 'pseudo_root');
             rows.push([
                 '',
                 label(id),
@@ -242,7 +242,7 @@ function sheetDuels() {
             rows.push([
                 label(atkId),
                 ...careerIds.map((defId) => {
-                    const d = duelOf(tables, atkId, defId, level, 'C');
+                    const d = duelOf(tables, atkId, defId, level, 'pseudo_root');
                     return d ? `${round1(d.seconds)}s / ${d.hits}击` : '—';
                 }),
             ]);
@@ -250,7 +250,7 @@ function sheetDuels() {
         rows.push([]);
     }
 
-    rows.push(['判据', '同级同品击杀非坦职业至少 3 击，否则半自动战斗中玩家无反应窗口']);
+    rows.push(['判据', '同级同灵根击杀非坦职业至少 3 击，否则半自动战斗中玩家无反应窗口']);
 
     return {
         name: '单挑TTK',
@@ -268,7 +268,7 @@ function sheetDuels() {
 /** sheet 7：续航核算。 */
 function sheetSustain() {
     const rows = SAMPLE_LEVELS.map((level) => {
-        const s = sustainOf(tables, level, 'C');
+        const s = sustainOf(tables, level, 'pseudo_root');
         return [
             `Lv${level}`,
             s.healAmount,
@@ -434,7 +434,7 @@ function sheetEconomy() {
 const sheets = [
     sheetReadme(),
     sheetGrowthRates(),
-    sheetGrades(),
+    sheetSpiritualRoots(),
     sheetCareerBase(),
     sheetProfiles(),
     sheetDuels(),

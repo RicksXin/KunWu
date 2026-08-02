@@ -8,7 +8,7 @@ import {
     defenseLevelConstantAt,
     parseBalanceTables,
     parseCombatConstants,
-    parseGradeMultipliers,
+    parseSpiritualRootMultipliers,
     parseGrowthRates,
     parseProductionRates,
     parseRealmRanges,
@@ -17,7 +17,7 @@ import {
 } from 'db://assets/scripts/domain/BalanceTables';
 import { ATTRIBUTE_KEYS } from 'db://assets/scripts/domain/Attributes';
 import type { AttributeKey } from 'db://assets/scripts/domain/Attributes';
-import { HERO_GRADES } from 'db://assets/scripts/domain/HeroGrowth';
+import { SPIRITUAL_ROOT_IDS } from 'db://assets/scripts/domain/HeroGrowth';
 import { PRODUCTION_JOBS } from 'db://assets/scripts/domain/Production';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
@@ -30,7 +30,7 @@ function readTable(name: string): unknown {
 function loadTables() {
     return parseBalanceTables({
         growth_rates: readTable('growth_rates'),
-        grade_multipliers: readTable('grade_multipliers'),
+        spiritual_root_multipliers: readTable('spiritual_root_multipliers'),
         combat_constants: readTable('combat_constants'),
         production_rates: readTable('production_rates'),
         realm_ranges: readTable('realm_ranges'),
@@ -154,32 +154,35 @@ describe('成长率表', () => {
     });
 });
 
-describe('品级倍率表', () => {
-    test('缺任一品级即失败', () => {
+describe('灵根倍率表', () => {
+    test('缺任一灵根即失败', () => {
         const partial: Record<string, unknown> = {};
-        for (const grade of HERO_GRADES) {
-            partial[grade] = { basePercent: 100, growthPercent: 100 };
+        for (const rootId of SPIRITUAL_ROOT_IDS) {
+            partial[rootId] = { basePercent: 100, growthPercent: 100 };
         }
-        delete partial.SSS;
-        assert.throws(() => parseGradeMultipliers(partial), /SSS/);
+        delete partial.variant_root;
+        assert.throws(() => parseSpiritualRootMultipliers(partial), /variant_root/);
     });
 
-    test('倍率必须随品级严格递增', () => {
+    test('倍率必须随灵根严格递增', () => {
         const table: Record<string, unknown> = {};
-        HERO_GRADES.forEach((grade, index) => {
-            table[grade] = { basePercent: 100 + index, growthPercent: 100 };
+        SPIRITUAL_ROOT_IDS.forEach((rootId, index) => {
+            table[rootId] = { basePercent: 100 + index, growthPercent: 100 };
         });
-        assert.throws(() => parseGradeMultipliers(table), /growthPercent 必须随品级严格递增/);
+        assert.throws(
+            () => parseSpiritualRootMultipliers(table),
+            /growthPercent 必须随灵根严格递增/,
+        );
     });
 
-    test('仓库表的 D 品为 100 基准，且 SSS 与 D 的成长倍率比不超过 2.0', () => {
+    test('杂灵根为 100 基准，且异灵根成长倍率不超过两倍', () => {
         const tables = loadTables();
-        assert.equal(tables.gradeMultipliers.D.basePercent, 100);
-        assert.equal(tables.gradeMultipliers.D.growthPercent, 100);
-        // PRD-03 §3：D 级角色必须能通过合理培养完成主线
+        assert.equal(tables.spiritualRootMultipliers.mixed_root.basePercent, 100);
+        assert.equal(tables.spiritualRootMultipliers.mixed_root.growthPercent, 100);
         const ratio =
-            tables.gradeMultipliers.SSS.growthPercent / tables.gradeMultipliers.D.growthPercent;
-        assert.ok(ratio <= 2, `SSS 与 D 的成长倍率比 ${ratio} 超过 2.0`);
+            tables.spiritualRootMultipliers.variant_root.growthPercent
+            / tables.spiritualRootMultipliers.mixed_root.growthPercent;
+        assert.ok(ratio <= 2, `异灵根与杂灵根的成长倍率比 ${ratio} 超过 2.0`);
     });
 });
 
@@ -358,6 +361,18 @@ describe('境界区间表', () => {
                     realms: [{ id: 'zhu_ji', min: 1, max: 60 }],
                 }),
             /超过 maxLevel/,
+        );
+    });
+
+    test('未知境界 ID 失败', () => {
+        assert.throws(
+            () =>
+                parseRealmRanges({
+                    maxLevel: 60,
+                    tier1UnlockLevel: 10,
+                    realms: [{ id: 'unknown_realm', min: 1, max: 60 }],
+                }),
+            /不是合法境界/,
         );
     });
 

@@ -1,0 +1,63 @@
+{
+  "id": "map_01",
+  "name": "破禁山麓",
+  "width": 48,
+  "height": 64,
+  "activeWidth": 15,
+  "activeHeight": 15,
+  "entryX": 2,
+  "entryY": 2,
+  "terrainRows": [
+    "###############",
+    "#.............#",
+    "#.###.....###.#",
+    "#.#.........#.#",
+    "#.#.##...##.#.#",
+    "#...#.....#...#",
+    "###.#..~..#.###",
+    "#...#.....#...#",
+    "#.#.##...##.#.#",
+    "#.#.........#.#",
+    "#..~.......~..#",
+    "#.###.....###.#",
+    "#.E...........#",
+    "#.............#",
+    "###############"
+  ],
+  "objects": [
+    {
+      "id": "can_jin_shi_kui_01",
+      "kind": "enemy_group",
+      "x": 9,
+      "y": 9,
+      "title": "遭遇：残禁石傀",
+      "description": "石傀从残禁中苏醒，挡住了去路。"
+    },
+    {
+      "id": "can_bei_liu_hen_01",
+      "kind": "story_event",
+      "x": 7,
+      "y": 8,
+      "title": "残碑留痕",
+      "description": "风化石碑上留着一行仓促刻下的字：石傀守在东北方，莫从正面惊动它。"
+    },
+    {
+      "id": "feng_jin_mu_xia_01",
+      "kind": "treasure_chest",
+      "x": 5,
+      "y": 4,
+      "title": "封禁木匣",
+      "description": "木匣上的禁纹已经黯淡，匣中还留有一柄可用的开山镐。",
+      "reward": {
+        "itemId": "pickaxe",
+        "itemName": "开山镐",
+        "amount": 1
+      }
+    }
+  ],
+  "visual": {
+    "tiledMapAssetPath": "third_party/puny_dungeon/map_01_d0",
+    "sourceTileSize": 16,
+    "logicalTileSize": 48
+  }
+}

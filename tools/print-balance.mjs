@@ -4,8 +4,8 @@
  * 调参时用这个：改完 JSON 直接跑，不必开 Excel。
  * 只输出最关键的三块——面板、TTK、经济解数——完整视图去 xlsx。
  *
- *   node tools/print-balance.mjs            默认 C 品
- *   node tools/print-balance.mjs --grade S
+ *   node tools/print-balance.mjs                    默认伪灵根
+ *   node tools/print-balance.mjs --root dual_root
  */
 
 import {
@@ -20,15 +20,15 @@ import {
     ATTRIBUTE_KEYS,
     ATTRIBUTE_LABELS,
     CAREER_LABELS,
-    GRADES,
+    SPIRITUAL_ROOT_IDS,
     SAMPLE_LEVELS,
 } from './balance-model.mjs';
 
 const args = process.argv.slice(2);
-const gradeIndex = args.indexOf('--grade');
-const grade = gradeIndex >= 0 ? args[gradeIndex + 1] : 'C';
-if (!GRADES.includes(grade)) {
-    console.error(`品级须为 ${GRADES.join('/')} 之一，收到 ${grade}`);
+const rootIndex = args.indexOf('--root');
+const spiritualRootId = rootIndex >= 0 ? args[rootIndex + 1] : 'pseudo_root';
+if (!SPIRITUAL_ROOT_IDS.includes(spiritualRootId)) {
+    console.error(`灵根须为 ${SPIRITUAL_ROOT_IDS.join('/')} 之一，收到 ${spiritualRootId}`);
     process.exit(1);
 }
 
@@ -38,13 +38,13 @@ const label = (id) => CAREER_LABELS[id] ?? id;
 const pct = (r) => `${Math.round(r * 100)}%`;
 const r1 = (n) => Math.round(n * 10) / 10;
 
-console.log(`\n品级 ${grade}｜减伤常数 K(1)=${defenseConstantAt(tables, 1)} → K(60)=${defenseConstantAt(tables, 60)}`);
+console.log(`\n灵根 ${spiritualRootId}｜减伤常数 K(1)=${defenseConstantAt(tables, 1)} → K(60)=${defenseConstantAt(tables, 60)}`);
 
 for (const level of SAMPLE_LEVELS) {
     console.log(`\n===== Lv${level}  K=${defenseConstantAt(tables, level)} =====`);
     console.table(
         careerIds.map((id) => {
-            const p = profileOf(tables, id, level, grade);
+            const p = profileOf(tables, id, level, spiritualRootId);
             const row = { 职业: label(id) };
             for (const key of ATTRIBUTE_KEYS) {
                 row[ATTRIBUTE_LABELS[key]] = p.attrs[key];
@@ -69,7 +69,7 @@ for (const level of [1, 20, 40, 60]) {
             .map((atkId) => {
                 const row = { 攻方: label(atkId) };
                 for (const defId of careerIds) {
-                    const d = duelOf(tables, atkId, defId, level, grade);
+                    const d = duelOf(tables, atkId, defId, level, spiritualRootId);
                     row[label(defId)] = d ? `${r1(d.seconds)}s/${d.hits}击` : '—';
                 }
                 return row;
@@ -80,7 +80,7 @@ for (const level of [1, 20, 40, 60]) {
 console.log('\n===== 续航核算 =====');
 console.table(
     SAMPLE_LEVELS.map((level) => {
-        const s = sustainOf(tables, level, grade);
+        const s = sustainOf(tables, level, spiritualRootId);
         return {
             等级: `Lv${level}`,
             医修HPS: Math.round(s.hps),

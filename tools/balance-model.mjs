@@ -21,7 +21,7 @@ register('../tests/resolver.mjs', import.meta.url);
 const { parseBalanceTables } = await import(
     pathToFileURL(path.join(REPO_ROOT, 'assets/scripts/domain/BalanceTables.ts')).href
 );
-const { computeGrowth, scaleBaseByGrade } = await import(
+const { computeGrowth, scaleBaseBySpiritualRoot } = await import(
     pathToFileURL(path.join(REPO_ROOT, 'assets/scripts/domain/HeroGrowth.ts')).href
 );
 const { createAttributes } = await import(
@@ -69,7 +69,10 @@ export const JOB_LABELS = {
     gengJing: '庚精',
 };
 
-export const GRADES = ['D', 'C', 'B', 'A', 'S', 'SS', 'SSS'];
+export const SPIRITUAL_ROOT_IDS = [
+    'mixed_root', 'pseudo_root', 'triple_root',
+    'dual_root', 'heavenly_root', 'variant_root',
+];
 
 /** 结算频率，与 domain/CombatTypes.ts 的 SIMULATION_TICK_HZ 一致。 */
 export const TICK_HZ = 20;
@@ -113,7 +116,7 @@ export function loadTables() {
 
     const balance = parseBalanceTables({
         growth_rates: need('growth_rates'),
-        grade_multipliers: need('grade_multipliers'),
+        spiritual_root_multipliers: need('spiritual_root_multipliers'),
         combat_constants: need('combat_constants'),
         production_rates: need('production_rates'),
         realm_ranges: need('realm_ranges'),
@@ -125,11 +128,11 @@ export function loadTables() {
 /**
  * 七维面板。
  *
- * 走领域层的 scaleBaseByGrade 与 computeGrowth，不在此重算一遍公式：
+ * 走领域层的 scaleBaseBySpiritualRoot 与 computeGrowth，不在此重算一遍公式：
  * 仿真器的价值是「表里的数会让游戏变成什么样」，若两边各算一套，
  * 它就只能证明自己自洽，证明不了游戏对不对。
  */
-export function attributesAt(tables, careerId, level, grade) {
+export function attributesAt(tables, careerId, level, spiritualRootId) {
     const career = tables.careers[careerId];
     if (!career) {
         throw new Error(`职业 ${careerId} 不在 careers 表内`);
@@ -138,17 +141,17 @@ export function attributesAt(tables, careerId, level, grade) {
     if (!rates) {
         throw new Error(`职业 ${careerId} 缺少成长率配置`);
     }
-    const mult = tables.gradeMultipliers[grade];
+    const mult = tables.spiritualRootMultipliers[spiritualRootId];
     if (!mult) {
-        throw new Error(`品级 ${grade} 不在 grade_multipliers 表内`);
+        throw new Error(`灵根 ${spiritualRootId} 不在 spiritual_root_multipliers 表内`);
     }
 
-    const base = scaleBaseByGrade(
+    const base = scaleBaseBySpiritualRoot(
         createAttributes(career.baseAttributes),
-        grade,
+        spiritualRootId,
         mult.basePercent,
     );
-    const growth = computeGrowth(level, grade, rates, mult.growthPercent);
+    const growth = computeGrowth(level, spiritualRootId, rates, mult.growthPercent);
 
     const result = {};
     for (const key of ATTRIBUTE_KEYS) {
@@ -210,9 +213,9 @@ export function healSkill(tables, careerId) {
         .find((s) => s && s.damageKind === 'none' && s.primaryPercent > 0);
 }
 
-/** 单个职业在某等级某品级的完整推演结果。 */
-export function profileOf(tables, careerId, level, grade) {
-    const attrs = attributesAt(tables, careerId, level, grade);
+/** 单个职业在某等级某灵根的完整推演结果。 */
+export function profileOf(tables, careerId, level, spiritualRootId) {
+    const attrs = attributesAt(tables, careerId, level, spiritualRootId);
     const hp = maxHpOf(tables, careerId, attrs);
     const K = defenseConstantAt(tables, level);
     const skill = primaryAttackSkill(tables, careerId);
@@ -224,7 +227,7 @@ export function profileOf(tables, careerId, level, grade) {
     return {
         careerId,
         level,
-        grade,
+        spiritualRootId,
         attrs,
         hp,
         K,
@@ -239,10 +242,10 @@ export function profileOf(tables, careerId, level, grade) {
     };
 }
 
-/** 攻方对守方的单挑推演。同级同品，无治疗、无嘲讽、无冷却。 */
-export function duelOf(tables, attackerId, defenderId, level, grade) {
-    const atk = profileOf(tables, attackerId, level, grade);
-    const def = profileOf(tables, defenderId, level, grade);
+/** 攻方对守方的单挑推演。同级同灵根，无治疗、无嘲讽、无冷却。 */
+export function duelOf(tables, attackerId, defenderId, level, spiritualRootId) {
+    const atk = profileOf(tables, attackerId, level, spiritualRootId);
+    const def = profileOf(tables, defenderId, level, spiritualRootId);
     if (!atk.skillId) {
         return null;
     }
@@ -260,7 +263,7 @@ export function duelOf(tables, attackerId, defenderId, level, grade) {
         attackerId,
         defenderId,
         level,
-        grade,
+        spiritualRootId,
         perHit,
         defenderHp: def.hp,
         hits,
@@ -269,8 +272,8 @@ export function duelOf(tables, attackerId, defenderId, level, grade) {
 }
 
 /** 医修奶量与承伤对比。攻击方固定用武修，代表同级物理压力。 */
-export function sustainOf(tables, level, grade) {
-    const healer = profileOf(tables, 'yi_xiu', level, grade);
+export function sustainOf(tables, level, spiritualRootId) {
+    const healer = profileOf(tables, 'yi_xiu', level, spiritualRootId);
     const heal = healSkill(tables, 'yi_xiu');
     const healAmount = skillBaseDamage(healer.attrs, {
         ...heal,
@@ -279,13 +282,13 @@ export function sustainOf(tables, level, grade) {
     const healTicks = intervalTicks(tables, heal.baseIntervalTicks, healer.attrs.speed);
     const hps = healAmount / (healTicks / TICK_HZ);
 
-    const vsTank = duelOf(tables, 'wu_xiu', 'ti_xiu', level, grade);
-    const vsSquishy = duelOf(tables, 'wu_xiu', 'fa_xiu', level, grade);
+    const vsTank = duelOf(tables, 'wu_xiu', 'ti_xiu', level, spiritualRootId);
+    const vsSquishy = duelOf(tables, 'wu_xiu', 'fa_xiu', level, spiritualRootId);
     const dpsOf = (duel) => duel.perHit / (duel.seconds / duel.hits);
 
     return {
         level,
-        grade,
+        spiritualRootId,
         hps,
         healAmount,
         tankDps: dpsOf(vsTank),

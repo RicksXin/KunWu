@@ -12,7 +12,6 @@ import {
     currentExpeditionPreset,
     expeditionHeroSnapshots,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionState';
-import { expeditionText } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionTheme';
 
 export type ExpeditionDepartureResult =
     | { readonly ok: false; readonly message: string }
@@ -28,19 +27,17 @@ export function prepareExpeditionDeparture(
     map: ExpeditionMapOption,
 ): ExpeditionDepartureResult {
     const preset = currentExpeditionPreset(profile.expeditionPreparation);
+    const loadout = { ...profile.expeditionPreparation.loadout };
     for (const itemId of EXPEDITION_ITEM_IDS) {
-        const carried = profile.expeditionPreparation.loadout[itemId];
-        if (carried > availableExpeditionItemCount(itemId, profile, config)) {
-            return {
-                ok: false,
-                message: `${expeditionText(config.items[itemId].nameKey)}库存不足`,
-            };
-        }
+        loadout[itemId] = Math.min(
+            loadout[itemId],
+            availableExpeditionItemCount(itemId, profile, config),
+        );
     }
     const readiness = validateExpeditionReadiness({
         slots: preset.slots,
         heroes: expeditionHeroSnapshots(profile),
-        loadout: profile.expeditionPreparation.loadout,
+        loadout,
         map,
         config,
     });
@@ -50,6 +47,6 @@ export function prepareExpeditionDeparture(
     return {
         ok: true,
         partyPresetId: preset.presetId,
-        loadout: { ...profile.expeditionPreparation.loadout },
+        loadout,
     };
 }

@@ -13,6 +13,8 @@ export {
     migrateProfileV1ToV2,
     migrateProfileV2ToV3,
     migrateProfileV3ToV4,
+    migrateProfileV4ToV5,
+    migrateProfileV5ToV6,
 } from './profile/ProfileMigrations';
 
 /** 从 shared Bundle 的新档数据种子创建独立 Profile。 */
@@ -49,6 +51,7 @@ export function serializeProfile(profile: Profile): Record<string, unknown> {
         })),
         inventory: { ...profile.inventory },
         storyFlags: { ...profile.storyFlags },
+        completedMapObjects: { ...profile.completedMapObjects },
         expeditionPreparation: {
             partyPresets: profile.expeditionPreparation.partyPresets.map((preset) => ({
                 presetId: preset.presetId,

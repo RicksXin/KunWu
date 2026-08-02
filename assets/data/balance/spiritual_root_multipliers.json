@@ -1,0 +1,12 @@
+{
+  "//": "六档灵根倍率，百分比整数。basePercent 乘初始七维，growthPercent 乘每级成长。",
+  "//迁移": "旧 D/C/B/A/S 依次映射前五档；旧 SS/SSS 都映射为异灵根。异灵根采用旧 SSS 曲线。",
+  "//上限约束": "杂灵根修士必须能通过合理培养完成主线；异灵根与杂灵根成长倍率比不超过 2.0。",
+  "//事实源": "Docs/PRD/03_英雄招募培养与职业转职_PRD.md §3。",
+  "mixed_root": { "basePercent": 100, "growthPercent": 100 },
+  "pseudo_root": { "basePercent": 108, "growthPercent": 110 },
+  "triple_root": { "basePercent": 116, "growthPercent": 122 },
+  "dual_root": { "basePercent": 124, "growthPercent": 136 },
+  "heavenly_root": { "basePercent": 133, "growthPercent": 152 },
+  "variant_root": { "basePercent": 152, "growthPercent": 190 }
+}

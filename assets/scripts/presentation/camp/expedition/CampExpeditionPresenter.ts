@@ -21,12 +21,16 @@ import {
 } from 'db://assets/scripts/domain/CampSceneContract';
 import type { HeroInstance } from 'db://assets/scripts/services/GameState';
 import { campNode } from 'db://assets/scripts/presentation/camp/shared/CampViewUtils';
+import type { CampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
 import {
     adjustExpeditionLoadout,
     toggleExpeditionHero,
     unlockExpeditionParty,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionMutations';
-import { renderExpeditionPreparation } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionPreparationView';
+import {
+    mountExpeditionPreparationShell,
+    renderExpeditionPreparation,
+} from 'db://assets/scripts/presentation/camp/expedition/ExpeditionPreparationView';
 import { renderExpeditionHeroSelection } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionHeroSelectionView';
 import { renderExpeditionMapSelection } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionMapSelectionView';
 import { prepareExpeditionDeparture } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionDeparture';
@@ -34,14 +38,10 @@ import { settleExpeditionStamina } from 'db://assets/scripts/presentation/camp/e
 import {
     EXPEDITION_LOGICAL_HEIGHT,
     EXPEDITION_LOGICAL_WIDTH,
-    expeditionText,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionTheme';
 import { loadExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionVisualAssets';
-import {
-    createEmptyExpeditionVisualAssets,
-} from 'db://assets/scripts/presentation/camp/expedition/ExpeditionViewTypes';
+import { createEmptyExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionViewTypes';
 import type { ExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionViewTypes';
-
 const { ccclass } = _decorator;
 
 /** 营地传送阵唤起的入山整备页面协调器。 */
@@ -49,10 +49,12 @@ const { ccclass } = _decorator;
 export class CampExpeditionPresenter extends Component {
     private config: ExpeditionPreparationConfig | null = null;
     private preparationLayer: Node | null = null;
+    private preparationFrame: CampModalPanelFrame | null = null;
     private selectionLayer: Node | null = null;
     private mapLayer: Node | null = null;
     private visualAssets: ExpeditionVisualAssets = createEmptyExpeditionVisualAssets();
     private visualLoadStarted = false;
+    private departureInFlight = false;
     private saveQueue: Promise<void> = Promise.resolve();
 
     static showFrom(owner: Component): void {
@@ -81,7 +83,11 @@ export class CampExpeditionPresenter extends Component {
     }
 
     protected override onDestroy(): void {
-        this.node.parent?.off(Node.EventType.SIZE_CHANGED, this.syncLogicalScale, this);
+        try {
+            this.node.parent?.off(Node.EventType.SIZE_CHANGED, this.syncLogicalScale, this);
+        } catch {
+            // 场景销毁时父节点的事件处理器可能已先释放。
+        }
         input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         this.unschedule(this.tickStamina);
     }
@@ -114,8 +120,12 @@ export class CampExpeditionPresenter extends Component {
             size.width / EXPEDITION_LOGICAL_WIDTH,
             size.height / EXPEDITION_LOGICAL_HEIGHT,
         );
+        const viewportWidth = size.width / scale;
+        const viewportHeight = size.height / scale;
         this.node.setScale(scale, scale, 1);
         this.node.setPosition(0, 0, 0);
+        this.node.getComponent(UITransform)?.setContentSize(viewportWidth, viewportHeight);
+        this.preparationFrame?.fitToHost(this.node);
     };
 
     private bindShell(): void {
@@ -124,20 +134,28 @@ export class CampExpeditionPresenter extends Component {
         this.mapLayer = campNode(this.node, CAMP_EXPEDITION_PATHS.mapSelection);
         if (this.selectionLayer) this.selectionLayer.active = false;
         if (this.mapLayer) this.mapLayer.active = false;
+        void mountExpeditionPreparationShell(this.node, {
+            adventure: () => AppRoot.instance.showFeedback('历练功能暂未开放'),
+            chooseMap: () => this.openMapSelection(),
+            close: () => this.close(),
+        }).then((shell) => {
+            if (!shell || !this.node.isValid) return;
+            this.preparationFrame = shell.frame;
+            this.preparationLayer = shell.contentRoot;
+            this.syncLogicalScale();
+            this.renderPreparation();
+        });
     }
 
     private renderPreparation(): void {
         const app = AppRoot.instance;
         if (!this.preparationLayer || !this.config || !app.state.isLoaded) return;
-        renderExpeditionPreparation(this.node, this.config, app.state.require(), this.visualAssets, {
+        renderExpeditionPreparation(this.preparationLayer, this.config, app.state.require(), this.visualAssets, {
             editParty: () => this.openHeroSelection(),
             switchParty: (presetId) => this.switchParty(presetId),
             unlockParty: (index) => this.unlockParty(index),
             adjustLoadout: (itemId, delta) => this.adjustLoadout(itemId, delta),
             restoreStamina: () => app.showFeedback('调息功能暂未开放'),
-            adventure: () => app.showFeedback('历练功能暂未开放'),
-            chooseMap: () => this.openMapSelection(),
-            close: () => this.close(),
         });
     }
 
@@ -209,22 +227,44 @@ export class CampExpeditionPresenter extends Component {
         );
     }
 
-    private selectMap(map: ExpeditionMapOption): void {
+    private async selectMap(map: ExpeditionMapOption): Promise<void> {
         const app = AppRoot.instance;
-        if (!app.state.isLoaded || !this.config) return;
+        if (!app.state.isLoaded || !this.config || this.departureInFlight) return;
         const profile = app.state.require();
         const departure = prepareExpeditionDeparture(profile, this.config, map);
         if (!departure.ok) {
             app.showFeedback(departure.message, 3);
             return;
         }
+        Object.assign(profile.expeditionPreparation.loadout, departure.loadout);
         app.events.emit('expedition.mapSelected', {
             mapId: map.mapId,
             partyPresetId: departure.partyPresetId,
             staminaCost: map.staminaCost,
             loadout: departure.loadout,
         });
-        app.showFeedback(`${expeditionText(map.nameKey)}已选定；地图场景尚未接入`, 3);
+        app.map.stageDeparture({
+            mapId: map.mapId,
+            partyPresetId: departure.partyPresetId,
+            staminaCost: map.staminaCost,
+            loadout: departure.loadout,
+        });
+        this.departureInFlight = true;
+        this.close();
+        try {
+            await app.router.replaceRoot({ pageId: 'map', params: { mapId: map.mapId } });
+        } catch (error) {
+            app.map.cancelStagedDeparture();
+            console.error('[入山整备] 地图场景加载失败', error);
+            app.showFeedback('地图加载失败，未扣除灵息与物资', 3);
+            try {
+                await app.router.replaceRoot({ pageId: 'camp' });
+            } catch (restoreError) {
+                console.error('[入山整备] 恢复营地场景失败', restoreError);
+            }
+        } finally {
+            this.departureInFlight = false;
+        }
     }
 
     private async loadVisualAssets(): Promise<void> {

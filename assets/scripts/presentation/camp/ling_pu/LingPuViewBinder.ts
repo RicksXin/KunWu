@@ -9,6 +9,8 @@ import {
     campNode,
     warnCampTouchTarget,
 } from '../shared/CampViewUtils';
+import { mountCampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
+import type { CampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
 import {
     LingPuResourceRowComponent,
     RESOURCE_ROW_DEFINITIONS,
@@ -72,6 +74,7 @@ export function bindLingPuView(
     const mount = campNode(owner.node, CAMP_LING_PU_PATHS.mount);
     const panelRoot = campNode(owner.node, CAMP_LING_PU_PATHS.panel);
     const mainPanel = campNode(owner.node, CAMP_LING_PU_PATHS.mainPanel);
+    const resourceRows = campNode(owner.node, CAMP_LING_PU_PATHS.resourceRows);
     const panelBackground = background(CAMP_LING_PU_PATHS.panelFrame);
     const title = label(CAMP_LING_PU_PATHS.title);
     const timerLabel = label(CAMP_LING_PU_PATHS.timerLabel);
@@ -88,14 +91,23 @@ export function bindLingPuView(
     const confirmationError = label(CAMP_LING_PU_PATHS.confirmationError);
     const confirmationPrimary = button(CAMP_LING_PU_PATHS.confirmationPrimary, CAMP_LING_PU_PATHS.confirmationPrimaryVisual, CAMP_LING_PU_PATHS.confirmationPrimaryLabel);
     const confirmationCancel = button(CAMP_LING_PU_PATHS.confirmationCancel, CAMP_LING_PU_PATHS.confirmationCancelVisual, CAMP_LING_PU_PATHS.confirmationCancelLabel);
+    const backdrop = configureSolid(
+        owner.node,
+        CAMP_LING_PU_PATHS.backdrop,
+        new Color(0, 0, 0, 164),
+    );
+    const confirmationBackdrop = configureSolid(
+        owner.node,
+        CAMP_LING_PU_PATHS.confirmationBackdrop,
+        new Color(0, 0, 0, 126),
+    );
 
-    const required = [mount, panelRoot, mainPanel, panelBackground, title, timerLabel,
-        progressTrack, progressFill, recruitButton, closeButton, confirmationRoot,
+    const required = [mount, panelRoot, backdrop, mainPanel, resourceRows, panelBackground,
+        title, timerLabel, progressTrack, progressFill, recruitButton, closeButton, confirmationRoot,
         confirmationPanel, confirmationTitle, confirmationIcon, confirmationMessage,
-        confirmationDetail, confirmationError, confirmationPrimary, confirmationCancel];
-    if (required.some((value) => !value)
-        || !configureSolid(owner.node, CAMP_LING_PU_PATHS.backdrop, new Color(0, 0, 0, 164))
-        || !configureSolid(owner.node, CAMP_LING_PU_PATHS.confirmationBackdrop, new Color(0, 0, 0, 126))) {
+        confirmationDetail, confirmationError, confirmationPrimary, confirmationCancel,
+        confirmationBackdrop];
+    if (required.some((value) => !value)) {
         console.error('[灵圃] Prefab 节点或组件不完整，面板绑定失败');
         return null;
     }
@@ -121,8 +133,10 @@ export function bindLingPuView(
     warnCampTouchTarget(confirmationCancel!.node, '灵圃二次确认取消');
     panelRoot!.active = false;
     confirmationRoot!.active = false;
-    return {
-        mount: mount!, panelRoot: panelRoot!, panelBackground: panelBackground!,
+    const view: LingPuView = {
+        mount: mount!, panelRoot: panelRoot!, backdrop: backdrop!, mainPanel: mainPanel!,
+        contentNodes: [title!.node, resourceRows!, timerLabel!.node, progressTrack!.node],
+        panelBackground: panelBackground!, modalFrame: null,
         timerLabel: timerLabel!, progressTrack: progressTrack!, progressFill: progressFill!,
         recruitButton: recruitButton!, closeButton: closeButton!,
         confirmationRoot: confirmationRoot!, confirmationPanel: confirmationPanel!,
@@ -132,6 +146,34 @@ export function bindLingPuView(
         confirmationCancel: confirmationCancel!, rows, labels,
         resourceIconFrames: new Map(),
     };
+    void installLingPuModalFrame(view, callbacks);
+    return view;
+}
+
+async function installLingPuModalFrame(
+    view: LingPuView,
+    callbacks: LingPuViewCallbacks,
+): Promise<void> {
+    const frame = await mountCampModalPanelFrame(view.panelRoot, {
+        panelWidth: 343,
+        panelHeight: 650,
+        footerBottomInset: 43,
+        footerActions: [
+            { text: '杂役招募', primary: true, onClick: callbacks.recruit },
+            { text: '关闭', onClick: callbacks.close },
+        ],
+    });
+    if (!frame || !view.panelRoot.isValid) return;
+    fitLingPuFrameToLegacyContent(view.panelRoot, view, frame);
+    frame.mountContents(view.contentNodes);
+    // 共享框架异步挂载期间，灵圃默认仍处于关闭态。
+    // 单独同步框架自身的 active，避免编辑器热刷新或重挂父节点时露出空壳。
+    frame.node.active = view.panelRoot.active;
+    view.backdrop.active = false;
+    view.mainPanel.active = false;
+    view.modalFrame = frame;
+    frame.setFooterFont(view.recruitButton.label?.font ?? null);
+    view.confirmationRoot.setSiblingIndex(view.panelRoot.children.length - 1);
 }
 
 function bindResourceRow(
@@ -214,8 +256,20 @@ export function syncLingPuViewSize(root: Node, view: LingPuView): void {
     view.mount.getComponent(UITransform)?.setContentSize(size);
     view.panelRoot.getComponent(UITransform)?.setContentSize(size);
     view.confirmationRoot.getComponent(UITransform)?.setContentSize(size);
-    redrawSolid(view.panelRoot.getChildByName('Backdrop'), size.width, size.height);
+    redrawSolid(view.backdrop, size.width, size.height);
     redrawSolid(view.confirmationRoot.getChildByName('ConfirmBackdrop'), size.width, size.height);
+    if (view.modalFrame) fitLingPuFrameToLegacyContent(view.panelRoot, view, view.modalFrame);
+}
+
+/** 旧灵圃内容按 1029 宽保存；共享框架沿用该比例以保持资源栏可见。 */
+function fitLingPuFrameToLegacyContent(
+    host: Node,
+    view: LingPuView,
+    frame: CampModalPanelFrame,
+): void {
+    const width = view.mainPanel.getComponent(UITransform)?.contentSize.width ?? 0;
+    const legacyScale = width > 0 ? width / 343 : undefined;
+    frame.fitToHost(host, legacyScale);
 }
 
 function redrawSolid(node: Node | null, width: number, height: number): void {

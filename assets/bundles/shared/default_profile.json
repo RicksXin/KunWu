@@ -39,7 +39,8 @@
       "definitionId": "hero_wu_xiu_01",
       "nameKey": "hero.shi_yan",
       "careerId": "wu_xiu",
-      "grade": "C",
+      "spiritualRootId": "pseudo_root",
+      "realmId": "lian_qi",
       "level": 1,
       "attributes": {
         "strength": 15,
@@ -65,7 +66,8 @@
       "definitionId": "hero_fa_xiu_01",
       "nameKey": "hero.lu_qing",
       "careerId": "fa_xiu",
-      "grade": "C",
+      "spiritualRootId": "pseudo_root",
+      "realmId": "lian_qi",
       "level": 1,
       "attributes": {
         "strength": 4,
@@ -91,7 +93,8 @@
       "definitionId": "hero_yi_xiu_01",
       "nameKey": "hero.bai_ling",
       "careerId": "yi_xiu",
-      "grade": "C",
+      "spiritualRootId": "pseudo_root",
+      "realmId": "lian_qi",
       "level": 1,
       "attributes": {
         "strength": 4,
@@ -117,7 +120,8 @@
       "definitionId": "hero_qian_xiu_01",
       "nameKey": "hero.mo_yan",
       "careerId": "qian_xiu",
-      "grade": "D",
+      "spiritualRootId": "mixed_root",
+      "realmId": "lian_qi",
       "level": 1,
       "attributes": {
         "strength": 10,
@@ -146,6 +150,7 @@
   "storyFlags": {
     "tutorial_started": false
   },
+  "completedMapObjects": {},
   "expeditionPreparation": {
     "partyPresets": [
       {

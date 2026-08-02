@@ -8,14 +8,18 @@ import {
     migrateProfileV1ToV2,
     migrateProfileV2ToV3,
     migrateProfileV3ToV4,
+    migrateProfileV4ToV5,
     serializeProfile,
 } from 'db://assets/scripts/services/ProfileCodec';
 import { instantiateHero } from 'db://assets/scripts/domain/HeroFactory';
 import { parseBalanceTables } from 'db://assets/scripts/domain/BalanceTables';
 import { GridCoord } from 'db://assets/scripts/domain/GridCoord';
 import { maxHp } from 'db://assets/scripts/domain/CombatFormulas';
-import { scaleBaseByGrade } from 'db://assets/scripts/domain/HeroGrowth';
-import type { HeroGrade } from 'db://assets/scripts/domain/HeroGrowth';
+import { scaleBaseBySpiritualRoot } from 'db://assets/scripts/domain/HeroGrowth';
+import type {
+    RealmId,
+    SpiritualRootId,
+} from 'db://assets/scripts/domain/HeroGrowth';
 import { createAttributes } from 'db://assets/scripts/domain/Attributes';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
@@ -79,7 +83,8 @@ describe('新档 Profile', () => {
             instanceId: string;
             nameKey: string;
             careerId: string;
-            grade: HeroGrade;
+            spiritualRootId: SpiritualRootId;
+            realmId: RealmId;
             level: number;
         }[];
 
@@ -90,7 +95,8 @@ describe('新档 Profile', () => {
             assert.ok(hero, `新档缺少 ${definition.instanceId}`);
             assert.equal(hero.nameKey, definition.nameKey);
             assert.equal(hero.careerId, definition.careerId);
-            assert.equal(hero.grade, definition.grade);
+            assert.equal(hero.spiritualRootId, definition.spiritualRootId);
+            assert.equal(hero.realmId, definition.realmId);
             assert.equal(hero.level, definition.level);
 
             const career = JSON.parse(
@@ -108,11 +114,10 @@ describe('新档 Profile', () => {
                 skillIds: string[];
             };
 
-            // 种子里的属性是**按品级缩放后**的值，不等于职业表裸值
-            // （PRD-03 §3：品级影响初始七维）。全部是 1 级角色，故成长为 0。
-            const scaled = scaleBaseByGrade(
+            // 种子里的属性按灵根缩放；全部是 1 级角色，故成长为 0。
+            const scaled = scaleBaseBySpiritualRoot(
                 createAttributes(career.baseAttributes),
-                definition.grade,
+                definition.spiritualRootId,
             );
             assert.deepEqual(hero.attributes, scaled);
             assert.deepEqual(hero.skillIds, career.skillIds);
@@ -120,9 +125,7 @@ describe('新档 Profile', () => {
         }
     });
 
-    test('C 品种子的属性高于职业裸值，D 品等于裸值', () => {
-        // 这条锁住「品级影响初始七维」真的生效：
-        // 若 basePercent 被 floor 抹掉，C 品会退化成与裸值相同
+    test('伪灵根种子属性高于职业裸值，杂灵根等于裸值', () => {
         const profile = createDefaultProfile(loadSeed(), 1);
         for (const hero of profile.roster) {
             const career = JSON.parse(
@@ -133,12 +136,12 @@ describe('新档 Profile', () => {
             ) as { baseAttributes: Record<string, number>; primaryAttribute: string };
             const raw = career.baseAttributes[career.primaryAttribute]!;
             const actual = hero.attributes[career.primaryAttribute as 'strength'];
-            if (hero.grade === 'D') {
-                assert.equal(actual, raw, `${hero.instanceId} D 品应等于裸值`);
+            if (hero.spiritualRootId === 'mixed_root') {
+                assert.equal(actual, raw, `${hero.instanceId} 杂灵根应等于裸值`);
             } else {
                 assert.ok(
                     actual > raw,
-                    `${hero.instanceId}（${hero.grade} 品）主属性 ${actual} 未高于裸值 ${raw}`,
+                    `${hero.instanceId}（${hero.spiritualRootId}）主属性 ${actual} 未高于裸值 ${raw}`,
                 );
             }
         }
@@ -252,7 +255,9 @@ describe('Profile v2 → v3（成长曲线变更）', () => {
 
     test('重算后七维不再冻结，生命上限随等级提升', () => {
         const migrated = migrateProfileV2ToV3(v2Save());
-        const hero = deserializeProfile(migrateProfileV3ToV4(migrated)).roster[0]!;
+        const hero = deserializeProfile(
+            migrateProfileV4ToV5(migrateProfileV3ToV4(migrated)),
+        ).roster[0]!;
         // 旧档 40 级法修的 constitution 恒为 7，maxHp 恒为 140
         assert.ok(hero.attributes.constitution > 7, '肉身仍是初始值，迁移未生效');
         assert.ok(hero.attributes.armor > 4, '护体仍是初始值，迁移未生效');
@@ -261,7 +266,9 @@ describe('Profile v2 → v3（成长曲线变更）', () => {
 
     test('maxHp 变大时 currentHp 不被拉高，保持原值', () => {
         const migrated = migrateProfileV2ToV3(v2Save({ currentHp: 50 }));
-        const hero = deserializeProfile(migrateProfileV3ToV4(migrated)).roster[0]!;
+        const hero = deserializeProfile(
+            migrateProfileV4ToV5(migrateProfileV3ToV4(migrated)),
+        ).roster[0]!;
         assert.equal(hero.currentHp, 50);
     });
 
@@ -271,16 +278,19 @@ describe('Profile v2 → v3（成长曲线变更）', () => {
             v2Save({ level: 1, currentHp: 9999, maxHp: 9999 }),
         );
         const v4 = migrateProfileV3ToV4(migrated);
-        const hero = deserializeProfile(v4).roster[0]!;
+        const v5 = migrateProfileV4ToV5(v4);
+        const hero = deserializeProfile(v5).roster[0]!;
         assert.equal(hero.currentHp, hero.maxHp);
-        assert.doesNotThrow(() => deserializeProfile(v4));
+        assert.doesNotThrow(() => deserializeProfile(v5));
     });
 
     test('迁移结果与 instantiateHero 用当前表算出的面板一致', () => {
         // 迁移里的快照常量与 balance 表在 v3 时刻必须相同，
         // 否则旧档迁出来的角色与同等级新角色数值不一样
         const migrated = migrateProfileV2ToV3(v2Save());
-        const hero = deserializeProfile(migrateProfileV3ToV4(migrated)).roster[0]!;
+        const hero = deserializeProfile(
+            migrateProfileV4ToV5(migrateProfileV3ToV4(migrated)),
+        ).roster[0]!;
 
         const careers = new Map(
             ['fa_xiu'].map((id) => [
@@ -302,17 +312,24 @@ describe('Profile v2 → v3（成长曲线变更）', () => {
             );
         const tables = parseBalanceTables({
             growth_rates: read('growth_rates'),
-            grade_multipliers: read('grade_multipliers'),
+            spiritual_root_multipliers: read('spiritual_root_multipliers'),
             combat_constants: read('combat_constants'),
             production_rates: read('production_rates'),
             realm_ranges: read('realm_ranges'),
         });
         const fresh = instantiateHero(
-            { instanceId: 'x', nameKey: 'x', careerId: 'fa_xiu', grade: 'C', level: 40 },
+            {
+                instanceId: 'x',
+                nameKey: 'x',
+                careerId: 'fa_xiu',
+                spiritualRootId: 'pseudo_root',
+                realmId: 'yuan_ying',
+                level: 40,
+            },
             careers,
             {
                 growthRates: tables.growthRates,
-                gradeMultipliers: tables.gradeMultipliers,
+                spiritualRootMultipliers: tables.spiritualRootMultipliers,
                 constitutionHpFactor: tables.combat.constitutionHpFactor,
             },
         );
@@ -357,5 +374,52 @@ describe('Profile v3 → v4（入山整备）', () => {
         const before = structuredClone(current.expeditionPreparation);
         const migrated = migrateProfileV3ToV4(current);
         assert.deepEqual(migrated.expeditionPreparation, before);
+    });
+});
+
+describe('Profile v4 → v5（灵根与境界）', () => {
+    test('旧品级映射为六档灵根并移除 grade', () => {
+        const v4 = loadSeed() as Record<string, unknown>;
+        const roster = v4.roster as Record<string, unknown>[];
+        const legacyGrades = ['D', 'C', 'B', 'A'] as const;
+        roster.forEach((hero, index) => {
+            delete hero.spiritualRootId;
+            delete hero.realmId;
+            hero.grade = legacyGrades[index];
+        });
+
+        const migrated = migrateProfileV4ToV5(v4);
+        const migratedRoster = migrated.roster as Record<string, unknown>[];
+        assert.deepEqual(
+            migratedRoster.map((hero) => hero.spiritualRootId),
+            ['mixed_root', 'pseudo_root', 'triple_root', 'dual_root'],
+        );
+        assert.ok(migratedRoster.every((hero) => !('grade' in hero)));
+        assert.ok(migratedRoster.every((hero) => hero.realmId === 'lian_qi'));
+        assert.doesNotThrow(() => deserializeProfile(migrated));
+    });
+
+    test('旧 SS 与 SSS 都映射为异灵根，境界由等级冻结', () => {
+        const v4 = loadSeed() as Record<string, unknown>;
+        const roster = v4.roster as Record<string, unknown>[];
+        roster.splice(2);
+        for (const [index, grade] of ['SS', 'SSS'].entries()) {
+            const hero = roster[index]!;
+            delete hero.spiritualRootId;
+            delete hero.realmId;
+            hero.grade = grade;
+            hero.level = index === 0 ? 12 : 51;
+        }
+
+        const migrated = migrateProfileV4ToV5(v4);
+        const migratedRoster = migrated.roster as Record<string, unknown>[];
+        assert.deepEqual(
+            migratedRoster.map((hero) => hero.spiritualRootId),
+            ['variant_root', 'variant_root'],
+        );
+        assert.deepEqual(
+            migratedRoster.map((hero) => hero.realmId),
+            ['zhu_ji', 'lian_xu'],
+        );
     });
 });

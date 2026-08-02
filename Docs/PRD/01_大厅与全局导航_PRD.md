@@ -5,10 +5,10 @@
 模块：HALL
 负责人：产品、UI策划、客户端
 
-关联技术文档：[客户端技术设计](../Tech/P1_HALL_ECO_客户端技术设计.md)、
-[服务端技术设计](../Tech/P1_HALL_ECO_服务端技术设计.md)、
-[API 契约](../API/P1_CAMP_HUD_LING_PU_API.md)、
-[本地适配器与验收](../Tech/P1_HALL_ECO_本地适配器与验收.md)。
+关联 Demo 技术文档：[客户端技术设计](../Demo/Tech/P1_HALL_ECO_客户端技术设计.md)、
+[服务端技术设计](../Demo/Tech/P1_HALL_ECO_服务端技术设计.md)、
+[API 契约](../Demo/API/P1_CAMP_HUD_LING_PU_API.md)、
+[本地适配器与验收](../Demo/Tech/P1_HALL_ECO_本地适配器与验收.md)。
 
 ## 1. 模块目标
 

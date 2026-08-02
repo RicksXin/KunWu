@@ -1,17 +1,17 @@
 import type { AttributeKey } from '../Attributes';
-import type { GrowthRates, HeroGrade, Realm } from '../HeroGrowth';
+import type { GrowthRates, RealmId, SpiritualRootId } from '../HeroGrowth';
 import type { ProductionJob } from '../Production';
 
 export const BALANCE_TABLE_NAMES = [
     'growth_rates',
-    'grade_multipliers',
+    'spiritual_root_multipliers',
     'combat_constants',
     'production_rates',
     'realm_ranges',
 ] as const;
 export type BalanceTableName = (typeof BALANCE_TABLE_NAMES)[number];
 
-export interface GradeMultiplier {
+export interface SpiritualRootMultiplier {
     readonly basePercent: number;
     readonly growthPercent: number;
 }
@@ -41,7 +41,7 @@ export interface ProductionRates {
 }
 
 export interface RealmRange {
-    readonly id: Realm;
+    readonly id: RealmId;
     readonly min: number;
     readonly max: number;
 }
@@ -54,7 +54,9 @@ export interface RealmRanges {
 
 export interface BalanceTables {
     readonly growthRates: Readonly<Record<string, GrowthRates>>;
-    readonly gradeMultipliers: Readonly<Record<HeroGrade, GradeMultiplier>>;
+    readonly spiritualRootMultipliers: Readonly<
+        Record<SpiritualRootId, SpiritualRootMultiplier>
+    >;
     readonly combat: CombatConstants;
     readonly production: ProductionRates;
     readonly realms: RealmRanges;

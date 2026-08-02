@@ -19,7 +19,7 @@ import { ATTRIBUTE_KEYS } from 'db://assets/scripts/domain/Attributes';
 import { SKILL_TARGET_TYPES, isTauntable } from 'db://assets/scripts/domain/SkillTargeting';
 import { MAX_PARTY_SIZE } from 'db://assets/scripts/domain/CombatTypes';
 import { runToCompletion } from 'db://assets/scripts/domain/CombatResolver';
-import { HERO_GRADES } from 'db://assets/scripts/domain/HeroGrowth';
+import { SPIRITUAL_ROOT_IDS } from 'db://assets/scripts/domain/HeroGrowth';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
@@ -55,14 +55,14 @@ const balance: HeroBalanceContext = (() => {
         );
     const tables = parseBalanceTables({
         growth_rates: read('growth_rates'),
-        grade_multipliers: read('grade_multipliers'),
+        spiritual_root_multipliers: read('spiritual_root_multipliers'),
         combat_constants: read('combat_constants'),
         production_rates: read('production_rates'),
         realm_ranges: read('realm_ranges'),
     });
     return {
         growthRates: tables.growthRates,
-        gradeMultipliers: tables.gradeMultipliers,
+        spiritualRootMultipliers: tables.spiritualRootMultipliers,
         constitutionHpFactor: tables.combat.constitutionHpFactor,
     };
 })();
@@ -262,12 +262,12 @@ describe('四名初始修士（PRD-04 §2）', () => {
         assert.ok(startingHeroes.some((h) => h.careerId === 'wu_xiu'));
     });
 
-    test('品级不超过 C（PRD-03 §3：主线不得设高品级门槛）', () => {
+    test('初始队不超过伪灵根（主线不得设高资质门槛）', () => {
         for (const hero of startingHeroes) {
-            const rank = HERO_GRADES.indexOf(hero.grade);
+            const rank = SPIRITUAL_ROOT_IDS.indexOf(hero.spiritualRootId);
             assert.ok(
-                rank <= HERO_GRADES.indexOf('C'),
-                `${hero.instanceId} 品级 ${hero.grade} 过高`,
+                rank <= SPIRITUAL_ROOT_IDS.indexOf('pseudo_root'),
+                `${hero.instanceId} 灵根 ${hero.spiritualRootId} 过高`,
             );
         }
     });
@@ -286,11 +286,12 @@ describe('实例化', () => {
         instanceId: 'test_1',
         nameKey: 'hero.test',
         careerId: 'wu_xiu',
-        grade: 'C',
+        spiritualRootId: 'pseudo_root',
+        realmId: 'lian_qi',
         level: 1,
     };
 
-    test('1 级时成长为 0，最终值只来自品级缩放后的基础值', () => {
+    test('1 级时成长为 0，最终值只来自灵根缩放后的基础值', () => {
         const instance = instantiateHero(hero, careerMap, balance);
         const { base, growth, final } = instance.attributes;
         for (const key of ATTRIBUTE_KEYS) {
@@ -299,24 +300,36 @@ describe('实例化', () => {
         assert.equal(final.strength, base.strength);
     });
 
-    test('1 级基础值已按品级缩放，D 品才等于职业表裸值', () => {
-        // PRD-03 §3：品级影响初始七维。若 C 品 1 级仍等于裸值，
-        // 说明 basePercent 没生效或被 floor 抹掉（Docs/13 §3.3）
-        const career = careerMap.get('wu_xiu')!;
-        const dGrade = instantiateHero({ ...hero, grade: 'D' }, careerMap, balance);
-        assert.equal(dGrade.attributes.base.strength, career.baseAttributes.strength);
+    test('境界必须与等级一致', () => {
+        assert.throws(
+            () => instantiateHero({ ...hero, realmId: 'zhu_ji' }, careerMap, balance),
+            /境界 zhu_ji 与等级 1 不一致，应为 lian_qi/,
+        );
+    });
 
-        const cGrade = instantiateHero(hero, careerMap, balance);
+    test('1 级基础值已按灵根缩放，杂灵根等于职业表裸值', () => {
+        const career = careerMap.get('wu_xiu')!;
+        const mixedRoot = instantiateHero(
+            { ...hero, spiritualRootId: 'mixed_root' },
+            careerMap,
+            balance,
+        );
+        assert.equal(mixedRoot.attributes.base.strength, career.baseAttributes.strength);
+
+        const pseudoRoot = instantiateHero(hero, careerMap, balance);
         assert.ok(
-            cGrade.attributes.base.strength > career.baseAttributes.strength,
-            `C 品 1 级 strength ${cGrade.attributes.base.strength} 未高于裸值 ${career.baseAttributes.strength}`,
+            pseudoRoot.attributes.base.strength > career.baseAttributes.strength,
         );
     });
 
     test('七维全部随等级成长，无一冻结', () => {
         // 旧结构只长主维与副维，法修等职业的生命上限从 1 级到 60 级完全不变
         const lv1 = instantiateHero(hero, careerMap, balance);
-        const lv60 = instantiateHero({ ...hero, level: 60 }, careerMap, balance);
+        const lv60 = instantiateHero(
+            { ...hero, realmId: 'lian_xu', level: 60 },
+            careerMap,
+            balance,
+        );
         for (const key of ATTRIBUTE_KEYS) {
             assert.ok(
                 lv60.attributes.final[key] > lv1.attributes.final[key],
@@ -335,7 +348,7 @@ describe('实例化', () => {
                 balance,
             );
             const lv60 = instantiateHero(
-                { ...hero, careerId: career.id, level: 60 },
+                { ...hero, careerId: career.id, realmId: 'lian_xu', level: 60 },
                 careerMap,
                 balance,
             );
@@ -359,19 +372,35 @@ describe('实例化', () => {
 
     test('等级提升后属性增长', () => {
         const lv1 = instantiateHero(hero, careerMap, balance);
-        const lv20 = instantiateHero({ ...hero, level: 20 }, careerMap, balance);
+        const lv20 = instantiateHero(
+            { ...hero, realmId: 'zhu_ji', level: 20 },
+            careerMap,
+            balance,
+        );
         assert.ok(lv20.attributes.final.strength > lv1.attributes.final.strength);
         assert.ok(lv20.maxHp > lv1.maxHp);
     });
 
-    test('品级越高属性越强', () => {
-        const low = instantiateHero({ ...hero, grade: 'D', level: 20 }, careerMap, balance);
-        const high = instantiateHero({ ...hero, grade: 'SSS', level: 20 }, careerMap, balance);
+    test('灵根越高属性越强', () => {
+        const low = instantiateHero(
+            { ...hero, spiritualRootId: 'mixed_root', realmId: 'zhu_ji', level: 20 },
+            careerMap,
+            balance,
+        );
+        const high = instantiateHero(
+            { ...hero, spiritualRootId: 'variant_root', realmId: 'zhu_ji', level: 20 },
+            careerMap,
+            balance,
+        );
         assert.ok(high.attributes.final.strength > low.attributes.final.strength);
     });
 
     test('属性拆解可查（PRD-03 §8）', () => {
-        const instance = instantiateHero({ ...hero, level: 20 }, careerMap, balance);
+        const instance = instantiateHero(
+            { ...hero, realmId: 'zhu_ji', level: 20 },
+            careerMap,
+            balance,
+        );
         const { base, growth, final } = instance.attributes;
         // 五个来源都要能单独展示
         assert.ok(base.strength > 0);
@@ -441,7 +470,11 @@ describe('四人队实战（端到端）', () => {
         // 敌人用同一套数据，血量减半模拟低阶敌人
         const enemies = [0, 1].map((i) => {
             const inst = instantiateHero(
-                { ...startingHeroes[0]!, instanceId: `enemy_${i}`, grade: 'D' },
+                {
+                    ...startingHeroes[0]!,
+                    instanceId: `enemy_${i}`,
+                    spiritualRootId: 'mixed_root',
+                },
                 careerMap,
                 balance,
             );
@@ -470,7 +503,11 @@ describe('四人队实战（端到端）', () => {
         );
         const enemies = [0, 1, 2].map((i) => {
             const inst = instantiateHero(
-                { ...startingHeroes[0]!, instanceId: `e${i}`, grade: 'D' },
+                {
+                    ...startingHeroes[0]!,
+                    instanceId: `e${i}`,
+                    spiritualRootId: 'mixed_root',
+                },
                 careerMap,
                 balance,
             );

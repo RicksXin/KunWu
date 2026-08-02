@@ -25,6 +25,7 @@ export const EXPEDITION_VISUAL_PATHS = Object.freeze({
 });
 
 export const EXPEDITION_COLORS = Object.freeze({
+    backdrop: new Color(0, 0, 0, 164),
     panel: new Color(22, 30, 29, 250),
     panelAlt: new Color(31, 42, 39, 255),
     row: new Color(43, 52, 44, 255),
@@ -81,6 +82,14 @@ const FALLBACK_TEXT: Readonly<Record<string, string>> = {
     'realm.yuan_ying': '元婴',
     'realm.hua_shen': '化神',
     'realm.lian_xu': '炼虚',
+    'realm.he_ti': '合体',
+    'realm.da_cheng': '大乘',
+    'spiritual_root.mixed_root': '杂灵根',
+    'spiritual_root.pseudo_root': '伪灵根',
+    'spiritual_root.triple_root': '三灵根',
+    'spiritual_root.dual_root': '双灵根',
+    'spiritual_root.heavenly_root': '天灵根',
+    'spiritual_root.variant_root': '异灵根',
     'resource.spirit_grain': '灵粮',
     'item.pickaxe': '开山镐',
     'item.lens': '探灵镜',

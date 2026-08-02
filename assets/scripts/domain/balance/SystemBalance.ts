@@ -1,4 +1,5 @@
-import type { Realm } from '../HeroGrowth';
+import { REALM_IDS } from '../HeroGrowth';
+import type { RealmId } from '../HeroGrowth';
 import { PRODUCTION_JOBS } from '../Production';
 import type { ProductionJob } from '../Production';
 import { nonNegativeIntegerOf, positiveIntegerOf, recordOf, stripCommentKeys } from './BalanceReaders';
@@ -90,11 +91,13 @@ export function parseRealmRanges(value: unknown): RealmRanges {
     const realms: RealmRange[] = raw.realms.map((item, index) => {
         const path = `realm_ranges.realms[${index}]`;
         const entry = recordOf(item, path);
-        if (typeof entry.id !== 'string' || entry.id.length === 0) throw new Error(`${path}.id 应为非空字符串`);
+        if (!(REALM_IDS as readonly unknown[]).includes(entry.id)) {
+            throw new Error(`${path}.id 不是合法境界：${String(entry.id)}`);
+        }
         const min = positiveIntegerOf(entry.min, `${path}.min`);
         const max = positiveIntegerOf(entry.max, `${path}.max`);
         if (min > max) throw new Error(`${path} 的 min ${min} 大于 max ${max}`);
-        return { id: entry.id as Realm, min, max };
+        return { id: entry.id as RealmId, min, max };
     });
     const sorted = [...realms].sort((a, b) => a.min - b.min);
     if (sorted[0]!.min !== 1) throw new Error(`realm_ranges.realms 必须从 1 级开始，当前起点 ${sorted[0]!.min}`);

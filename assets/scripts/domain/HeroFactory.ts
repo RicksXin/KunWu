@@ -1,7 +1,7 @@
 /**
  * 修士实例化与战斗单位转换（PRD-03 §2、§8、任务 P1-HERO-001）。
  *
- * 纯逻辑、无引擎依赖。职责边界：把「数据表 + 品级 + 等级」变成
+ * 纯逻辑、无引擎依赖。职责边界：把「数据表 + 灵根 + 等级」变成
  * 可用于战斗的 CombatUnit，不做数据表加载（那在 DataRegistry）。
  *
  * 属性来源必须可拆解（PRD-03 §8），故先算 AttributeBreakdown 再取 final，
@@ -10,8 +10,14 @@
 
 import { createAttributes } from './Attributes';
 import type { AttributeKey, Attributes } from './Attributes';
-import { computeGrowth, scaleBaseByGrade, summarize, MAX_LEVEL } from './HeroGrowth';
-import type { AttributeBreakdown, GrowthRates, HeroGrade } from './HeroGrowth';
+import {
+    computeGrowth,
+    scaleBaseBySpiritualRoot,
+    summarize,
+    MAX_LEVEL,
+    realmIdOf,
+} from './HeroGrowth';
+import type { AttributeBreakdown, GrowthRates, SpiritualRootId, RealmId } from './HeroGrowth';
 import { maxHp } from './CombatFormulas';
 import type { CombatUnit, CombatSide, SkillRuntime } from './CombatState';
 import type { SkillTargetType } from './SkillTargeting';
@@ -34,14 +40,14 @@ export interface CareerData {
  *
  * 全部可选：省略时退回各模块的默认常数，与接入数据表前的行为一致。
  * 之所以整体作为一个参数而非拆成多个：这三项必须同批变更——
- * 只换成长率不换品级倍率会得到一份没人验算过的曲线。
+ * 只换成长率不换灵根倍率会得到一份没人验算过的曲线。
  */
 export interface HeroBalanceContext {
     /** 职业 id → 七维成长率（千分位）。 */
     readonly growthRates?: Readonly<Record<string, GrowthRates>>;
-    /** 品级 → 初始与成长倍率（百分比）。 */
-    readonly gradeMultipliers?: Readonly<
-        Record<HeroGrade, { readonly basePercent: number; readonly growthPercent: number }>
+    /** 灵根 → 初始与成长倍率（百分比）。 */
+    readonly spiritualRootMultipliers?: Readonly<
+        Record<SpiritualRootId, { readonly basePercent: number; readonly growthPercent: number }>
     >;
     /** 生命上限中肉身的系数。 */
     readonly constitutionHpFactor?: number;
@@ -73,7 +79,8 @@ export interface HeroData {
     readonly instanceId: string;
     readonly nameKey: string;
     readonly careerId: string;
-    readonly grade: HeroGrade;
+    readonly spiritualRootId: SpiritualRootId;
+    readonly realmId: RealmId;
     readonly level: number;
     /** 装备加成汇总。缺省为全 0。 */
     readonly equipmentBonus?: Attributes;
@@ -111,7 +118,15 @@ export function instantiateHero(
         );
     }
 
-    const multiplier = balance.gradeMultipliers?.[data.grade];
+    const expectedRealmId = realmIdOf(data.level);
+    if (data.realmId !== expectedRealmId) {
+        throw new Error(
+            `修士 ${data.instanceId} 的境界 ${data.realmId} 与等级 ${data.level} 不一致，` +
+            `应为 ${expectedRealmId}`,
+        );
+    }
+
+    const multiplier = balance.spiritualRootMultipliers?.[data.spiritualRootId];
     const rates = balance.growthRates?.[career.id];
 
     // 缺成长率时抛错而非按 0 处理：零成长会让七维终身冻结，
@@ -123,13 +138,18 @@ export function instantiateHero(
         );
     }
 
-    const base = scaleBaseByGrade(
+    const base = scaleBaseBySpiritualRoot(
         createAttributes(career.baseAttributes),
-        data.grade,
+        data.spiritualRootId,
         multiplier?.basePercent,
     );
     const growth = rates
-        ? computeGrowth(data.level, data.grade, rates, multiplier?.growthPercent)
+        ? computeGrowth(
+            data.level,
+            data.spiritualRootId,
+            rates,
+            multiplier?.growthPercent,
+        )
         : createAttributes();
     const attributes = summarize({
         base,

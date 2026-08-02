@@ -1,8 +1,20 @@
-import { _decorator, Component, Node, screen, view, ResolutionPolicy, sys, Widget } from 'cc';
+import { _decorator, Component, Node, screen, view, ResolutionPolicy, sys, UITransform, Widget } from 'cc';
 import { solveViewport, toDesignInsets, DESIGN_WIDTH, DESIGN_HEIGHT, ZERO_INSETS } from 'db://assets/scripts/domain/ViewportLayout';
 import type { SafeAreaInsets, ViewportSolution } from 'db://assets/scripts/domain/ViewportLayout';
 
 const { ccclass, property } = _decorator;
+
+/** 为运行时创建的页面安装与编辑器场景相同的安全区根节点。 */
+export function createViewportSafeAreaRoot(host: Node, name: string): Node {
+    const root = new Node(name);
+    root.layer = host.layer;
+    host.addChild(root);
+    root.addComponent(UITransform).setContentSize(DESIGN_WIDTH, DESIGN_HEIGHT);
+    const adapter = host.getComponent(ViewportAdapter) ?? host.addComponent(ViewportAdapter);
+    adapter.safeAreaRoot = root;
+    adapter.apply();
+    return root;
+}
 
 /**
  * 竖屏适配与安全区落地（PRD-09 §2、任务 P0-UX-001）。

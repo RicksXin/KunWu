@@ -19,6 +19,7 @@ import type { BuildingId } from './HallBadges';
 import { CAMP_SYSTEM_ENTRY_IDS } from './CampBottomHud';
 import type { CampSystemEntryId } from './CampBottomHud';
 import {
+    CAMP_EXPEDITION_CONTENT_PATHS,
     CAMP_EXPEDITION_PATHS,
     CAMP_LING_PU_PATHS,
     CAMP_LING_PU_RESOURCE_ROW_IDS,
@@ -28,6 +29,7 @@ import {
 import type { CampLingPuRowChild } from './camp/CampPagePaths';
 
 export {
+    CAMP_EXPEDITION_CONTENT_PATHS,
     CAMP_EXPEDITION_PATHS,
     CAMP_LING_PU_PATHS,
     CAMP_LING_PU_RESOURCE_ROW_IDS,

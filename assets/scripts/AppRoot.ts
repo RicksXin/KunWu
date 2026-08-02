@@ -11,6 +11,7 @@ import { LingPuService } from 'db://assets/scripts/services/LingPuService';
 import { CampHudApplicationService } from 'db://assets/scripts/services/camp/CampHudApplicationService';
 import { LingPuApplicationService } from 'db://assets/scripts/services/camp/LingPuApplicationService';
 import { LocalCampApiAdapter } from 'db://assets/scripts/services/camp/api/LocalCampApiAdapter';
+import { MapApplicationService } from 'db://assets/scripts/services/map/MapApplicationService';
 import {
     LING_PU_CONFIG_ID,
     LING_PU_CONFIG_TABLE,
@@ -58,6 +59,12 @@ export class AppRoot extends Component {
         events: this.events,
         time: this.time,
         save: () => this.saveCurrentProfile(),
+    });
+    readonly map = new MapApplicationService({
+        state: this.state,
+        events: this.events,
+        save: () => this.saveCurrentProfile(),
+        nowUtcSeconds: () => this.time.nowUtcSeconds(),
     });
 
     /** 导航加载期间覆盖全屏并拦截输入。 */

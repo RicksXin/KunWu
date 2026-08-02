@@ -32,7 +32,8 @@ function makeProfile(): Profile {
                 definitionId: 'def_sword',
                 nameKey: 'hero.test',
                 careerId: 'wu_xiu',
-                grade: 'C',
+                spiritualRootId: 'pseudo_root',
+                realmId: 'lian_qi',
                 level: 1,
                 attributes: createAttributes({ strength: 10 }),
                 maxHp: 50,
@@ -44,6 +45,7 @@ function makeProfile(): Profile {
         ],
         inventory: {},
         storyFlags: {},
+        completedMapObjects: {},
         expeditionPreparation: {
             partyPresets: [
                 {

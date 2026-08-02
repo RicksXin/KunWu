@@ -10,7 +10,7 @@
 import type { Attributes } from '../domain/Attributes';
 import type { ExpeditionLoadout } from '../domain/ExpeditionPreparation';
 import type { GridCoord } from '../domain/GridCoord';
-import type { HeroGrade } from '../domain/HeroGrowth';
+import type { RealmId, SpiritualRootId } from '../domain/HeroGrowth';
 import type { PartyPreset } from '../domain/Party';
 
 /** 资源一律用整数，乘法在整数域完成（技术方案 §7）。 */
@@ -43,7 +43,8 @@ export interface HeroInstance {
     readonly definitionId: string;
     readonly nameKey: string;
     readonly careerId: string;
-    readonly grade: HeroGrade;
+    readonly spiritualRootId: SpiritualRootId;
+    readonly realmId: RealmId;
     level: number;
     /** 七维当前值，含装备加成前的基础值。 */
     readonly attributes: Attributes;
@@ -82,6 +83,8 @@ export interface Profile {
     readonly roster: HeroInstance[];
     readonly inventory: Record<string, number>;
     readonly storyFlags: Record<string, boolean>;
+    /** `map_id.object_id` → 是否已完成；宝箱和一次性事件跨入山持久保存。 */
+    readonly completedMapObjects: Record<string, boolean>;
     readonly expeditionPreparation: ExpeditionPreparationState;
     expedition: ExpeditionState | null;
 }

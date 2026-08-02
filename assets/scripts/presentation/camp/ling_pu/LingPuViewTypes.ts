@@ -1,5 +1,6 @@
 import { Button, Color, Label, Node, Sprite, SpriteFrame } from 'cc';
 import type { P1LingPuJob } from 'db://assets/scripts/domain/LingPu';
+import type { CampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
 
 export const TEXT_SECONDARY = new Color(188, 196, 182, 255);
 export const TEXT_WARNING = new Color(230, 132, 82, 255);
@@ -129,7 +130,11 @@ export type ConfirmationMode =
 export interface LingPuView {
     readonly mount: Node;
     readonly panelRoot: Node;
+    readonly backdrop: Node;
+    readonly mainPanel: Node;
+    readonly contentNodes: readonly Node[];
     readonly panelBackground: VisualBackground;
+    modalFrame: CampModalPanelFrame | null;
     readonly timerLabel: Label;
     readonly progressTrack: VisualBackground;
     readonly progressFill: Sprite;

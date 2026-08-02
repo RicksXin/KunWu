@@ -87,6 +87,7 @@ export class CampLingPuPresenter extends Component {
         if (!this.view) return;
         this.cancelConfirmation();
         this.view.panelRoot.active = true;
+        if (this.view.modalFrame) this.view.modalFrame.node.active = true;
         this.render();
         this.enqueueOperation(() => AppRoot.instance.lingPu.settle('panel_open').then(() => undefined));
     }
@@ -98,6 +99,7 @@ export class CampLingPuPresenter extends Component {
             return;
         }
         this.view.panelRoot.active = false;
+        if (this.view.modalFrame) this.view.modalFrame.node.active = false;
         this.enqueueOperation(() => AppRoot.instance.lingPu.settle('panel_close').then(() => undefined));
     }
 

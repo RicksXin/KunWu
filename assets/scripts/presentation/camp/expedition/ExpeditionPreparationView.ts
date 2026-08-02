@@ -8,8 +8,10 @@ import type {
     ExpeditionItemId,
     ExpeditionPreparationConfig,
 } from 'db://assets/scripts/domain/ExpeditionPreparation';
-import { CAMP_EXPEDITION_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
-import { realmOf } from 'db://assets/scripts/domain/HeroGrowth';
+import {
+    CAMP_EXPEDITION_CONTENT_PATHS,
+    CAMP_EXPEDITION_PATHS,
+} from 'db://assets/scripts/domain/CampSceneContract';
 import type { PartySlots } from 'db://assets/scripts/domain/Party';
 import type {
     ExpeditionPreparationState,
@@ -17,6 +19,8 @@ import type {
     Profile,
 } from 'db://assets/scripts/services/GameState';
 import { campLabel, campNode } from 'db://assets/scripts/presentation/camp/shared/CampViewUtils';
+import { mountCampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
+import type { CampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
 import {
     availableExpeditionItemCount,
     currentExpeditionPreset,
@@ -36,7 +40,6 @@ import {
     styleExistingRect,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionUiFactory';
 import {
-    applyPanelBackground,
     createItemGlyph,
     createSilhouette,
     createSpriteNode,
@@ -49,13 +52,71 @@ export interface ExpeditionPreparationActions {
     readonly unlockParty: (index: number) => void;
     readonly adjustLoadout: (itemId: ExpeditionItemId, delta: number) => void;
     readonly restoreStamina: () => void;
+}
+
+export interface ExpeditionPreparationFooterActions {
     readonly adventure: () => void;
     readonly chooseMap: () => void;
     readonly close: () => void;
 }
 
-export function renderExpeditionPreparation(
+export interface ExpeditionPreparationShell {
+    readonly frame: CampModalPanelFrame;
+    readonly contentRoot: Node;
+}
+
+export async function mountExpeditionPreparationShell(
     root: Node,
+    actions: ExpeditionPreparationFooterActions,
+): Promise<ExpeditionPreparationShell | null> {
+    const legacyAdventure = campNode(root, CAMP_EXPEDITION_PATHS.adventure);
+    const legacyDepart = campNode(root, CAMP_EXPEDITION_PATHS.depart);
+    const legacyClose = campNode(root, CAMP_EXPEDITION_PATHS.close);
+    legacyAdventure && configureExistingButton(legacyAdventure, {
+        text: '历练', enabled: false, onClick: actions.adventure,
+    });
+    legacyDepart && configureExistingButton(legacyDepart, {
+        text: '启程', primary: true, onClick: actions.chooseMap,
+    });
+    legacyClose && configureExistingButton(legacyClose, {
+        text: '离开', onClick: actions.close,
+    });
+    const frame = await mountCampModalPanelFrame(root, {
+        panelWidth: 359,
+        panelHeight: 570,
+        footerBottomInset: 30,
+        footerActions: [
+            { text: '历练', enabled: false, onClick: actions.adventure },
+            { text: '启程', primary: true, onClick: actions.chooseMap },
+            { text: '离开', onClick: actions.close },
+        ],
+    });
+    const contentRoot = frame?.contentMount ?? null;
+    if (!frame || !contentRoot) return null;
+    const contentPaths = [
+        CAMP_EXPEDITION_PATHS.preparationTitle,
+        CAMP_EXPEDITION_PATHS.heroCards,
+        CAMP_EXPEDITION_PATHS.toolbar,
+        CAMP_EXPEDITION_PATHS.burdenRow,
+        CAMP_EXPEDITION_PATHS.loadoutRows,
+    ];
+    const contents = contentPaths.map((path) => campNode(root, path));
+    const legacyNodes = [
+        campNode(root, CAMP_EXPEDITION_PATHS.backdrop),
+        campNode(root, CAMP_EXPEDITION_PATHS.preparationPanel),
+        campNode(root, CAMP_EXPEDITION_PATHS.bottomActions),
+    ];
+    if (contents.some((node) => !node) || legacyNodes.some((node) => !node)) {
+        frame.node.destroy();
+        return null;
+    }
+    frame.mountContents(contents as Node[]);
+    for (const node of legacyNodes) node!.active = false;
+    return { frame, contentRoot };
+}
+
+export function renderExpeditionPreparation(
+    contentRoot: Node,
     config: ExpeditionPreparationConfig,
     profile: Profile,
     assets: ExpeditionVisualAssets,
@@ -63,16 +124,14 @@ export function renderExpeditionPreparation(
 ): void {
     const state = profile.expeditionPreparation;
     const preset = currentExpeditionPreset(state);
-    const panel = campNode(root, CAMP_EXPEDITION_PATHS.preparationPanel);
-    const title = campLabel(root, CAMP_EXPEDITION_PATHS.preparationTitle);
-    const heroCards = campNode(root, CAMP_EXPEDITION_PATHS.heroCards);
-    const partyTabs = campNode(root, CAMP_EXPEDITION_PATHS.partyTabs);
-    const burdenRow = campNode(root, CAMP_EXPEDITION_PATHS.burdenRow);
-    const burdenLabel = campLabel(root, CAMP_EXPEDITION_PATHS.burdenLabel);
-    if (!panel || !title || !heroCards || !partyTabs || !burdenRow || !burdenLabel) {
+    const title = campLabel(contentRoot, CAMP_EXPEDITION_CONTENT_PATHS.title);
+    const heroCards = campNode(contentRoot, CAMP_EXPEDITION_CONTENT_PATHS.heroCards);
+    const partyTabs = campNode(contentRoot, CAMP_EXPEDITION_CONTENT_PATHS.partyTabs);
+    const burdenRow = campNode(contentRoot, CAMP_EXPEDITION_CONTENT_PATHS.burdenRow);
+    const burdenLabel = campLabel(contentRoot, CAMP_EXPEDITION_CONTENT_PATHS.burdenLabel);
+    if (!title || !heroCards || !partyTabs || !burdenRow || !burdenLabel) {
         return;
     }
-    applyPanelBackground(panel, assets.panelFrame);
     configureExistingLabel(title, '入山整备', 20, EXPEDITION_COLORS.text);
 
     for (let index = 0; index < 4; index += 1) {
@@ -82,13 +141,13 @@ export function renderExpeditionPreparation(
         card && renderHeroCard(card, hero, assets);
     }
 
-    const editParty = campNode(root, CAMP_EXPEDITION_PATHS.editParty);
+    const editParty = campNode(contentRoot, CAMP_EXPEDITION_CONTENT_PATHS.editParty);
     editParty && configureExistingButton(editParty, {
         text: '编辑队伍',
         onClick: actions.editParty,
     });
     renderPartyTabs(partyTabs, state, config.maxPartyPresets, assets, actions);
-    const restore = campNode(root, CAMP_EXPEDITION_PATHS.restoreStamina);
+    const restore = campNode(contentRoot, CAMP_EXPEDITION_CONTENT_PATHS.restoreStamina);
     restore && configureExistingButton(restore, {
         text: '调息',
         enabled: false,
@@ -106,25 +165,14 @@ export function renderExpeditionPreparation(
     );
 
     const paths: Readonly<Record<ExpeditionItemId, string>> = {
-        spiritGrain: CAMP_EXPEDITION_PATHS.spiritGrainRow,
-        pickaxe: CAMP_EXPEDITION_PATHS.pickaxeRow,
-        lens: CAMP_EXPEDITION_PATHS.lensRow,
+        spiritGrain: CAMP_EXPEDITION_CONTENT_PATHS.spiritGrainRow,
+        pickaxe: CAMP_EXPEDITION_CONTENT_PATHS.pickaxeRow,
+        lens: CAMP_EXPEDITION_CONTENT_PATHS.lensRow,
     };
     EXPEDITION_ITEM_IDS.forEach((itemId) => {
-        const row = campNode(root, paths[itemId]);
+        const row = campNode(contentRoot, paths[itemId]);
         row && renderLoadoutRow(row, itemId, profile, preset.slots, config, assets, actions);
     });
-
-    const adventure = campNode(root, CAMP_EXPEDITION_PATHS.adventure);
-    adventure && configureExistingButton(adventure, {
-        text: '历练', enabled: false, onClick: actions.adventure,
-    });
-    const depart = campNode(root, CAMP_EXPEDITION_PATHS.depart);
-    depart && configureExistingButton(depart, {
-        text: '启程', primary: true, onClick: actions.chooseMap,
-    });
-    const close = campNode(root, CAMP_EXPEDITION_PATHS.close);
-    close && configureExistingButton(close, { text: '离开', onClick: actions.close });
 }
 
 function renderHeroCard(
@@ -169,7 +217,7 @@ function renderHeroCard(
         `灵息 ${hero.stamina}`,
         expeditionText(hero.nameKey),
         `${expeditionText(`career.${hero.careerId}`)}·${hero.level}级`,
-        expeditionText(`realm.${realmOf(hero.level)}`),
+        `${expeditionText(`realm.${hero.realmId}`)}·${expeditionText(`spiritual_root.${hero.spiritualRootId}`)}`,
     ].join('\n');
     const label = createLabel(card, 'HeroInfo', details, 0, -50, width - 8, 76, 12, EXPEDITION_COLORS.text);
     label.lineHeight = 17;

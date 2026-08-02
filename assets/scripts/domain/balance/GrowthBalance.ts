@@ -1,9 +1,9 @@
 import { ATTRIBUTE_KEYS } from '../Attributes';
 import type { AttributeKey } from '../Attributes';
-import { HERO_GRADES } from '../HeroGrowth';
-import type { GrowthRates, HeroGrade } from '../HeroGrowth';
+import { SPIRITUAL_ROOT_IDS } from '../HeroGrowth';
+import type { GrowthRates, SpiritualRootId } from '../HeroGrowth';
 import { nonNegativeIntegerOf, positiveIntegerOf, recordOf, stripCommentKeys } from './BalanceReaders';
-import type { CareerPrimaryAttribute, GradeMultiplier } from './BalanceTypes';
+import type { CareerPrimaryAttribute, SpiritualRootMultiplier } from './BalanceTypes';
 
 export function parseGrowthRates(value: unknown): Record<string, GrowthRates> {
     const raw = stripCommentKeys(recordOf(value, 'growth_rates'));
@@ -33,28 +33,30 @@ export function parseGrowthRates(value: unknown): Record<string, GrowthRates> {
     return result;
 }
 
-export function parseGradeMultipliers(value: unknown): Record<HeroGrade, GradeMultiplier> {
-    const raw = stripCommentKeys(recordOf(value, 'grade_multipliers'));
-    const result = {} as Record<HeroGrade, GradeMultiplier>;
-    for (const grade of HERO_GRADES) {
-        const path = `grade_multipliers.${grade}`;
-        const entry = recordOf(raw[grade], path);
-        result[grade] = {
+export function parseSpiritualRootMultipliers(
+    value: unknown,
+): Record<SpiritualRootId, SpiritualRootMultiplier> {
+    const raw = stripCommentKeys(recordOf(value, 'spiritual_root_multipliers'));
+    const result = {} as Record<SpiritualRootId, SpiritualRootMultiplier>;
+    for (const rootId of SPIRITUAL_ROOT_IDS) {
+        const path = `spiritual_root_multipliers.${rootId}`;
+        const entry = recordOf(raw[rootId], path);
+        result[rootId] = {
             basePercent: positiveIntegerOf(entry.basePercent, `${path}.basePercent`),
             growthPercent: positiveIntegerOf(entry.growthPercent, `${path}.growthPercent`),
         };
     }
-    for (let index = 1; index < HERO_GRADES.length; index += 1) {
-        const previous = result[HERO_GRADES[index - 1]!];
-        const current = result[HERO_GRADES[index]!];
+    for (let index = 1; index < SPIRITUAL_ROOT_IDS.length; index += 1) {
+        const previous = result[SPIRITUAL_ROOT_IDS[index - 1]!];
+        const current = result[SPIRITUAL_ROOT_IDS[index]!];
         if (current.basePercent <= previous.basePercent) {
             throw new Error(
-                `grade_multipliers.basePercent 必须随品级严格递增：${HERO_GRADES[index]} 不高于 ${HERO_GRADES[index - 1]}`,
+                `spiritual_root_multipliers.basePercent 必须随灵根严格递增：${SPIRITUAL_ROOT_IDS[index]} 不高于 ${SPIRITUAL_ROOT_IDS[index - 1]}`,
             );
         }
         if (current.growthPercent <= previous.growthPercent) {
             throw new Error(
-                `grade_multipliers.growthPercent 必须随品级严格递增：${HERO_GRADES[index]} 不高于 ${HERO_GRADES[index - 1]}`,
+                `spiritual_root_multipliers.growthPercent 必须随灵根严格递增：${SPIRITUAL_ROOT_IDS[index]} 不高于 ${SPIRITUAL_ROOT_IDS[index - 1]}`,
             );
         }
     }

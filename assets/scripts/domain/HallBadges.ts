@@ -54,7 +54,7 @@ export interface PendingAction {
     readonly isActionable: boolean;
     /** 优先级，越大越先占用一级红点名额。 */
     readonly priority: number;
-    /** 同一批只提醒一次的动作（如招贤台高品级候选）需给出批次 ID。 */
+    /** 同一批只提醒一次的动作（如招贤台高灵根候选）需给出批次 ID。 */
     readonly batchId?: string;
 }
 

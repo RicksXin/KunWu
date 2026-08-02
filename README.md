@@ -9,9 +9,9 @@
 - 包管理器：pnpm 10.33.0（禁止使用 npm 或 yarn）
 - UI 逻辑设计基准：`375×817`
 - 营地全景逻辑宽度：`1050`（`375×2.8`）
-- 当前目标：完成可从 localhost 操作的 15–20 分钟核心闭环
+- 当前目标：完成 D0——可从 localhost 操作的 15–20 分钟核心闭环
 
-当前开发进度和待办以 [`Docs/08_开发进度与待办.md`](Docs/08_开发进度与待办.md) 为准。本 README 负责解释工程从哪里进入、各目录存放什么以及修改页面时应该找哪些文件，不替代 PRD、技术方案或工程约定。
+当前 Demo 范围、技术、API、进度和验收统一从 [`Docs/Demo/`](Docs/Demo/README.md) 进入；正式项目阶段状态见 [`Docs/08_开发进度与待办.md`](Docs/08_开发进度与待办.md)。本 README 负责解释工程入口与目录职责，不替代 PRD、技术方案或工程约定。
 
 ## 1. 快速开始
 
@@ -51,9 +51,10 @@ Cocos 编辑器预览通常位于 `http://127.0.0.1:7456/`。修改 `.scene` 或
 
 1. [`Docs/07_分阶段产品需求文档_PRD.md`](Docs/07_分阶段产品需求文档_PRD.md)：PRD 总入口和事实源归属。
 2. [`Docs/PRD/`](Docs/PRD)：对应系统的产品范围、规则、异常和验收。
-3. [`Docs/01_技术实现方案.md`](Docs/01_技术实现方案.md)：技术结构和实现边界。
-4. [`Docs/08_开发进度与待办.md`](Docs/08_开发进度与待办.md)：当前页面进度和下一步。
-5. [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md)：容易踩错的长期工程约定。
+3. [`Docs/Demo/`](Docs/Demo/README.md)：当前 Demo 裁剪范围、前后端技术、API、进度和验收。
+4. [`Docs/01_技术实现方案.md`](Docs/01_技术实现方案.md)：正式技术结构和实现边界。
+5. [`Docs/08_开发进度与待办.md`](Docs/08_开发进度与待办.md)：正式项目阶段状态。
+6. [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md)：容易踩错的长期工程约定。
 
 若文档冲突，以 PRD 总目录中的“文档归属与冲突处理”表为准。`CLAUDE.md` 和 `AGENTS.md` 不替代产品与技术事实源。
 
@@ -225,15 +226,16 @@ Docs/
 ├── 05_地图与关卡编辑方案.md       地图尺寸、Tile、迷雾、POI 与 Tiled 流程
 ├── 06_游戏策划案.md               世界观、核心循环、系统总设计和术语转译
 ├── 07_分阶段产品需求文档_PRD.md   PRD 总入口和事实源表
-├── 08_开发进度与待办.md           按页面维护的当前进度和优先级
+├── 08_开发进度与待办.md           正式项目阶段状态与 Demo 后待办
 ├── 09_编辑器操作清单.md           必须在 Cocos 编辑器中完成的人工步骤
 ├── 13_数值设计方案.md             成长、战斗和灵圃经济设计
 ├── 14_美术素材制作总清单.md       美术分册总入口
-├── PRD/                            PRD-00 至 PRD-12 系统需求
+├── Demo/                           D0/D1 范围、前后端技术、API、进度与验收
+├── PRD/                            PRD-00 至 PRD-12 正式系统需求
 └── ArtAssets/                      营地、HUD、灵圃和入山整备素材清单
 ```
 
-`Docs/PRD/` 规定“做什么、何时做、怎样验收”；技术、美术、动画、地图和数值文档解释“如何设计和实现”。进度不要写回 PRD，统一维护在 `Docs/08_开发进度与待办.md`。
+`Docs/PRD/` 规定正式产品“做什么、何时做、怎样验收”；`Docs/Demo/` 负责从正式规则中裁剪当前 Demo，并独立维护其技术、API、进度和验收。Demo 日常进度只更新 `Docs/Demo/05_Demo开发进度与待办.md`，正式阶段状态才更新根 `Docs/08_开发进度与待办.md`。
 
 ## 7. `tools/`：工程脚本
 
@@ -329,7 +331,8 @@ strength magic technique speed constitution armor resistance
 | 想做的事 | 首先查看 |
 |---|---|
 | 确认需求和验收 | `Docs/07_分阶段产品需求文档_PRD.md` → 对应 `Docs/PRD/*` |
-| 查看当前做到哪里 | `Docs/08_开发进度与待办.md` |
+| 查看 Demo 当前做到哪里 | `Docs/Demo/05_Demo开发进度与待办.md` |
+| 查看正式项目阶段状态 | `Docs/08_开发进度与待办.md` |
 | 调整营地主大厅节点 | `assets/bundles/camp/Camp.scene` |
 | 调整灵圃页面 | `CampLingPuPage.prefab` + `assets/scripts/presentation/camp/ling_pu/` |
 | 调整入山整备页面 | `CampExpeditionPage.prefab` + `assets/scripts/presentation/camp/expedition/` |

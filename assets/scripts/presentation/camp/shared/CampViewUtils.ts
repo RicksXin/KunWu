@@ -146,10 +146,15 @@ export function bindCampButton(
 }
 
 export function disposeCampBindings(disposers: (() => void)[]): void {
-    for (const dispose of disposers) {
-        dispose();
+    const pending = disposers.splice(0);
+    for (const dispose of pending) {
+        try {
+            dispose();
+        } catch {
+            // Cocos 销毁场景时先销毁 NodeEventProcessor，再调用组件 onDestroy。
+            // 此时 node.off() 已无必要且会抛错；继续释放其余外部订阅即可。
+        }
     }
-    disposers.length = 0;
 }
 
 /** 让常驻页面 Prefab 根节点跟随 SafeAreaRoot，子面板可继续使用 Widget 铺满。 */

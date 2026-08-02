@@ -1,6 +1,5 @@
 import { HorizontalTextAlignment, Mask, Node, UITransform } from 'cc';
 import { CAMP_EXPEDITION_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
-import { realmOf } from 'db://assets/scripts/domain/HeroGrowth';
 import { membersOf } from 'db://assets/scripts/domain/Party';
 import type { HeroInstance, Profile } from 'db://assets/scripts/services/GameState';
 import { campLabel, campNode } from 'db://assets/scripts/presentation/camp/shared/CampViewUtils';
@@ -109,12 +108,12 @@ function renderHeroSelectionRow(
     createLabel(
         row,
         'Realm',
-        expeditionText(`realm.${realmOf(hero.level)}`),
+        `${expeditionText(`realm.${hero.realmId}`)}·${expeditionText(`spiritual_root.${hero.spiritualRootId}`)}`,
         -127,
         -42,
-        67,
+        86,
         18,
-        10,
+        9,
         EXPEDITION_COLORS.text,
     );
 

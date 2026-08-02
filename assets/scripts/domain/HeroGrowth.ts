@@ -1,13 +1,13 @@
 /**
- * 修士品级、境界与属性成长（PRD-03 §3、§8、§9、任务 P1-HERO-001）。
+ * 修士灵根资质、境界与属性成长（PRD-03 §3、§8、§9、任务 P1-HERO-001）。
  *
  * 纯逻辑、无引擎依赖。三条来自 PRD 的硬约束：
  *
  *   1. **属性详情必须区分基础、成长、装备、状态和最终值**（PRD-03 §8）。
  *      故不能只存一个数——UI 要能告诉玩家"这 120 点力道从哪来"。
  *
- *   2. **品级影响初始七维、成长幅度和潜能，不改变技能数量**（PRD-03 §3）。
- *      D 级角色必须能通过合理培养完成主线，故成长倍率差距不能过大。
+ *   2. **灵根影响初始七维、成长幅度和潜能，不改变技能数量**（PRD-03 §3）。
+ *      杂灵根修士必须能通过合理培养完成主线，故成长倍率差距不能过大。
  *
  *   3. **境界突破固定成功，不加入失败概率**（PRD-03 §9）。
  *      故这里只做等级区间映射，没有概率判定。
@@ -16,76 +16,82 @@
 import { ATTRIBUTE_KEYS, createAttributes, addAttributes } from './Attributes';
 import type { AttributeKey, Attributes, MutableAttributes } from './Attributes';
 
-/** 品级（PRD-03 §3）。顺序即强度递增。 */
-export const HERO_GRADES = ['D', 'C', 'B', 'A', 'S', 'SS', 'SSS'] as const;
-export type HeroGrade = (typeof HERO_GRADES)[number];
+/** 六档灵根资质（PRD-03 §3）。顺序即强度递增。 */
+export const SPIRITUAL_ROOT_IDS = [
+    'mixed_root',
+    'pseudo_root',
+    'triple_root',
+    'dual_root',
+    'heavenly_root',
+    'variant_root',
+] as const;
+export type SpiritualRootId = (typeof SPIRITUAL_ROOT_IDS)[number];
 
 /**
- * 品级成长倍率，百分比整数。
+ * 灵根成长倍率，百分比整数。
  *
- * D 级取 100 作基准。差距刻意收窄：PRD-03 §3 要求
- * 「D 级角色必须能通过合理培养与队伍搭配完成主线」，
- * 若 SSS 是 D 的数倍，低品级角色会在数值上被彻底淘汰。
+ * 杂灵根取 100 作基准。差距刻意收窄，避免低资质修士被数值淘汰。
  *
- * 正式取值来自 `assets/data/balance/grade_multipliers.json` 的 `growthPercent`，
- * 通过 `computeGrowth` 的 `gradeMultiplier` 参数注入。此处仅作默认值与兜底，
+ * 正式取值来自 `assets/data/balance/spiritual_root_multipliers.json` 的 `growthPercent`，
+ * 通过 `computeGrowth` 的 `rootMultiplier` 参数注入。此处仅作默认值与兜底，
  * **不要在新代码里直接引用**（技术方案 §1：数值不在业务代码中硬编码）。
  */
-export const GRADE_GROWTH_PERCENT: Readonly<Record<HeroGrade, number>> = {
-    D: 100,
-    C: 110,
-    B: 122,
-    A: 136,
-    S: 152,
-    SS: 170,
-    SSS: 190,
+export const SPIRITUAL_ROOT_GROWTH_PERCENT: Readonly<Record<SpiritualRootId, number>> = {
+    mixed_root: 100,
+    pseudo_root: 110,
+    triple_root: 122,
+    dual_root: 136,
+    heavenly_root: 152,
+    variant_root: 190,
 };
 
 /**
- * 品级初始倍率，百分比整数。
+ * 灵根初始倍率，百分比整数。
  *
- * PRD-03 §3 要求品级影响**初始七维**，而非只影响成长。此前只有成长倍率，
- * 导致 1 级的 D 品与 SSS 品面板完全相同，招募界面看不出区别。
+ * PRD-03 §3 要求灵根影响**初始七维**，而非只影响成长。
  *
  * 曲线比成长倍率更平：初始值只需让玩家在招募时看出差别，
- * 不该在 1 级就制造代差。正式取值同样来自 `grade_multipliers.json`。
+ * 不该在 1 级就制造代差。正式取值同样来自 `spiritual_root_multipliers.json`。
  *
  * 步长约 8 个百分点是**为了跨过整数取整**：初始七维在 13–16 的个位数量级，
- * 105% 作用在 14 上得 14.7，floor 后仍是 14——D 品与 C 品的 1 级面板会完全相同。
- * 想调这条曲线时先验算 floor 后相邻品级是否仍有差异。
+ * 105% 作用在 14 上得 14.7，floor 后仍是 14——杂灵根与下一档的 1 级面板会完全相同。
+ * 想调这条曲线时先验算 floor 后相邻灵根是否仍有差异。
  */
-export const GRADE_BASE_PERCENT: Readonly<Record<HeroGrade, number>> = {
-    D: 100,
-    C: 108,
-    B: 116,
-    A: 124,
-    S: 133,
-    SS: 142,
-    SSS: 152,
+export const SPIRITUAL_ROOT_BASE_PERCENT: Readonly<Record<SpiritualRootId, number>> = {
+    mixed_root: 100,
+    pseudo_root: 108,
+    triple_root: 116,
+    dual_root: 124,
+    heavenly_root: 133,
+    variant_root: 152,
 };
 
 /** 成长率的千分位基数：3000 表示每级 +3.0 点。 */
 export const GROWTH_RATE_SCALE = 1000;
 
-/** 当前 `Lv60` 范围内的境界（PRD-03 §9）；合体、大乘待等级上限开放后加入。 */
-export const REALMS = [
+/** Schema v5 冻结的八个稳定境界 ID；合体、大乘当前锁定。 */
+export const REALM_IDS = [
     'lian_qi',
     'zhu_ji',
     'jie_dan',
     'yuan_ying',
     'hua_shen',
     'lian_xu',
+    'he_ti',
+    'da_cheng',
 ] as const;
-export type Realm = (typeof REALMS)[number];
+export type RealmId = (typeof REALM_IDS)[number];
 
 /** 各境界的等级区间（PRD-03 §9）。 */
-export const REALM_LEVEL_RANGES: Readonly<Record<Realm, { min: number; max: number }>> = {
+export const REALM_LEVEL_RANGES: Readonly<Record<RealmId, { min: number; max: number }>> = {
     lian_qi: { min: 1, max: 10 },
     zhu_ji: { min: 11, max: 20 },
     jie_dan: { min: 21, max: 30 },
     yuan_ying: { min: 31, max: 40 },
     hua_shen: { min: 41, max: 50 },
     lian_xu: { min: 51, max: 60 },
+    he_ti: { min: 61, max: 70 },
+    da_cheng: { min: 71, max: 80 },
 };
 
 /** MVP 等级上限。 */
@@ -98,17 +104,18 @@ export const TIER_1_LEVEL = 10;
  * 越界抛错而非返回默认值——等级超范围说明升级逻辑有 bug，
  * 静默钳制会让问题在数值上表现为"卡在 60 级"而难以定位。
  */
-export function realmOf(level: number): Realm {
-    if (!Number.isInteger(level) || level < 1 || level > MAX_LEVEL) {
-        throw new Error(`等级须为 1–${MAX_LEVEL} 的整数，收到 ${level}`);
+export function realmIdOf(level: number): RealmId {
+    const schemaMaxLevel = REALM_LEVEL_RANGES.da_cheng.max;
+    if (!Number.isInteger(level) || level < 1 || level > schemaMaxLevel) {
+        throw new Error(`等级须为 1–${schemaMaxLevel} 的整数，收到 ${level}`);
     }
-    for (const realm of REALMS) {
+    for (const realm of REALM_IDS) {
         const range = REALM_LEVEL_RANGES[realm];
         if (level >= range.min && level <= range.max) {
             return realm;
         }
     }
-    // REALM_LEVEL_RANGES 覆盖 1–60，理论上不可达
+    // REALM_LEVEL_RANGES 覆盖 1–80，理论上不可达
     throw new Error(`等级 ${level} 未落入任何境界区间`);
 }
 
@@ -121,7 +128,7 @@ export function canPromoteToTier1(level: number): boolean {
  * 每一项都要能单独展示，故不合并存储。
  */
 export interface AttributeBreakdown {
-    /** 职业与品级决定的初始值。 */
+    /** 职业与灵根决定的初始值。 */
     readonly base: Attributes;
     /** 等级成长累计。 */
     readonly growth: Attributes;
@@ -146,25 +153,25 @@ export interface AttributeBreakdown {
 export type GrowthRates = Readonly<Record<AttributeKey, number>>;
 
 /**
- * 计算等级成长（PRD-03 §3：品级影响成长幅度）。
+ * 计算等级成长（PRD-03 §3：灵根影响成长幅度）。
  *
  * 成长从 1 级起算，故 1 级时成长为 0——初始值全部来自 base，
  * 这样"1 级角色的面板"与数据表里的初始值一致，便于策划核对。
  *
  * @param rates 七维成长率，千分位。来自 `balance/growth_rates.json`
- * @param gradeMultiplier 品级成长倍率，百分比。省略时取 GRADE_GROWTH_PERCENT
+ * @param rootMultiplier 灵根成长倍率，百分比。
  */
 export function computeGrowth(
     level: number,
-    grade: HeroGrade,
+    spiritualRootId: SpiritualRootId,
     rates: GrowthRates,
-    gradeMultiplier?: number,
+    rootMultiplier?: number,
 ): Attributes {
     if (!Number.isInteger(level) || level < 1) {
         throw new Error(`等级须为正整数，收到 ${level}`);
     }
     const levelsGained = level - 1;
-    const percent = gradeMultiplier ?? GRADE_GROWTH_PERCENT[grade];
+    const percent = rootMultiplier ?? SPIRITUAL_ROOT_GROWTH_PERCENT[spiritualRootId];
 
     const result = createAttributes() as MutableAttributes;
     for (const key of ATTRIBUTE_KEYS) {
@@ -182,19 +189,19 @@ export function computeGrowth(
 }
 
 /**
- * 按品级缩放初始七维（PRD-03 §3：品级影响初始七维）。
+ * 按灵根缩放初始七维（PRD-03 §3：灵根影响初始七维）。
  *
  * @param baseAttributes 职业表里的裸初始值
- * @param gradeMultiplier 品级初始倍率，百分比。省略时取 GRADE_BASE_PERCENT
+ * @param rootMultiplier 灵根初始倍率，百分比。
  */
-export function scaleBaseByGrade(
+export function scaleBaseBySpiritualRoot(
     baseAttributes: Attributes,
-    grade: HeroGrade,
-    gradeMultiplier?: number,
+    spiritualRootId: SpiritualRootId,
+    rootMultiplier?: number,
 ): Attributes {
-    const percent = gradeMultiplier ?? GRADE_BASE_PERCENT[grade];
+    const percent = rootMultiplier ?? SPIRITUAL_ROOT_BASE_PERCENT[spiritualRootId];
     if (percent <= 0) {
-        throw new Error(`品级初始倍率必须为正，收到 ${percent}`);
+        throw new Error(`灵根初始倍率必须为正，收到 ${percent}`);
     }
     const result = createAttributes() as MutableAttributes;
     for (const key of ATTRIBUTE_KEYS) {
@@ -235,12 +242,14 @@ export function summarize(parts: {
 /** 解雇返还比例，百分比整数（PRD-03 §10：比例由数值表配置）。 */
 export const DISMISS_REFUND_PERCENT = 50;
 
-/** 需二次确认才能解雇的品级（PRD-03 §10：A 级及以上）。 */
-export function requiresDismissConfirm(grade: HeroGrade): boolean {
-    return HERO_GRADES.indexOf(grade) >= HERO_GRADES.indexOf('A');
+/** 双灵根及以上解雇需要二次确认。 */
+export function requiresDismissConfirm(spiritualRootId: SpiritualRootId): boolean {
+    return SPIRITUAL_ROOT_IDS.indexOf(spiritualRootId)
+        >= SPIRITUAL_ROOT_IDS.indexOf('dual_root');
 }
 
-/** 默认锁定、不可解雇的品级（PRD-03 §10：S 级及以上）。 */
-export function isDismissLocked(grade: HeroGrade): boolean {
-    return HERO_GRADES.indexOf(grade) >= HERO_GRADES.indexOf('S');
+/** 天灵根和异灵根默认锁定。 */
+export function isDismissLocked(spiritualRootId: SpiritualRootId): boolean {
+    return SPIRITUAL_ROOT_IDS.indexOf(spiritualRootId)
+        >= SPIRITUAL_ROOT_IDS.indexOf('heavenly_root');
 }

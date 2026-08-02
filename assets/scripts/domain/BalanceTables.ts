@@ -6,7 +6,7 @@
  */
 
 import { recordOf } from './balance/BalanceReaders';
-import { parseGradeMultipliers, parseGrowthRates } from './balance/GrowthBalance';
+import { parseGrowthRates, parseSpiritualRootMultipliers } from './balance/GrowthBalance';
 import { parseCombatConstants, parseProductionRates, parseRealmRanges } from './balance/SystemBalance';
 import type { BalanceTables } from './balance/BalanceTypes';
 
@@ -16,8 +16,8 @@ export { stripCommentKeys } from './balance/BalanceReaders';
 export {
     assertGrowthRatesCoverCareers,
     assertPrimaryAttributeMatchesGrowth,
-    parseGradeMultipliers,
     parseGrowthRates,
+    parseSpiritualRootMultipliers,
 } from './balance/GrowthBalance';
 export {
     defenseLevelConstantAt,
@@ -33,7 +33,7 @@ export type {
     BalanceTables,
     CombatConstants,
     DefenseLevelConstantCurve,
-    GradeMultiplier,
+    SpiritualRootMultiplier,
     JobRateConfig,
     ProductionRates,
     RealmRange,
@@ -42,7 +42,7 @@ export type {
 
 export function parseBalanceTables(raw: {
     readonly growth_rates: unknown;
-    readonly grade_multipliers: unknown;
+    readonly spiritual_root_multipliers: unknown;
     readonly combat_constants: unknown;
     readonly production_rates: unknown;
     readonly realm_ranges: unknown;
@@ -54,7 +54,9 @@ export function parseBalanceTables(raw: {
     };
     return {
         growthRates: parseGrowthRates(raw.growth_rates),
-        gradeMultipliers: parseGradeMultipliers(raw.grade_multipliers),
+        spiritualRootMultipliers: parseSpiritualRootMultipliers(
+            raw.spiritual_root_multipliers,
+        ),
         combat: parseCombatConstants(unwrap(raw.combat_constants, 'combat_constants', 'combat_constants')),
         production: parseProductionRates(unwrap(raw.production_rates, 'production_rates', 'production_rates')),
         realms: parseRealmRanges(unwrap(raw.realm_ranges, 'realm_ranges', 'realm_ranges')),
