@@ -63,16 +63,34 @@ export class MapEventPanelController {
     }
 
     private readonly engage = (): void => {
+        void this.startCombat();
+    };
+
+    private async startCombat(): Promise<void> {
         const map = this.host.getMap();
         const object = this.currentObject;
         if (!map || !object || this.busy) return;
+        this.busy = true;
         AppRoot.instance.events.emit('map.encounterTriggered', {
             mapId: map.id,
             objectId: object.id,
             enemyId: object.enemyId ?? object.id,
         });
-        AppRoot.instance.showFeedback('战斗场景尚未接入');
-    };
+        try {
+            await AppRoot.instance.router.push({
+                pageId: 'combat',
+                params: {
+                    mapId: map.id,
+                    objectId: object.id,
+                    enemyId: object.enemyId ?? object.id,
+                },
+            });
+        } catch (error) {
+            console.error('[地图事件] 进入战斗失败', error);
+            this.busy = false;
+            AppRoot.instance.showFeedback('战斗页面加载失败，请重试', 3);
+        }
+    }
 
     private readonly inspect = (): void => {
         const map = this.host.getMap();

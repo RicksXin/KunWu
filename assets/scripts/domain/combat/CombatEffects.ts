@@ -26,7 +26,10 @@ export function tickStatuses(
         }
         const isDead = hp <= 0;
         if (isDead && !unit.isDead) events.push({ type: 'unit.died', unitId: unit.unitId });
-        return { ...unit, currentHp: Math.max(0, hp), statuses: kept, isDead };
+        const tauntStrength = kept
+            .filter((status) => status.kind === 'gather_spirit')
+            .reduce((maximum, status) => Math.max(maximum, status.magnitude), 0);
+        return { ...unit, currentHp: Math.max(0, hp), statuses: kept, tauntStrength, isDead };
     });
 }
 

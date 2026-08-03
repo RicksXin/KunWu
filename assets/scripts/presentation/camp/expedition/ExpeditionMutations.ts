@@ -1,5 +1,6 @@
 import {
     loadoutWeight,
+    maximumSpiritGrainLoadout,
     partyBurdenLimit,
 } from 'db://assets/scripts/domain/ExpeditionPreparation';
 import type {
@@ -70,6 +71,24 @@ export function adjustExpeditionLoadout(
         state.loadout[itemId] = old;
         return { changed: false, message: '负重已达上限' };
     }
+    return { changed: true };
+}
+
+export function maximizeExpeditionSpiritGrain(
+    profile: Profile,
+    config: ExpeditionPreparationConfig,
+): ExpeditionMutationResult {
+    const state = profile.expeditionPreparation;
+    const preset = currentExpeditionPreset(state);
+    const next = maximumSpiritGrainLoadout({
+        slots: preset.slots,
+        heroes: expeditionHeroSnapshots(profile),
+        loadout: state.loadout,
+        availableSpiritGrain: profile.wallet.spiritGrain,
+        config,
+    });
+    if (state.loadout.spiritGrain === next) return { changed: false };
+    state.loadout.spiritGrain = next;
     return { changed: true };
 }
 

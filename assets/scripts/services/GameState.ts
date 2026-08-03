@@ -92,7 +92,7 @@ export interface Profile {
     readonly roster: HeroInstance[];
     readonly inventory: Record<string, number>;
     readonly storyFlags: Record<string, boolean>;
-    /** `map_id.object_id` → 是否已完成；宝箱和一次性事件跨入山持久保存。 */
+    /** `map_id.object_id` → 是否已完成；宝箱/一次性事件永久保存，普通敌人在新一次入山时清除。 */
     readonly completedMapObjects: Record<string, boolean>;
     readonly expeditionPreparation: ExpeditionPreparationState;
     expedition: ExpeditionState | null;

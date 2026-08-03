@@ -17,6 +17,7 @@ import { GridCoord } from 'db://assets/scripts/domain/GridCoord';
 import { demoObjectAt } from 'db://assets/scripts/domain/map/DemoMapDefinition';
 import type { DemoMapDefinition } from 'db://assets/scripts/domain/map/DemoMapDefinition';
 import { createViewportSafeAreaRoot } from 'db://assets/scripts/presentation/core/ViewportAdapter';
+import { CombatPresenter } from 'db://assets/scripts/presentation/combat/CombatPresenter';
 import { MapActionController } from 'db://assets/scripts/presentation/map/MapActionController';
 import { MapEventPanelController } from 'db://assets/scripts/presentation/map/MapEventPanelController';
 import {
@@ -52,6 +53,10 @@ export class MapPresenter extends Component {
     private ready = false;
 
     protected override onLoad(): void {
+        if (AppRoot.instance.router.current()?.pageId === 'combat') {
+            this.node.addComponent(CombatPresenter);
+            return;
+        }
         const safeAreaRoot = createViewportSafeAreaRoot(this.node, 'MapSafeAreaRoot');
         this.nodes = buildMapScene(safeAreaRoot, MAP_LOGICAL_WIDTH, MAP_LOGICAL_HEIGHT);
         this.actions = new MapActionController({
@@ -236,9 +241,7 @@ export class MapPresenter extends Component {
         if (!object) return;
         const completed = AppRoot.instance.state.require()
             .completedMapObjects[`${map.id}.${object.id}`] === true;
-        if (completed && object.kind !== 'enemy_group' && !object.kind.startsWith('boss_')) {
-            return;
-        }
+        if (completed) return;
         if (object.kind === 'story_event') {
             const result = await AppRoot.instance.map.resolveObject(map, object);
             if (!result.ok) {

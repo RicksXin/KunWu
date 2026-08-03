@@ -15,8 +15,9 @@ Boot.scene
    ├─ 灵圃模态页
    └─ 入山整备模态页
 → Map.scene
-→ Combat.scene
-→ 回城结算模态页
+   ├─ Map 逻辑页
+   └─ Combat 逻辑页（D0 灰盒复用宿主）
+→ 归营原子结算 + 黑屏缓动切场
 → Camp.scene
 ```
 
@@ -48,7 +49,7 @@ Presenter
 | Expedition | 编队、灵息、负重、装载和地图选择 | party/loadout/readiness |
 | Map | 移动、迷雾、补给和遭遇 | expedition state、visible tiles |
 | Combat | 消费 CombatEvent 并播放 | snapshot、event queue、outcome |
-| Settlement | 奖励确认与回城 | settlement preview/committed |
+| Return Transition | 原子归营结算、黑屏缓动与大厅刷新 | settling/fading/routing |
 
 表现层继续按页面放在 `assets/scripts/presentation/`，Application Service 按业务模块放在
 `assets/scripts/services/`。单个 TypeScript 文件不得超过 300 行。
@@ -70,14 +71,14 @@ Presenter
 - 所有消费、奖励、队伍和地图状态变更必须经过 Application Service 串行提交。
 - D0 使用 IndexedDB 主档与备份；重要命令成功后立即保存。
 - 重复点击、场景加载失败和刷新恢复必须有稳定结果；消费与奖励使用本地事务标识防止重复执行。
-- 刷新后至少恢复 Wallet、灵圃、队伍、装载、地图位置、迷雾、敌人状态和最近结算。
+- 刷新后至少恢复 Wallet、灵圃、队伍、装载、地图位置、迷雾和敌人状态。
 
 ## 6. 性能与资源
 
 - UI 逻辑基准为 `375×817`，营地全景宽度为 `1050`。
 - D0 首次压缩下载保持小于 25MB；D1 按 PRD-10 的 Demo 预算执行。
 - 像素素材使用 Nearest；大地图只保留可见范围节点，迷雾与 Tile 不逐帧全量重建。
-- CombatResolver 保持 20Hz 纯事件结算；表现层可加速或跳过动画，不反向影响伤害。
+- CombatResolver 保持 20Hz 纯事件结算；D0 玩家界面只提供正常速度，表现层不反向影响伤害。
 - 非当前 Demo 闭环资源不进入首包。
 
 ## 7. 当前技术文档
@@ -88,5 +89,10 @@ Presenter
 - [本地适配器与验收](Tech/P1_HALL_ECO_本地适配器与验收.md)
 - [API 契约](API/P1_CAMP_HUD_LING_PU_API.md)
 
-入山整备、地图、战斗和回城结算在进入编码前，只需在本目录补齐客户端状态流、存档、
+入山整备、地图、战斗和归营转场在进入编码前，只需在本目录补齐客户端状态流、存档、
 失败恢复和人工验收；Demo 阶段不要求服务端设计、API 契约或 Local Adapter。
+
+D0 地图与战斗的已落地详细设计见：
+
+- [D0 地图探索客户端设计](Tech/D0_MAP_客户端技术设计.md)
+- [D0 固定遭遇战客户端设计](Tech/D0_COMBAT_客户端技术设计.md)

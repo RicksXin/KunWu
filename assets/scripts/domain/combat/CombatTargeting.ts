@@ -13,15 +13,27 @@ export function chooseSkill(
     actor: CombatUnit,
     config: ResolverConfig,
 ): SkillChoice | null {
-    const snapshot: CombatSnapshot = { tick: 0, units, outcome: null };
     for (const skillId of actor.skillIds) {
-        const skill = config.skills.get(skillId);
-        if (!skill || (actor.cooldowns[skillId] ?? 0) > 0) continue;
-        if (hasStatus(actor, 'silence') && skill.appliesStatus) continue;
-        const targetIds = selectTargets(snapshot, actor, skill, config);
-        if (targetIds.length > 0) return { skill, targetIds };
+        const choice = chooseSkillById(units, actor, skillId, config);
+        if (choice) return choice;
     }
     return null;
+}
+
+/** 玩家点选技能后仍由领域层决定合法目标，表现层不能直接指定伤害对象。 */
+export function chooseSkillById(
+    units: readonly CombatUnit[],
+    actor: CombatUnit,
+    skillId: string,
+    config: ResolverConfig,
+): SkillChoice | null {
+    const skill = config.skills.get(skillId);
+    if (!skill || !actor.skillIds.includes(skillId)) return null;
+    if ((actor.cooldowns[skillId] ?? 0) > 0) return null;
+    if (hasStatus(actor, 'silence') && skill.appliesStatus) return null;
+    const snapshot: CombatSnapshot = { tick: 0, units, outcome: null };
+    const targetIds = selectTargets(snapshot, actor, skill, config);
+    return targetIds.length > 0 ? { skill, targetIds } : null;
 }
 
 function selectTargets(

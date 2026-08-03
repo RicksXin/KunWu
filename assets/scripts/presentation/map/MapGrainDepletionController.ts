@@ -22,6 +22,6 @@ export async function finishGrainDepletionDeath(
         AppRoot.instance.showFeedback(result.message, 3);
         return;
     }
-    await AppRoot.instance.router.replaceRoot({ pageId: 'camp' });
+    await AppRoot.instance.router.replaceRoot({ pageId: 'camp' }, 'fade');
     AppRoot.instance.showFeedback('队伍生机断绝，阵亡修士已送入还魂殿', 4);
 }

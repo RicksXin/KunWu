@@ -6,6 +6,7 @@
  */
 
 import type { Profile } from './GameState';
+import { MAX_PARTY_SIZE } from 'db://assets/scripts/domain/CombatTypes';
 import { parseProfile } from './profile/ProfileParsing';
 import { integerOf, recordOf } from './profile/ProfileValueReaders';
 
@@ -82,4 +83,25 @@ export function serializeProfile(profile: Profile): Record<string, unknown> {
               }
             : null,
     };
+}
+
+/** localhost 灰盒调试恢复；是否允许恢复由启动层决定。 */
+export function recoverDemoRoster(profile: Profile): void {
+    profile.roster.forEach((hero) => {
+        hero.currentHp = hero.maxHp;
+        hero.isDead = false;
+    });
+    const activeId = profile.expeditionPreparation.activePresetId;
+    const recoveredIds = profile.roster
+        .slice(0, MAX_PARTY_SIZE)
+        .map((hero) => hero.instanceId);
+    const recoveredSet = new Set(recoveredIds);
+    profile.expeditionPreparation.partyPresets = profile.expeditionPreparation.partyPresets
+        .map((preset) => preset.presetId === activeId
+            ? { ...preset, slots: recoveredIds }
+            : {
+                  ...preset,
+                  slots: preset.slots.map((id) => id && recoveredSet.has(id) ? null : id),
+              });
+    profile.expedition = null;
 }

@@ -24,6 +24,20 @@ export async function settleGrainDepletionDeath(
         || expedition.grainDepletionSteps < depletionStepLimit) {
         return { ok: false, message: '队伍尚未进入断粮阵亡状态' };
     }
+    return settleExpeditionPartyDeath(deps, mapId, 'grain_depletion');
+}
+
+/** 战斗失败与断粮共用的全队阵亡原子结算。 */
+export async function settleExpeditionPartyDeath(
+    deps: MapDeathSettlementDeps,
+    mapId: string,
+    source: 'grain_depletion' | 'combat_defeat',
+): Promise<MapActionResult> {
+    const profile = deps.state.require();
+    const expedition = profile.expedition;
+    if (!expedition || expedition.mapId !== mapId) {
+        return { ok: false, message: '当前没有可结算的入山进度' };
+    }
     const memberIds = new Set(expedition.partyMemberIds);
     const heroes = profile.roster.filter((hero) => memberIds.has(hero.instanceId));
     if (heroes.length === 0) {
@@ -63,16 +77,17 @@ export async function settleGrainDepletionDeath(
         profile.expeditionPreparation.partyPresets = presetsBefore;
         profile.expeditionPreparation.lastStaminaSettledAtUtc = recoveryAnchorBefore;
         profile.expedition = expedition;
-        return { ok: false, message: mapErrorMessage('断粮阵亡结算保存失败', error) };
+        const label = source === 'grain_depletion' ? '断粮阵亡' : '战斗阵亡';
+        return { ok: false, message: mapErrorMessage(`${label}结算保存失败`, error) };
     }
 
     const heroIds = heroes.map((hero) => hero.instanceId);
-    deps.events.emit('heroes.deathChanged', { heroIds, source: 'grain_depletion' });
+    deps.events.emit('heroes.deathChanged', { heroIds, source });
     deps.events.emit('inventory.changed', { inventory: profile.inventory });
-    deps.events.emit('camp.badgesChanged', { source: 'grain_depletion' });
+    deps.events.emit('camp.badgesChanged', { source });
     deps.events.emit('expedition.ended', {
         mapId,
-        reason: 'grain_depletion',
+        reason: source,
     });
     return { ok: true };
 }

@@ -1,5 +1,32 @@
 import type { Profile } from 'db://assets/scripts/services/GameState';
 
+export type MapProgressSnapshot = readonly (readonly [string, boolean | undefined])[];
+
+export function clearNormalEnemyProgress(
+    profile: Pick<Profile, 'completedMapObjects'>,
+    map: {
+        readonly id: string;
+        readonly objects: readonly { readonly id: string; readonly kind: string }[];
+    },
+): MapProgressSnapshot {
+    return map.objects.filter((object) => object.kind === 'enemy_group').map((object) => {
+        const key = `${map.id}.${object.id}`;
+        const previous = profile.completedMapObjects[key];
+        delete profile.completedMapObjects[key];
+        return [key, previous] as const;
+    });
+}
+
+export function restoreMapProgress(
+    profile: Pick<Profile, 'completedMapObjects'>,
+    snapshot: MapProgressSnapshot,
+): void {
+    snapshot.forEach(([key, value]) => {
+        if (value === undefined) delete profile.completedMapObjects[key];
+        else profile.completedMapObjects[key] = value;
+    });
+}
+
 export function mapMoveRejectionMessage(reason: string): string {
     switch (reason) {
         case 'not_adjacent': return '只能移动到相邻格';

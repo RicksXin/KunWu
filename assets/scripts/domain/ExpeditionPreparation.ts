@@ -29,6 +29,7 @@ export type { FieldExpeditionSnapshot } from './expedition/FieldExpeditionRules'
 export {
     createEmptyLoadout,
     loadoutWeight,
+    maximumSpiritGrainLoadout,
     partyBurdenLimit,
     settleNaturalStamina,
     validateExpeditionReadiness,

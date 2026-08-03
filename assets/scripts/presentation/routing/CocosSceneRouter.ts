@@ -8,7 +8,17 @@
  * PRD-09 §9 要求两者行为一致，各写一套迟早会分叉。
  */
 
-import { assetManager, director } from 'cc';
+import {
+    assetManager,
+    Color,
+    director,
+    Graphics,
+    Node,
+    tween,
+    Tween,
+    UIOpacity,
+    UITransform,
+} from 'cc';
 import { PageStack } from 'db://assets/scripts/services/PageStack';
 import type { BackResult, ModalEntry } from 'db://assets/scripts/services/PageStack';
 import type { PageId, RouteEntry, SceneRouterApi } from 'db://assets/scripts/services/SceneRouter';
@@ -20,7 +30,7 @@ export const PAGE_SCENE_NAMES: Readonly<Record<PageId, string>> = {
     building: 'Building',
     party: 'Party',
     map: 'Map',
-    combat: 'Combat',
+    combat: 'Map',
 };
 
 export interface SceneRouterEvents {
@@ -30,7 +40,11 @@ export interface SceneRouterEvents {
     onAtRoot?: () => void;
     /** 全局遮罩据此显示／隐藏，阻止载入期间重复点击。 */
     onLoadingChanged?: (loading: boolean) => void;
+    /** 只用于需要黑屏缓动的切场流程。 */
+    onFadeChanged?: (opaque: boolean) => Promise<void>;
 }
+
+export type SceneTransition = 'loading' | 'fade';
 
 export class CocosSceneRouter implements SceneRouterApi {
     private readonly stack = new PageStack();
@@ -56,7 +70,13 @@ export class CocosSceneRouter implements SceneRouterApi {
             return;
         }
         this.stack.push(entry);
-        await this.activate(entry);
+        try {
+            await this.activate(entry);
+        } catch (error) {
+            // 页面加载失败时保留原页面，并撤销刚压入的无效路由。
+            this.stack.pop();
+            throw error;
+        }
     }
 
     async pop(): Promise<void> {
@@ -74,12 +94,12 @@ export class CocosSceneRouter implements SceneRouterApi {
         }
     }
 
-    async replaceRoot(entry: RouteEntry): Promise<void> {
+    async replaceRoot(entry: RouteEntry, transition: SceneTransition = 'loading'): Promise<void> {
         if (this.loading) {
             return;
         }
         this.stack.replaceRoot(entry);
-        await this.activate(entry);
+        await this.activate(entry, transition);
     }
 
     current(): RouteEntry | null {
@@ -120,11 +140,12 @@ export class CocosSceneRouter implements SceneRouterApi {
         return result;
     }
 
-    private async activate(entry: RouteEntry): Promise<void> {
+    private async activate(entry: RouteEntry, transition: SceneTransition = 'loading'): Promise<void> {
         const sceneName = PAGE_SCENE_NAMES[entry.pageId];
         this.loading = true;
         this.events.onLoadingChanged?.(true);
         try {
+            if (transition === 'fade') await this.events.onFadeChanged?.(true);
             await this.ensurePageBundle(entry);
             await new Promise<void>((resolve, reject) => {
                 const accepted = director.loadScene(sceneName, (error) => {
@@ -140,6 +161,7 @@ export class CocosSceneRouter implements SceneRouterApi {
             });
             this.events.onPageChanged?.(entry);
         } finally {
+            if (transition === 'fade') await this.events.onFadeChanged?.(false);
             // 必须在 finally 里复位：加载失败后若停在 true，
             // 之后所有导航都会被静默忽略
             this.loading = false;
@@ -147,9 +169,9 @@ export class CocosSceneRouter implements SceneRouterApi {
         }
     }
 
-    /** 地图场景位于独立 Bundle；主动进入时不能只依赖后台预载是否及时完成。 */
+    /** Map 与 D0 Combat 共用地图 Bundle；主动进入时不能只依赖后台预载是否完成。 */
     private async ensurePageBundle(entry: RouteEntry): Promise<void> {
-        if (entry.pageId !== 'map') return;
+        if (entry.pageId !== 'map' && entry.pageId !== 'combat') return;
         const mapId = entry.params?.mapId;
         if (typeof mapId !== 'string' || !isMapBundle(mapId)) {
             throw new Error(`无效的地图 Bundle：${String(mapId)}`);
@@ -165,4 +187,55 @@ export class CocosSceneRouter implements SceneRouterApi {
             });
         });
     }
+}
+
+const SCENE_FADE_NODE = 'SceneFadeOverlay';
+
+/** 使用持久 AppRoot 遮罩跨场景保持纯黑，避免场景销毁时过渡中断。 */
+export function fadeSceneOverlay(overlay: Node | null, opaque: boolean): Promise<void> {
+    if (!overlay) return Promise.resolve();
+    const loadingText = overlay.getChildByName('LoadingText');
+    if (opaque) {
+        if (loadingText) loadingText.active = false;
+        const fade = overlay.getChildByName(SCENE_FADE_NODE) ?? createFadeNode(overlay);
+        const opacity = fade.getComponent(UIOpacity)!;
+        opacity.opacity = 0;
+        return tweenOpacity(opacity, 255, 0.28);
+    }
+    const fade = overlay.getChildByName(SCENE_FADE_NODE);
+    if (!fade) {
+        if (loadingText) loadingText.active = true;
+        return Promise.resolve();
+    }
+    const opacity = fade.getComponent(UIOpacity)!;
+    return tweenOpacity(opacity, 0, 0.36).then(() => {
+        fade.destroy();
+        if (loadingText?.isValid) loadingText.active = true;
+    });
+}
+
+function createFadeNode(overlay: Node): Node {
+    const fade = new Node(SCENE_FADE_NODE);
+    fade.layer = overlay.layer;
+    overlay.addChild(fade);
+    const parentSize = overlay.getComponent(UITransform)?.contentSize;
+    const width = parentSize?.width ?? 1080;
+    const height = parentSize?.height ?? 1920;
+    fade.addComponent(UITransform).setContentSize(width, height);
+    const graphics = fade.addComponent(Graphics);
+    graphics.fillColor = new Color(0, 0, 0, 255);
+    graphics.rect(-width / 2, -height / 2, width, height);
+    graphics.fill();
+    fade.addComponent(UIOpacity);
+    return fade;
+}
+
+function tweenOpacity(opacity: UIOpacity, target: number, duration: number): Promise<void> {
+    Tween.stopAllByTarget(opacity);
+    return new Promise((resolve) => {
+        tween(opacity)
+            .to(duration, { opacity: target }, { easing: 'sineInOut' })
+            .call(resolve)
+            .start();
+    });
 }

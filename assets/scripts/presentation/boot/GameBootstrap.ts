@@ -22,6 +22,10 @@ import {
     serializeProfile,
 } from 'db://assets/scripts/services/ProfileCodec';
 import {
+    finishDemoProfileRecovery,
+    prepareDemoProfileRecovery,
+} from 'db://assets/scripts/presentation/boot/DemoProfileRecovery';
+import {
     LING_PU_CONFIG_ID,
     LING_PU_CONFIG_TABLE,
     parseLingPuConfig,
@@ -156,10 +160,12 @@ export class GameBootstrap extends Component {
             const seed = await this.loadDefaultProfileSeed();
             profile = createDefaultProfile(seed, app.time.nowUtcSeconds());
         }
+        const recovery = prepareDemoProfileRecovery(profile);
 
         // P1 不结算浏览器关闭或后台期间的收益；加载后从当前时刻重新计在线周期。
         profile.camp.lastSettledAtUtc = app.time.nowUtcSeconds();
         const envelope = await saves.save(serializeProfile(profile));
+        finishDemoProfileRecovery(recovery);
         const result: SaveLoadResult = {
             status: loaded.envelope ? loaded.status : 'ok',
             envelope,
@@ -170,6 +176,7 @@ export class GameBootstrap extends Component {
         app.state.load(profile);
         app.events.emit('profile.loaded', { source: loaded.status });
         app.events.emit('wallet.changed', { wallet: profile.wallet });
+        if (recovery.recovered) app.showFeedback(recovery.message, 4);
         return result;
     }
 

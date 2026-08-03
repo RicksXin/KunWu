@@ -8,6 +8,19 @@ import type {
     ExpeditionPreparationState,
     Profile,
 } from 'db://assets/scripts/services/GameState';
+import { AppRoot } from 'db://assets/scripts/AppRoot';
+
+export class ExpeditionSaveQueue {
+    private pending: Promise<void> = Promise.resolve();
+
+    enqueue(reason: string): void {
+        const app = AppRoot.instance;
+        this.pending = this.pending.then(() => app.saveCurrentProfile()).catch((error: unknown) => {
+            console.error(`[入山整备] ${reason}保存失败`, error);
+            app.showFeedback('入山整备保存失败');
+        });
+    }
+}
 
 export function currentExpeditionPreset(
     state: ExpeditionPreparationState,

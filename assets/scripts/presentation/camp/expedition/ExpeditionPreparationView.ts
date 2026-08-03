@@ -45,6 +45,7 @@ import {
     createSpriteNode,
     drawSolidBackground,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionVisualNodes';
+import { createSpiritualRootFrame } from 'db://assets/scripts/presentation/camp/expedition/SpiritualRootFrame';
 
 export interface ExpeditionPreparationActions {
     readonly editParty: () => void;
@@ -213,6 +214,7 @@ function renderHeroCard(
         createLabel(card, 'Undecided', '人选未定', 0, -78, 72, 24, 13, EXPEDITION_COLORS.textSecondary);
         return;
     }
+    createSpiritualRootFrame(card, hero.spiritualRootId, 0, 0, width, height);
     const details = [
         `灵息 ${hero.stamina}`,
         expeditionText(hero.nameKey),

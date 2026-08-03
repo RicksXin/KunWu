@@ -1,0 +1,242 @@
+{
+  "defenseLevelConstant": 100,
+  "partyInitialActionTimers": [30, 40, 50, 60],
+  "skills": [
+    {
+      "id": "zhan_ji",
+      "nameKey": "skill.zhan_ji",
+      "damageKind": "physical",
+      "targetType": "ENEMY_SINGLE",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 20,
+      "cooldownTicks": 0,
+      "primaryAttribute": "strength",
+      "primaryPercent": 110
+    },
+    {
+      "id": "tiao_xin",
+      "nameKey": "skill.tiao_xin",
+      "damageKind": "none",
+      "targetType": "SELF",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 24,
+      "cooldownTicks": 120,
+      "primaryAttribute": "strength",
+      "primaryPercent": 0,
+      "appliesStatus": {
+        "kind": "gather_spirit",
+        "durationTicks": 100,
+        "magnitude": 120
+      }
+    },
+    {
+      "id": "chong_zhuang",
+      "nameKey": "skill.chong_zhuang",
+      "damageKind": "physical",
+      "targetType": "ENEMY_SINGLE",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 28,
+      "cooldownTicks": 80,
+      "primaryAttribute": "strength",
+      "primaryPercent": 90,
+      "appliesStatus": {
+        "kind": "stun",
+        "durationTicks": 20,
+        "magnitude": 0
+      }
+    },
+    {
+      "id": "ling_huo_dan",
+      "nameKey": "skill.ling_huo_dan",
+      "damageKind": "magical",
+      "targetType": "ENEMY_SINGLE",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 22,
+      "cooldownTicks": 0,
+      "primaryAttribute": "magic",
+      "primaryPercent": 120,
+      "secondaryAttribute": "technique",
+      "secondaryPercent": 30
+    },
+    {
+      "id": "ning_shuang_hu",
+      "nameKey": "skill.ning_shuang_hu",
+      "damageKind": "none",
+      "targetType": "ALLY_LOWEST_HP",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 26,
+      "cooldownTicks": 140,
+      "primaryAttribute": "magic",
+      "primaryPercent": 0,
+      "appliesStatus": {
+        "kind": "shield",
+        "durationTicks": 160,
+        "magnitude": 60
+      }
+    },
+    {
+      "id": "ling_neng_zhen_dang",
+      "nameKey": "skill.ling_neng_zhen_dang",
+      "damageKind": "magical",
+      "targetType": "ENEMY_ALL",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 34,
+      "cooldownTicks": 200,
+      "primaryAttribute": "magic",
+      "primaryPercent": 70
+    },
+    {
+      "id": "hui_chun_shu",
+      "nameKey": "skill.hui_chun_shu",
+      "damageKind": "none",
+      "targetType": "ALLY_LOWEST_HP",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 24,
+      "cooldownTicks": 0,
+      "primaryAttribute": "magic",
+      "primaryPercent": 130
+    },
+    {
+      "id": "qing_xin_jue",
+      "nameKey": "skill.qing_xin_jue",
+      "damageKind": "none",
+      "targetType": "ALLY_ALL",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 30,
+      "cooldownTicks": 180,
+      "primaryAttribute": "magic",
+      "primaryPercent": 0,
+      "appliesStatus": {
+        "kind": "purify",
+        "durationTicks": 20,
+        "magnitude": 1
+      }
+    },
+    {
+      "id": "ling_guang_ji",
+      "nameKey": "skill.ling_guang_ji",
+      "damageKind": "magical",
+      "targetType": "ENEMY_SINGLE",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 24,
+      "cooldownTicks": 0,
+      "primaryAttribute": "magic",
+      "primaryPercent": 85
+    },
+    {
+      "id": "ying_xi",
+      "nameKey": "skill.ying_xi",
+      "damageKind": "physical",
+      "targetType": "ENEMY_LOWEST_HP",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 18,
+      "cooldownTicks": 0,
+      "primaryAttribute": "technique",
+      "primaryPercent": 115,
+      "secondaryAttribute": "speed",
+      "secondaryPercent": 25
+    },
+    {
+      "id": "tou_ren",
+      "nameKey": "skill.tou_ren",
+      "damageKind": "physical",
+      "targetType": "ENEMY_RANDOM_MULTI",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 26,
+      "cooldownTicks": 100,
+      "primaryAttribute": "technique",
+      "primaryPercent": 65
+    },
+    {
+      "id": "yan_dun",
+      "nameKey": "skill.yan_dun",
+      "damageKind": "none",
+      "targetType": "SELF",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 24,
+      "cooldownTicks": 220,
+      "primaryAttribute": "technique",
+      "primaryPercent": 0,
+      "appliesStatus": {
+        "kind": "haste",
+        "durationTicks": 120,
+        "magnitude": 40
+      }
+    },
+    {
+      "id": "shi_kui_zhen_di",
+      "nameKey": "skill.shi_kui_zhen_di",
+      "damageKind": "physical",
+      "targetType": "ENEMY_ALL",
+      "ignoreTaunt": true,
+      "baseIntervalTicks": 40,
+      "cooldownTicks": 120,
+      "primaryAttribute": "strength",
+      "primaryPercent": 45
+    },
+    {
+      "id": "shi_kui_jin_shen",
+      "nameKey": "skill.shi_kui_jin_shen",
+      "damageKind": "none",
+      "targetType": "SELF",
+      "ignoreTaunt": true,
+      "baseIntervalTicks": 34,
+      "cooldownTicks": 160,
+      "primaryAttribute": "constitution",
+      "primaryPercent": 0,
+      "appliesStatus": {
+        "kind": "shield",
+        "durationTicks": 100,
+        "magnitude": 24
+      }
+    },
+    {
+      "id": "shi_kui_zhong_quan",
+      "nameKey": "skill.shi_kui_zhong_quan",
+      "damageKind": "physical",
+      "targetType": "ENEMY_LOWEST_HP",
+      "ignoreTaunt": false,
+      "baseIntervalTicks": 30,
+      "cooldownTicks": 0,
+      "primaryAttribute": "strength",
+      "primaryPercent": 90
+    }
+  ],
+  "encounters": [
+    {
+      "id": "can_jin_shi_kui",
+      "escapeEnemyHpPercent": 35,
+      "soulCrystalReward": 200,
+      "enemies": [
+        {
+          "id": "can_jin_shi_kui_01",
+          "nameKey": "enemy.can_jin_shi_kui",
+          "raceKey": "race.puppet",
+          "maxHp": 480,
+          "attributes": {
+            "strength": 14,
+            "magic": 3,
+            "technique": 5,
+            "speed": 5,
+            "constitution": 18,
+            "armor": 18,
+            "resistance": 8
+          },
+          "skillIds": [
+            "shi_kui_zhen_di",
+            "shi_kui_jin_shen",
+            "shi_kui_zhong_quan"
+          ],
+          "initialActionTimer": 45
+        }
+      ],
+      "loot": [
+        {
+          "itemId": "bigu_cake",
+          "nameKey": "item.bigu_cake",
+          "amount": 1
+        }
+      ]
+    }
+  ]
+}

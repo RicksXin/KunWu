@@ -7,6 +7,7 @@ import type {
     ExpeditionMapOption,
     ExpeditionPreparationConfig,
 } from 'db://assets/scripts/domain/ExpeditionPreparation';
+import type { AppRoot } from 'db://assets/scripts/AppRoot';
 import type { Profile } from 'db://assets/scripts/services/GameState';
 import {
     availableExpeditionItemCount,
@@ -63,4 +64,50 @@ export function prepareExpeditionDeparture(
         ),
         restUses: restUseLimit(config.field, profile.camp.buildingLevels.lian_qi_fang ?? 0),
     };
+}
+
+export async function startExpeditionDeparture(
+    app: AppRoot,
+    config: ExpeditionPreparationConfig,
+    map: ExpeditionMapOption,
+    closePreparation: () => void,
+): Promise<void> {
+    const profile = app.state.require();
+    const departure = prepareExpeditionDeparture(profile, config, map);
+    if (!departure.ok) {
+        app.showFeedback(departure.message, 3);
+        return;
+    }
+    Object.assign(profile.expeditionPreparation.loadout, departure.loadout);
+    app.events.emit('expedition.mapSelected', {
+        mapId: map.mapId,
+        partyPresetId: departure.partyPresetId,
+        partyMemberIds: departure.partyMemberIds,
+        staminaCost: map.staminaCost,
+        loadout: departure.loadout,
+        carriedItems: departure.carriedItems,
+        restUses: departure.restUses,
+    });
+    app.map.stageDeparture({
+        mapId: map.mapId,
+        partyPresetId: departure.partyPresetId,
+        partyMemberIds: departure.partyMemberIds,
+        staminaCost: map.staminaCost,
+        loadout: departure.loadout,
+        carriedItems: departure.carriedItems,
+        restUses: departure.restUses,
+    });
+    closePreparation();
+    try {
+        await app.router.replaceRoot({ pageId: 'map', params: { mapId: map.mapId } });
+    } catch (error) {
+        app.map.cancelStagedDeparture();
+        console.error('[入山整备] 地图场景加载失败', error);
+        app.showFeedback('地图加载失败，未扣除灵息与物资', 3);
+        try {
+            await app.router.replaceRoot({ pageId: 'camp' });
+        } catch (restoreError) {
+            console.error('[入山整备] 恢复营地场景失败', restoreError);
+        }
+    }
 }

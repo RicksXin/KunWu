@@ -58,8 +58,9 @@ Demo 阶段按约定不强制 API First。客户端直接使用 `MapApplicationS
 - `carriedItems`：启程时从营地库存转入的开山镐、探灵镜等携带物。
 - `restUsesRemaining / isResting / restHealingUsed`：休整次数与刷新恢复状态。
 
-Profile 另以 `completedMapObjects: Record<string, boolean>` 持久保存一次性地图对象状态，
-键为 `map_id.object_id`。永久地图对象状态于 v6 引入；v7 增加启程队伍、携带物、
+Profile 以 `completedMapObjects: Record<string, boolean>` 持久保存对象状态，键为
+`map_id.object_id`。宝箱和一次性剧情跨入山保留；普通野外敌人的完成标记只在本次入山保留，
+创建新的 `ExpeditionState` 时按当前地图配置原子清除。对象状态于 v6 引入；v7 增加启程队伍、携带物、
 灵粮容量与休整状态，并为 v6 存档发放 1 张初始归营符；v8 增加
 `grainDepletionSteps`，旧档迁移默认补 0。`expeditionPreparation` 仍只保存营地中的
 队伍和下次携带偏好。
@@ -90,11 +91,14 @@ Profile 另以 `completedMapObjects: Record<string, boolean>` 持久保存一次
 - D0 每次入山只有 1 次休整。进入休整立即原子保存；休整中锁定地图输入。
 - 补充灵粮按外置配置消耗 `beast_meat`（妖兽肉）或 `bigu_cake`（辟谷饼），没有食材
   时只提示，不修改灵粮。运功疗伤每次休整仅可执行一次。
-- 背包面板只读取 `temporaryLoot`；队伍与设置暂显示“功能待定”。
+- 背包面板只读取 `temporaryLoot`，使用五列 `48×48` 物品格平铺展示；格内为物品图标和右下角数量。
+  已有物品图标从 camp Bundle 复用，缺失图标的物品使用可辨识灰盒图形降级；队伍与设置暂显示“功能待定”。
 - 归营从任意坐标原子消耗 `return_talisman`（归营符）并按安全返回结算。无归营符时
   只能补粮后继续行动或在衰竭步数耗尽前返回入口，不提供紧急撤离。
 - 角色移动 Tween 抵达入口格后才打开归营确认层；启程初始化和刷新恢复在入口时
   不自动弹出。确认使用无符的安全归营，取消只关闭弹窗。
+- 归营结算成功后不打开结果面板；持久全局遮罩以 `0.28s` 正弦缓动变为纯黑，在黑屏中
+  切换到营地，再以 `0.36s` 正弦缓动恢复。转场期间全程拦截输入；保存失败不开始转场。
 
 - 固定敌人「残禁石傀」位于配置坐标；只有进入当前视野时才显示标记。
 - `MapEventPanelController` 统一管理敌人、故事、宝箱、NPC、资源点和秘境入口的

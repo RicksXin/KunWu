@@ -92,6 +92,9 @@
   "skill.ying_xi": "影袭",
   "skill.tou_ren": "投刃",
   "skill.yan_dun": "烟遁",
+  "skill.shi_kui_zhen_di": "震地",
+  "skill.shi_kui_jin_shen": "禁身",
+  "skill.shi_kui_zhong_quan": "石拳",
   "skill.fei_fu": "飞符",
   "skill.fu_shen_fu": "缚身符",
   "skill.hu_shen_fu": "护身符",
@@ -101,5 +104,8 @@
   "hero.shi_yan": "石岩",
   "hero.lu_qing": "陆清",
   "hero.bai_ling": "白灵",
-  "hero.mo_yan": "墨言"
+  "hero.mo_yan": "墨言",
+  "enemy.can_jin_shi_kui": "残禁石傀",
+  "race.human": "人",
+  "race.puppet": "傀"
 }

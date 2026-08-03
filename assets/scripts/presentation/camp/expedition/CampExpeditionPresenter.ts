@@ -24,6 +24,7 @@ import { campNode } from 'db://assets/scripts/presentation/camp/shared/CampViewU
 import type { CampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
 import {
     adjustExpeditionLoadout,
+    maximizeExpeditionSpiritGrain,
     toggleExpeditionHero,
     unlockExpeditionParty,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionMutations';
@@ -33,7 +34,7 @@ import {
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionPreparationView';
 import { renderExpeditionHeroSelection } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionHeroSelectionView';
 import { renderExpeditionMapSelection } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionMapSelectionView';
-import { prepareExpeditionDeparture } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionDeparture';
+import { startExpeditionDeparture } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionDeparture';
 import { settleExpeditionStamina } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionStamina';
 import {
     EXPEDITION_LOGICAL_HEIGHT,
@@ -42,6 +43,7 @@ import {
 import { loadExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionVisualAssets';
 import { createEmptyExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionViewTypes';
 import type { ExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionViewTypes';
+import { ExpeditionSaveQueue } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionState';
 const { ccclass } = _decorator;
 
 /** 营地传送阵唤起的入山整备页面协调器。 */
@@ -55,7 +57,7 @@ export class CampExpeditionPresenter extends Component {
     private visualAssets: ExpeditionVisualAssets = createEmptyExpeditionVisualAssets();
     private visualLoadStarted = false;
     private departureInFlight = false;
-    private saveQueue: Promise<void> = Promise.resolve();
+    private readonly saves = new ExpeditionSaveQueue();
 
     static showFrom(owner: Component): void {
         const canvas = owner.node.scene?.getChildByName(CAMP_SCENE_NODE_NAMES.canvas) ?? null;
@@ -104,6 +106,7 @@ export class CampExpeditionPresenter extends Component {
         if (this.selectionLayer) this.selectionLayer.active = false;
         if (this.mapLayer) this.mapLayer.active = false;
         this.settleStamina();
+        if (this.applyDefaultSpiritGrain()) this.saves.enqueue('更新默认灵粮');
         this.renderPreparation();
     }
 
@@ -162,7 +165,8 @@ export class CampExpeditionPresenter extends Component {
     private switchParty(presetId: string): void {
         const profile = AppRoot.instance.state.require();
         profile.expeditionPreparation.activePresetId = presetId;
-        this.queueSave('切换队伍');
+        this.applyDefaultSpiritGrain();
+        this.saves.enqueue('切换队伍');
         this.renderPreparation();
     }
 
@@ -173,7 +177,8 @@ export class CampExpeditionPresenter extends Component {
         const result = unlockExpeditionParty(profile, this.config, index);
         if (result.walletChanged) app.events.emit('wallet.changed', { wallet: profile.wallet });
         if (result.changed) {
-            this.queueSave('解锁队伍');
+            this.applyDefaultSpiritGrain();
+            this.saves.enqueue('解锁队伍');
             this.renderPreparation();
         }
         result.message && app.showFeedback(result.message);
@@ -185,7 +190,7 @@ export class CampExpeditionPresenter extends Component {
         const result = adjustExpeditionLoadout(app.state.require(), this.config, itemId, delta);
         if (result.message) app.showFeedback(result.message);
         if (!result.changed) return;
-        this.queueSave('调整入山物资');
+        this.saves.enqueue('调整入山物资');
         this.renderPreparation();
     }
 
@@ -206,7 +211,8 @@ export class CampExpeditionPresenter extends Component {
         const result = toggleExpeditionHero(app.state.require(), hero);
         if (result.message) app.showFeedback(result.message);
         if (!result.changed) return;
-        this.queueSave('编辑队伍');
+        this.applyDefaultSpiritGrain();
+        this.saves.enqueue('编辑队伍');
         this.openHeroSelection();
     }
 
@@ -230,47 +236,17 @@ export class CampExpeditionPresenter extends Component {
     private async selectMap(map: ExpeditionMapOption): Promise<void> {
         const app = AppRoot.instance;
         if (!app.state.isLoaded || !this.config || this.departureInFlight) return;
-        const profile = app.state.require();
-        const departure = prepareExpeditionDeparture(profile, this.config, map);
-        if (!departure.ok) {
-            app.showFeedback(departure.message, 3);
-            return;
-        }
-        Object.assign(profile.expeditionPreparation.loadout, departure.loadout);
-        app.events.emit('expedition.mapSelected', {
-            mapId: map.mapId,
-            partyPresetId: departure.partyPresetId,
-            partyMemberIds: departure.partyMemberIds,
-            staminaCost: map.staminaCost,
-            loadout: departure.loadout,
-            carriedItems: departure.carriedItems,
-            restUses: departure.restUses,
-        });
-        app.map.stageDeparture({
-            mapId: map.mapId,
-            partyPresetId: departure.partyPresetId,
-            partyMemberIds: departure.partyMemberIds,
-            staminaCost: map.staminaCost,
-            loadout: departure.loadout,
-            carriedItems: departure.carriedItems,
-            restUses: departure.restUses,
-        });
         this.departureInFlight = true;
-        this.close();
         try {
-            await app.router.replaceRoot({ pageId: 'map', params: { mapId: map.mapId } });
-        } catch (error) {
-            app.map.cancelStagedDeparture();
-            console.error('[入山整备] 地图场景加载失败', error);
-            app.showFeedback('地图加载失败，未扣除灵息与物资', 3);
-            try {
-                await app.router.replaceRoot({ pageId: 'camp' });
-            } catch (restoreError) {
-                console.error('[入山整备] 恢复营地场景失败', restoreError);
-            }
+            await startExpeditionDeparture(app, this.config, map, () => this.close());
         } finally {
             this.departureInFlight = false;
         }
+    }
+
+    private applyDefaultSpiritGrain(): boolean {
+        if (!this.config) return false;
+        return maximizeExpeditionSpiritGrain(AppRoot.instance.state.require(), this.config).changed;
     }
 
     private async loadVisualAssets(): Promise<void> {
@@ -291,7 +267,7 @@ export class CampExpeditionPresenter extends Component {
         const profile = app.state.require();
         const result = settleExpeditionStamina(profile, this.config, app.time.nowUtcSeconds());
         if (!result.changed) return;
-        this.queueSave('灵息自然恢复');
+        this.saves.enqueue('灵息自然恢复');
         if (result.recovered > 0) app.events.emit('heroes.staminaChanged', { recovered: result.recovered });
     }
 
@@ -309,14 +285,6 @@ export class CampExpeditionPresenter extends Component {
         this.renderPreparation();
         if (this.selectionLayer?.active) this.openHeroSelection();
     };
-
-    private queueSave(reason: string): void {
-        const app = AppRoot.instance;
-        this.saveQueue = this.saveQueue.then(() => app.saveCurrentProfile()).catch((error: unknown) => {
-            console.error(`[入山整备] ${reason}保存失败`, error);
-            app.showFeedback('入山整备保存失败');
-        });
-    }
 
     private readonly onKeyDown = (event: EventKeyboard): void => {
         if (!this.node.active || event.keyCode !== KeyCode.ESCAPE) return;

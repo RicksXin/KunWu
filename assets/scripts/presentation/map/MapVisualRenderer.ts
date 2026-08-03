@@ -175,7 +175,7 @@ function renderMarkers(
     for (const object of map.objects) {
         const fogState = fog.stateAt(new GridCoord(object.x, object.y));
         if (object.kind === 'enemy_group') {
-            if (fogState !== 'VISIBLE') continue;
+            if (fogState !== 'VISIBLE' || completedObjects[`${map.id}.${object.id}`]) continue;
             graphics.fillColor = new Color(204, 75, 61, 245);
             drawDiamond(graphics, center(object.x), center(object.y), 16);
         } else if (fogState !== 'UNKNOWN' && !completedObjects[`${map.id}.${object.id}`]) {

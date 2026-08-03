@@ -4,7 +4,10 @@ import { TimeService } from 'db://assets/scripts/services/TimeService';
 import { DataRegistry } from 'db://assets/scripts/services/DataRegistry';
 import { GameState } from 'db://assets/scripts/services/GameState';
 import { BrowserLifecycle } from 'db://assets/scripts/services/BrowserLifecycle';
-import { CocosSceneRouter } from 'db://assets/scripts/presentation/routing/CocosSceneRouter';
+import {
+    CocosSceneRouter,
+    fadeSceneOverlay,
+} from 'db://assets/scripts/presentation/routing/CocosSceneRouter';
 import type { SaveRepository } from 'db://assets/scripts/services/SaveRepository';
 import { serializeProfile } from 'db://assets/scripts/services/ProfileCodec';
 import { LingPuService } from 'db://assets/scripts/services/LingPuService';
@@ -128,6 +131,7 @@ export class AppRoot extends Component {
             },
             onPageChanged: (entry) => this.events.emit('router.pageChanged', entry),
             onAtRoot: () => this.showFeedback('已在营地'),
+            onFadeChanged: (opaque) => fadeSceneOverlay(this.loadingOverlay, opaque),
         });
 
         // 浏览器切后台时暂停渲染与战斗表现，但领域计时用可信时间补算

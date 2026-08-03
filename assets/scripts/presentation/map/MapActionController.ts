@@ -66,7 +66,7 @@ export class MapActionController {
         if (!expedition || !config) return;
         renderRestOverlay(expedition, config, this.host.nodes);
         if (this.host.nodes.backpackRoot.active) {
-            renderBackpackOverlay(expedition, config, this.host.nodes);
+            renderBackpackOverlay(expedition, this.host.nodes);
         }
     }
 
@@ -134,7 +134,7 @@ export class MapActionController {
             AppRoot.instance.showFeedback(result.message);
             return;
         }
-        await AppRoot.instance.router.replaceRoot({ pageId: 'camp' });
+        await AppRoot.instance.router.replaceRoot({ pageId: 'camp' }, 'fade');
     }
 
     private readonly openParty = (): void => {
@@ -147,9 +147,8 @@ export class MapActionController {
 
     private readonly openBackpack = (): void => {
         const expedition = AppRoot.instance.state.require().expedition;
-        const config = this.host.getConfig();
-        if (!expedition || !config) return;
-        renderBackpackOverlay(expedition, config, this.host.nodes);
+        if (!expedition) return;
+        renderBackpackOverlay(expedition, this.host.nodes);
         this.host.nodes.backpackRoot.active = true;
     };
 
@@ -172,7 +171,7 @@ export class MapActionController {
             return;
         }
         this.host.nodes.entryReturnRoot.active = false;
-        await AppRoot.instance.router.replaceRoot({ pageId: 'camp' });
+        await AppRoot.instance.router.replaceRoot({ pageId: 'camp' }, 'fade');
     }
 
     private readonly cancelEntryReturn = (): void => {

@@ -10,10 +10,12 @@ import type { HeroInstance } from 'db://assets/scripts/services/GameState';
 import type { EventBus } from 'db://assets/scripts/services/EventBus';
 import type { GameState } from 'db://assets/scripts/services/GameState';
 import {
+    clearNormalEnemyProgress,
     mapErrorMessage,
     mapMoveRejectionMessage,
     replaceRecord,
     replaceSet,
+    restoreMapProgress,
     restoreRecordValue,
     restoreStamina,
 } from './MapApplicationUtils';
@@ -101,6 +103,7 @@ export class MapApplicationService {
         const staminaBefore = party.map((hero) => [hero.instanceId, hero.stamina] as const);
         const recoveryAnchorBefore = profile.expeditionPreparation.lastStaminaSettledAtUtc;
         const departedAtUtc = this.nowUtcSeconds();
+        const enemyProgressBefore = clearNormalEnemyProgress(profile, map);
         try {
             profile.wallet.spiritGrain -= pending.loadout.spiritGrain;
             for (const [itemId, amount] of Object.entries(pending.carriedItems)) {
@@ -134,6 +137,7 @@ export class MapApplicationService {
             replaceRecord(profile.inventory, inventoryBefore);
             restoreStamina(profile, staminaBefore);
             profile.expeditionPreparation.lastStaminaSettledAtUtc = recoveryAnchorBefore;
+            restoreMapProgress(profile, enemyProgressBefore);
             profile.expedition = null;
             return { ok: false, message: mapErrorMessage('入山状态保存失败', error) };
         }

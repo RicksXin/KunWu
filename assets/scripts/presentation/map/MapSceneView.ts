@@ -54,7 +54,8 @@ export interface MapSceneNodes {
     readonly healButton: Node;
     readonly continueButton: Node;
     readonly backpackRoot: Node;
-    readonly backpackItemsLabel: Label;
+    readonly backpackGridRoot: Node;
+    readonly backpackEmptyLabel: Label;
     readonly backpackCloseButton: Node;
     readonly entryReturnRoot: Node;
     readonly entryReturnConfirmButton: Node;
@@ -160,10 +161,13 @@ function buildBackpackOverlay(root: Node) {
     backpackRoot.addComponent(BlockInputEvents);
     const card = createMapPanel(backpackRoot, 'BackpackPanel', 0, 0, 331, 340, overlayFill(), hudBorder());
     createMapLabel(card, 'Title', '本次入山所得', 0, 137, 295, 36, 20, new Color(232, 224, 190));
-    const backpackItemsLabel = createMapLabel(card, 'Items', '尚未获得临时战利品', 0, 18, 285, 190, 14);
+    const backpackGridRoot = createMapNode(card, 'ItemGrid', 0, 18, 285, 190);
+    const backpackEmptyLabel = createMapLabel(
+        card, 'Empty', '尚未获得临时战利品', 0, 18, 285, 190, 14,
+    );
     const backpackCloseButton = createMapButton(card, 'Close', '关闭', 0, -137, 126, 48);
     backpackRoot.active = false;
-    return { backpackRoot, backpackItemsLabel, backpackCloseButton };
+    return { backpackRoot, backpackGridRoot, backpackEmptyLabel, backpackCloseButton };
 }
 
 function buildEntryReturnOverlay(root: Node) {

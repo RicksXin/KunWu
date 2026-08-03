@@ -5,6 +5,7 @@
 import { evaluateOutcome, isIncapacitated } from './CombatState';
 import type { CombatEventPayload, CombatSnapshot } from './CombatState';
 import { performAction } from './combat/CombatActions';
+import { performChosenAction } from './combat/CombatActions';
 import { tickStatuses } from './combat/CombatEffects';
 import type { ResolverConfig, StepResult } from './combat/CombatResolverTypes';
 
@@ -28,6 +29,7 @@ export function step(snapshot: CombatSnapshot, config: ResolverConfig): StepResu
     });
     const actors = units
         .filter((unit) => !unit.isDead && unit.actionTimer === 0 && !isIncapacitated(unit))
+        .filter((unit) => !config.deferActor?.(unit))
         .map((unit) => unit.unitId)
         .sort((left, right) => left - right);
     for (const actorId of actors) {
@@ -40,6 +42,33 @@ export function step(snapshot: CombatSnapshot, config: ResolverConfig): StepResu
     if (outcome === null && tick >= (config.maxTicks ?? DEFAULT_MAX_TICKS)) outcome = 'draw';
     if (outcome !== null) events.push({ type: 'combat.ended', outcome, tick });
     return { snapshot: { tick, units, outcome }, events };
+}
+
+export interface CombatCommandResult extends StepResult {
+    readonly accepted: boolean;
+}
+
+/** 结算玩家选定的技能；目标仍由领域层按技能目标类型解析。 */
+export function commandSkill(
+    snapshot: CombatSnapshot,
+    actorId: number,
+    skillId: string,
+    config: ResolverConfig,
+): CombatCommandResult {
+    if (snapshot.outcome !== null) return { snapshot, events: [], accepted: false };
+    const events: CombatEventPayload[] = [];
+    const result = performChosenAction(snapshot.units, actorId, skillId, config, events);
+    if (!result.accepted) return { snapshot, events, accepted: false };
+    const pending: CombatSnapshot = { ...snapshot, units: result.units };
+    const outcome = evaluateOutcome(pending);
+    if (outcome !== null) {
+        events.push({ type: 'combat.ended', outcome, tick: snapshot.tick });
+    }
+    return {
+        snapshot: { ...pending, outcome },
+        events,
+        accepted: true,
+    };
 }
 
 export function runToCompletion(

@@ -22,6 +22,21 @@ export function loadoutWeight(
     return EXPEDITION_ITEM_IDS.reduce((sum, id) => sum + loadout[id] * config.items[id].weight, 0);
 }
 
+export function maximumSpiritGrainLoadout(input: {
+    readonly slots: PartySlots;
+    readonly heroes: readonly ExpeditionHeroSnapshot[];
+    readonly loadout: Readonly<ExpeditionLoadout>;
+    readonly availableSpiritGrain: number;
+    readonly config: ExpeditionPreparationConfig;
+}): number {
+    const withoutGrain = { ...input.loadout, spiritGrain: 0 };
+    const limit = partyBurdenLimit(input.slots, input.heroes, input.config);
+    const remainingWeight = Math.max(0, limit - loadoutWeight(withoutGrain, input.config));
+    const grainWeight = input.config.items.spiritGrain.weight;
+    const byWeight = Math.floor(remainingWeight / grainWeight);
+    return Math.max(0, Math.min(Math.floor(input.availableSpiritGrain), byWeight));
+}
+
 export function partyBurdenLimit(
     slots: PartySlots,
     heroes: readonly ExpeditionHeroSnapshot[],
