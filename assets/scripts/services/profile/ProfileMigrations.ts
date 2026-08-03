@@ -232,3 +232,51 @@ export function migrateProfileV5ToV6(payload: Record<string, unknown>): Record<s
         completedMapObjects: profile.completedMapObjects ?? {},
     };
 }
+
+/** v6 → v7：冻结入山队伍与携带物，并持久保存野外休整状态。 */
+export function migrateProfileV6ToV7(payload: Record<string, unknown>): Record<string, unknown> {
+    const profile = recordOf(payload, 'profile');
+    const inventory = profile.inventory && typeof profile.inventory === 'object'
+        && !Array.isArray(profile.inventory)
+        ? profile.inventory as UnknownRecord
+        : {};
+    if (!profile.expedition || typeof profile.expedition !== 'object'
+        || Array.isArray(profile.expedition)) {
+        return {
+            ...profile,
+            inventory: { ...inventory, return_talisman: inventory.return_talisman ?? 1 },
+        };
+    }
+    const expedition = profile.expedition as UnknownRecord;
+    const preparation = profile.expeditionPreparation
+        && typeof profile.expeditionPreparation === 'object'
+        && !Array.isArray(profile.expeditionPreparation)
+        ? profile.expeditionPreparation as UnknownRecord
+        : {};
+    const presets = Array.isArray(preparation.partyPresets) ? preparation.partyPresets : [];
+    const activePresetId = typeof preparation.activePresetId === 'string'
+        ? preparation.activePresetId
+        : 'party_01';
+    const activePreset = presets.find((entry) => entry && typeof entry === 'object'
+        && !Array.isArray(entry) && (entry as UnknownRecord).presetId === activePresetId) as UnknownRecord | undefined;
+    const partyMemberIds = Array.isArray(activePreset?.slots)
+        ? activePreset.slots.filter((id): id is string => typeof id === 'string')
+        : [];
+    const remainingGrain = typeof expedition.remainingGrain === 'number'
+        ? expedition.remainingGrain
+        : 0;
+    return {
+        ...profile,
+        inventory: { ...inventory, return_talisman: inventory.return_talisman ?? 1 },
+        expedition: {
+            ...expedition,
+            partyPresetId: expedition.partyPresetId ?? activePresetId,
+            partyMemberIds: expedition.partyMemberIds ?? partyMemberIds,
+            grainCapacity: expedition.grainCapacity ?? remainingGrain,
+            carriedItems: expedition.carriedItems ?? {},
+            restUsesRemaining: expedition.restUsesRemaining ?? 1,
+            isResting: expedition.isResting ?? false,
+            restHealingUsed: expedition.restHealingUsed ?? false,
+        },
+    };
+}

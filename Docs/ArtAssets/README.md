@@ -34,8 +34,8 @@
 
 | 组件组 | 运行时文件/计划文件 | 复用原则 |
 |---|---|---|
-| 面板 | `ui/ling_pu/ui_ling_pu_panel_frame.png` | 主弹窗与二次弹窗共用；先九宫格拉伸，验收失败后才做页面专用框 |
-| 行底板 | `ui/ling_pu/ui_ling_pu_resource_row.png` | 资源行、装载行、普通列表行优先共用；状态用 Tint、描边、图标和文字叠加 |
+| 面板 | 现行 `ui/ling_pu/ui_ling_pu_panel_frame.png`；重做计划见 `03_灵圃生产弹窗.md` §5.4.1 | 重做为一张全建筑共用基础九宫格；主面板额外叠加上下装饰，二次确认只改变基础框高度，不生成页面专用边框 |
+| 列表项 | 现行 `ui/ling_pu/ui_ling_pu_resource_row.png`；重做计划为 `ui/common/ui_common_list_item_normal.png` + `ui_common_list_item_selected.png` | 普通态与选中态都是完整、不透明的无框底板，通过同一 Sprite 切换；选中态只增加整行轻微明度变化与左侧短标，禁用/锁定继续用 Tint、锁图标和原因文字 |
 | 旧横向按钮（待退役） | `ui/ling_pu/ui_ling_pu_action_button_normal.png` | 仅保留给未迁移的 Prefab/场景引用；新页面不再复用 |
 | 通用行内按钮（已生成） | `ui/common/ui_common_button_inline_normal.png` | 资源行、列表行和卡片内的紧凑操作；可见高度不代替 `48dp` 热区 |
 | 通用底部按钮（现版退回，待重做） | `ui/common/ui_common_button_footer_normal.png` | 主面板底部与二次确认弹窗操作；当前阶梯形外轮廓不通过，不作最终视觉 |

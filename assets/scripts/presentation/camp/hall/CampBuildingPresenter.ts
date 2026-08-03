@@ -39,7 +39,7 @@ export class CampBuildingPresenter extends Component {
         this.disposers.push(
             app.events.on('profile.loaded', () => this.renderAll()),
             app.events.on('story.changed', () => this.renderAll()),
-            app.events.on('camp.badgesChanged', () => this.renderBadges([])),
+            app.events.on('camp.badgesChanged', () => this.renderAll()),
             app.events.on<{ pageId: string }>('router.pageChanged', ({ pageId }) => {
                 if (pageId === 'camp') {
                     this.renderAll();
@@ -94,6 +94,13 @@ export class CampBuildingPresenter extends Component {
             const label = campLabel(this.node, campBuildingPath(buildingId, 'State'));
             label && (label.string = BUILDING_STATE_NAMES[this.buildingStates[buildingId]]);
         }
+        const hasDeadHeroes = profile.roster.some((hero) => hero.isDead);
+        this.renderBadges(hasDeadHeroes ? [{
+            buildingId: 'huan_hun_tan',
+            actionId: 'revive_dead_heroes',
+            isActionable: true,
+            priority: 100,
+        }] : []);
     }
 
     private activateBuilding(index: number): BuildingId | null {

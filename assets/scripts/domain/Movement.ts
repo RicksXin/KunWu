@@ -3,15 +3,16 @@
  *
  * 纯逻辑、无引擎依赖。领域层只认 GridCoord，像素换算在表现层（技术方案 §9.1）。
  *
- * 两条不可放松的规则：
+ * 三条不可放松的规则：
  *   1. 每次只移动上下左右一格，不允许斜走（PRD-05 §2）。
  *      判定用 GridCoord.isAdjacentTo，即曼哈顿距离恰好 1。
- *   2. 每步先校验灵粮，再扣除（PRD-05 §6）。
- *      顺序反了会出现「灵粮扣成负数后才发现走不了」。
+ *   2. 有灵粮时按地形成本扣除，不得扣为负数（PRD-05 §6）。
+ *   3. 灵粮归零后，每次位移推进一层断粮衰竭；达到上限时全队阵亡。
  */
 
 import { GridCoord } from './GridCoord';
-import { canAffordStep, deductStep } from './BurdenAndGrain';
+import { deductStep } from './BurdenAndGrain';
+import { advanceGrainDepletion } from './GrainDepletion';
 import type { TileDefinition } from './MapTypes';
 
 /** 地形成本表（PRD-05 §4）。 */
@@ -41,7 +42,7 @@ export type MoveRejection =
     | 'out_of_bounds'
     /** 目标格不可通行。 */
     | 'not_walkable'
-    /** 灵粮不足。 */
+    /** 断粮衰竭步数已经耗尽。 */
     | 'insufficient_grain';
 
 export type MoveResult =
@@ -50,6 +51,8 @@ export type MoveResult =
           readonly to: GridCoord;
           readonly grainSpent: number;
           readonly remainingGrain: number;
+          readonly grainDepletionSteps: number;
+          readonly partyWiped: boolean;
       }
     | { readonly ok: false; readonly reason: MoveRejection };
 
@@ -74,8 +77,18 @@ export function tryMove(params: {
     readonly bounds: MapBounds;
     readonly tile: TileDefinition;
     readonly remainingGrain: number;
+    readonly grainDepletionSteps: number;
+    readonly grainDepletionStepLimit: number;
 }): MoveResult {
-    const { from, to, bounds, tile, remainingGrain } = params;
+    const {
+        from,
+        to,
+        bounds,
+        tile,
+        remainingGrain,
+        grainDepletionSteps,
+        grainDepletionStepLimit,
+    } = params;
 
     // 不允许斜走：曼哈顿距离必须恰好为 1
     if (!from.isAdjacentTo(to)) {
@@ -88,17 +101,29 @@ export function tryMove(params: {
         return { ok: false, reason: 'not_walkable' };
     }
 
-    // 先校验后扣除
     const cost = tile.moveCost;
-    if (!canAffordStep(remainingGrain, cost)) {
+    if (remainingGrain > 0) {
+        const grainSpent = Math.min(remainingGrain, cost);
+        return {
+            ok: true,
+            to,
+            grainSpent,
+            remainingGrain: grainSpent === cost ? deductStep(remainingGrain, cost) : 0,
+            grainDepletionSteps: 0,
+            partyWiped: false,
+        };
+    }
+    const depletion = advanceGrainDepletion(grainDepletionSteps, grainDepletionStepLimit);
+    if (!depletion) {
         return { ok: false, reason: 'insufficient_grain' };
     }
-
     return {
         ok: true,
         to,
-        grainSpent: cost,
-        remainingGrain: deductStep(remainingGrain, cost),
+        grainSpent: 0,
+        remainingGrain: 0,
+        grainDepletionSteps: depletion.steps,
+        partyWiped: depletion.partyWiped,
     };
 }
 

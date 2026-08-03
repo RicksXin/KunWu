@@ -240,14 +240,20 @@ export class CampExpeditionPresenter extends Component {
         app.events.emit('expedition.mapSelected', {
             mapId: map.mapId,
             partyPresetId: departure.partyPresetId,
+            partyMemberIds: departure.partyMemberIds,
             staminaCost: map.staminaCost,
             loadout: departure.loadout,
+            carriedItems: departure.carriedItems,
+            restUses: departure.restUses,
         });
         app.map.stageDeparture({
             mapId: map.mapId,
             partyPresetId: departure.partyPresetId,
+            partyMemberIds: departure.partyMemberIds,
             staminaCost: map.staminaCost,
             loadout: departure.loadout,
+            carriedItems: departure.carriedItems,
+            restUses: departure.restUses,
         });
         this.departureInFlight = true;
         this.close();

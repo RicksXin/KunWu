@@ -1,5 +1,6 @@
 import {
     EXPEDITION_ITEM_IDS,
+    restUseLimit,
     validateExpeditionReadiness,
 } from 'db://assets/scripts/domain/ExpeditionPreparation';
 import type {
@@ -18,7 +19,10 @@ export type ExpeditionDepartureResult =
     | {
         readonly ok: true;
         readonly partyPresetId: string;
+        readonly partyMemberIds: readonly string[];
         readonly loadout: Profile['expeditionPreparation']['loadout'];
+        readonly carriedItems: Readonly<Record<string, number>>;
+        readonly restUses: number;
     };
 
 export function prepareExpeditionDeparture(
@@ -47,6 +51,16 @@ export function prepareExpeditionDeparture(
     return {
         ok: true,
         partyPresetId: preset.presetId,
+        partyMemberIds: preset.slots.filter((id): id is string => id !== null),
         loadout,
+        carriedItems: Object.fromEntries(
+            EXPEDITION_ITEM_IDS.flatMap((itemId) => {
+                const inventoryId = config.items[itemId].inventoryId;
+                return inventoryId && loadout[itemId] > 0
+                    ? [[inventoryId, loadout[itemId]] as const]
+                    : [];
+            }),
+        ),
+        restUses: restUseLimit(config.field, profile.camp.buildingLevels.lian_qi_fang ?? 0),
     };
 }

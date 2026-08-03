@@ -49,7 +49,7 @@ export class CampBottomHudPresenter extends Component {
     }
 
     protected override start(): void {
-        this.render(null);
+        this.render(AppRoot.instance.campHud.current);
         this.requestRefresh();
     }
 
@@ -104,8 +104,12 @@ export class CampBottomHudPresenter extends Component {
     }
 
     private requestRefresh(): void {
-        void AppRoot.instance.campHud.refresh().catch((error) => {
-            console.error('[底部 HUD] 数据刷新失败', error);
-        });
+        void AppRoot.instance.campHud.refresh()
+            .then((model) => {
+                if (this.node.isValid) this.render(model);
+            })
+            .catch((error) => {
+                console.error('[底部 HUD] 数据刷新失败', error);
+            });
     }
 }

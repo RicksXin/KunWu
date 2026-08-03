@@ -31,7 +31,10 @@
       "x": 9,
       "y": 9,
       "title": "遭遇：残禁石傀",
-      "description": "石傀从残禁中苏醒，挡住了去路。"
+      "description": "石傀从残禁中苏醒，挡住了去路。",
+      "eventActions": ["engage", "inspect", "leave"],
+      "enemyId": "can_jin_shi_kui",
+      "inspectionText": "炼气后期傀物；护甲坚实，灵抗偏低，行动迟缓。"
     },
     {
       "id": "can_bei_liu_hen_01",
@@ -39,7 +42,8 @@
       "x": 7,
       "y": 8,
       "title": "残碑留痕",
-      "description": "风化石碑上留着一行仓促刻下的字：石傀守在东北方，莫从正面惊动它。"
+      "description": "风化石碑上留着一行仓促刻下的字：石傀守在东北方，莫从正面惊动它。",
+      "eventActions": ["leave"]
     },
     {
       "id": "feng_jin_mu_xia_01",
@@ -48,6 +52,8 @@
       "y": 4,
       "title": "封禁木匣",
       "description": "木匣上的禁纹已经黯淡，匣中还留有一柄可用的开山镐。",
+      "eventActions": ["operate", "leave"],
+      "operationLabel": "开启",
       "reward": {
         "itemId": "pickaxe",
         "itemName": "开山镐",

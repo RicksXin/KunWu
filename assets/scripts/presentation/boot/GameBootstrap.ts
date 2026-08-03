@@ -17,6 +17,8 @@ import {
     migrateProfileV3ToV4,
     migrateProfileV4ToV5,
     migrateProfileV5ToV6,
+    migrateProfileV6ToV7,
+    migrateProfileV7ToV8,
     serializeProfile,
 } from 'db://assets/scripts/services/ProfileCodec';
 import {
@@ -119,6 +121,8 @@ export class GameBootstrap extends Component {
                 [3, migrateProfileV3ToV4],
                 [4, migrateProfileV4ToV5],
                 [5, migrateProfileV5ToV6],
+                [6, migrateProfileV6ToV7],
+                [7, migrateProfileV7ToV8],
             ]),
         };
 

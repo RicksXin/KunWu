@@ -16,12 +16,12 @@ import {
     demoTileAt,
     parseDemoMapDefinition,
 } from 'db://assets/scripts/domain/map/DemoMapDefinition';
-import type {
-    DemoMapDefinition,
-    DemoMapObjectDefinition,
-} from 'db://assets/scripts/domain/map/DemoMapDefinition';
+import type { DemoMapDefinition } from 'db://assets/scripts/domain/map/DemoMapDefinition';
 import type { ExpeditionState } from 'db://assets/scripts/services/GameState';
 import type { MapSceneNodes } from 'db://assets/scripts/presentation/map/MapSceneView';
+
+const MAP_MOVE_DURATION_SECONDS = 0.32;
+const MAP_CAMERA_FOLLOW_DURATION_SECONDS = 0.18;
 
 export interface MapRenderOptions {
     readonly centerCamera?: boolean;
@@ -124,27 +124,18 @@ export async function animateMapMove(
     nodes: MapSceneNodes,
 ): Promise<void> {
     placePlayerMarker(map, from, nodes.playerMarker);
-    await tweenPosition(nodes.playerMarker, markerPosition(map, to), 0.16);
-    await tweenPosition(nodes.world, cameraPosition(map, to, nodes), 0.1);
-}
-
-export function showMapObjectOverlay(
-    nodes: MapSceneNodes,
-    object: DemoMapObjectDefinition,
-): void {
-    nodes.encounterTitle.string = object.title;
-    if (object.kind === 'enemy_group') {
-        nodes.encounterMessage.string = `${object.description}\n战斗表现将在下一阶段接入。`;
-    } else if (object.kind === 'treasure_chest' && object.reward) {
-        nodes.encounterMessage.string = [
-            object.description,
-            `获得：${object.reward.itemName} ×${object.reward.amount}`,
-            '临时战利品，安全返营后入库。',
-        ].join('\n');
-    } else {
-        nodes.encounterMessage.string = object.description;
-    }
-    nodes.encounterRoot.active = true;
+    await tweenPosition(
+        nodes.playerMarker,
+        markerPosition(map, to),
+        MAP_MOVE_DURATION_SECONDS,
+        mapMoveBezier,
+    );
+    await tweenPosition(
+        nodes.world,
+        cameraPosition(map, to, nodes),
+        MAP_CAMERA_FOLLOW_DURATION_SECONDS,
+        'cubicOut',
+    );
 }
 
 function renderFog(map: DemoMapDefinition, fog: FogMap, graphics: Graphics): void {
@@ -242,15 +233,23 @@ function placePlayerMarker(map: DemoMapDefinition, player: GridCoord, marker: No
     marker.setPosition(markerPosition(map, player));
 }
 
-function tweenPosition(node: Node, position: Vec3, duration: number): Promise<void> {
+function tweenPosition(
+    node: Node,
+    position: Vec3,
+    duration: number,
+    easing: 'cubicOut' | ((progress: number) => number),
+): Promise<void> {
     if (Vec3.squaredDistance(node.position, position) < 0.01) return Promise.resolve();
     return new Promise((resolve) => {
         tween(node)
-            .to(duration, { position }, { easing: 'cubicOut' })
+            .to(duration, { position }, { easing })
             .call(() => resolve())
             .start();
     });
 }
+
+/** cubic-bezier(0.333, 0, 0.667, 1)：单格移动平缓起步并在落点前减速。 */
+const mapMoveBezier = (progress: number): number => progress * progress * (3 - 2 * progress);
 
 function drawTreasureChest(graphics: Graphics, x: number, y: number): void {
     graphics.fillColor = new Color(221, 167, 60, 250);

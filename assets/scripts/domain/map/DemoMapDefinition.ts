@@ -1,5 +1,10 @@
 import type { GridCoord } from '../GridCoord';
 import type { MapObjectDefinition, TileDefinition } from '../MapTypes';
+import {
+    isDemoMapObjectKind,
+    parseDemoMapEventActions,
+} from './DemoMapEvents';
+import type { DemoMapEventActionId, DemoMapObjectKind } from './DemoMapEvents';
 
 const WALKABLE_TILES: Readonly<Record<string, TileDefinition>> = {
     '.': {
@@ -54,8 +59,17 @@ export interface DemoMapReward {
 }
 
 export interface DemoMapObjectDefinition extends MapObjectDefinition {
+    readonly kind: DemoMapObjectKind;
     readonly title: string;
     readonly description: string;
+    readonly eventActions: readonly DemoMapEventActionId[];
+    readonly enemyId?: string;
+    readonly inspectionText?: string;
+    readonly dialogueText?: string;
+    readonly smallTalkText?: string;
+    readonly operationLabel?: string;
+    readonly requiredItemId?: string;
+    readonly requiredItemName?: string;
     readonly reward?: DemoMapReward;
 }
 
@@ -170,10 +184,11 @@ function objectArrayOf(value: unknown): DemoMapObjectDefinition[] {
     return value.map((entry, index) => {
         const path = `map_01_demo.objects[${index}]`;
         const raw = recordOf(entry, path);
-        const kind = stringOf(raw.kind, `${path}.kind`);
-        if (kind !== 'enemy_group' && kind !== 'treasure_chest' && kind !== 'story_event') {
-            throw new Error(`${path}.kind 当前不支持 ${kind}`);
+        const kindValue = stringOf(raw.kind, `${path}.kind`);
+        if (!isDemoMapObjectKind(kindValue)) {
+            throw new Error(`${path}.kind 当前不支持 ${kindValue}`);
         }
+        const kind = kindValue;
         const reward = rewardOf(raw.reward, path);
         if (kind === 'treasure_chest' && !reward) {
             throw new Error(`${path}.reward 宝箱必须配置奖励`);
@@ -186,6 +201,14 @@ function objectArrayOf(value: unknown): DemoMapObjectDefinition[] {
             initialState: 'AVAILABLE',
             title: stringOf(raw.title, `${path}.title`),
             description: stringOf(raw.description, `${path}.description`),
+            eventActions: parseDemoMapEventActions(raw.eventActions, kind, path),
+            enemyId: optionalStringOf(raw.enemyId, `${path}.enemyId`),
+            inspectionText: optionalStringOf(raw.inspectionText, `${path}.inspectionText`),
+            dialogueText: optionalStringOf(raw.dialogueText, `${path}.dialogueText`),
+            smallTalkText: optionalStringOf(raw.smallTalkText, `${path}.smallTalkText`),
+            operationLabel: optionalStringOf(raw.operationLabel, `${path}.operationLabel`),
+            requiredItemId: optionalStringOf(raw.requiredItemId, `${path}.requiredItemId`),
+            requiredItemName: optionalStringOf(raw.requiredItemName, `${path}.requiredItemName`),
         };
         return reward ? { ...object, reward } : object;
     });
@@ -211,6 +234,10 @@ function recordOf(value: unknown, path: string): UnknownRecord {
 function stringOf(value: unknown, path: string): string {
     if (typeof value !== 'string' || value.length === 0) throw new Error(`${path} 应为非空字符串`);
     return value;
+}
+
+function optionalStringOf(value: unknown, path: string): string | undefined {
+    return value === undefined ? undefined : stringOf(value, path);
 }
 
 function stringArrayOf(value: unknown, path: string): string[] {

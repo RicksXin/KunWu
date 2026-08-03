@@ -8,6 +8,8 @@ export {
 } from './expedition/ExpeditionConfig';
 export type {
     ExpeditionHeroSnapshot,
+    ExpeditionFieldConfig,
+    ExpeditionFoodConfig,
     ExpeditionItemConfig,
     ExpeditionItemId,
     ExpeditionLoadout,
@@ -16,6 +18,14 @@ export type {
     ExpeditionReadiness,
     StaminaSettlement,
 } from './expedition/ExpeditionConfig';
+export {
+    currentExpeditionBurden,
+    currentExpeditionBurdenLimit,
+    fieldItemNameKey,
+    fieldItemWeight,
+    restUseLimit,
+} from './expedition/FieldExpeditionRules';
+export type { FieldExpeditionSnapshot } from './expedition/FieldExpeditionRules';
 export {
     createEmptyLoadout,
     loadoutWeight,

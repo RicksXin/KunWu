@@ -69,11 +69,20 @@ export interface ExpeditionPreparationState {
 
 export interface ExpeditionState {
     readonly mapId: string;
+    readonly partyPresetId: string;
+    readonly partyMemberIds: readonly string[];
     position: GridCoord;
     remainingGrain: number;
+    readonly grainCapacity: number;
+    /** 灵粮归零后已行走的衰竭步数；达配置上限触发全队阵亡。 */
+    grainDepletionSteps: number;
+    readonly carriedItems: Record<string, number>;
+    restUsesRemaining: number;
+    isResting: boolean;
+    restHealingUsed: boolean;
     /** 已揭露格，用位集或坐标键集合保存（技术方案 §9.3）。 */
     readonly revealedTiles: Set<string>;
-    /** 本次入山的临时战利品，战败会遗失。 */
+    /** 本次入山的临时战利品；安全归营全返，全队阵亡按损失规则结算。 */
     readonly temporaryLoot: Record<string, number>;
 }
 

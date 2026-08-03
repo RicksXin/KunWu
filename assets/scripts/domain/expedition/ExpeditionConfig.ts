@@ -28,6 +28,23 @@ export interface ExpeditionMapOption {
     readonly unlockFlag: string | null;
 }
 
+export interface ExpeditionFoodConfig {
+    readonly itemId: string;
+    readonly nameKey: string;
+    readonly weight: number;
+    readonly grainRestored: number;
+}
+
+export interface ExpeditionFieldConfig {
+    readonly restUseLimitsByForgeLevel: readonly number[];
+    readonly grainDepletionStepLimit: number;
+    readonly healingPercent: number;
+    readonly defaultLootWeight: number;
+    readonly foodItems: readonly ExpeditionFoodConfig[];
+    readonly returnTalismanItemId: string;
+    readonly returnTalismanNameKey: string;
+}
+
 export interface ExpeditionPreparationConfig {
     readonly staminaMax: number;
     readonly staminaRecoveryAmount: number;
@@ -39,6 +56,7 @@ export interface ExpeditionPreparationConfig {
     readonly partyUnlockCosts: readonly number[];
     readonly items: Readonly<Record<ExpeditionItemId, ExpeditionItemConfig>>;
     readonly maps: readonly ExpeditionMapOption[];
+    readonly field: ExpeditionFieldConfig;
 }
 
 export interface ExpeditionHeroSnapshot {
@@ -135,6 +153,32 @@ export function parseExpeditionPreparationConfig(value: unknown): ExpeditionPrep
             unlockFlag: nullableStringOf(map.unlockFlag, `maps[${index}].unlockFlag`),
         };
     });
+    const fieldRaw = recordOf(raw.field, 'field');
+    if (!Array.isArray(fieldRaw.restUseLimitsByForgeLevel)
+        || fieldRaw.restUseLimitsByForgeLevel.length === 0) {
+        throw new Error('field.restUseLimitsByForgeLevel 应为非空数组');
+    }
+    const restUseLimitsByForgeLevel = fieldRaw.restUseLimitsByForgeLevel.map(
+        (count, index) => integerOf(count, `field.restUseLimitsByForgeLevel[${index}]`, 1),
+    );
+    const healingPercent = integerOf(fieldRaw.healingPercent, 'field.healingPercent', 1);
+    if (healingPercent > 100) throw new Error('field.healingPercent 不得超过 100');
+    if (!Array.isArray(fieldRaw.foodItems) || fieldRaw.foodItems.length === 0) {
+        throw new Error('field.foodItems 应为非空数组');
+    }
+    const foodIds = new Set<string>();
+    const foodItems = fieldRaw.foodItems.map((foodValue, index): ExpeditionFoodConfig => {
+        const food = recordOf(foodValue, `field.foodItems[${index}]`);
+        const itemId = stringOf(food.itemId, `field.foodItems[${index}].itemId`);
+        if (foodIds.has(itemId)) throw new Error(`field.foodItems 存在重复 ID: ${itemId}`);
+        foodIds.add(itemId);
+        return {
+            itemId,
+            nameKey: stringOf(food.nameKey, `field.foodItems[${index}].nameKey`),
+            weight: integerOf(food.weight, `field.foodItems[${index}].weight`, 1),
+            grainRestored: integerOf(food.grainRestored, `field.foodItems[${index}].grainRestored`, 1),
+        };
+    });
     return {
         staminaMax: integerOf(raw.staminaMax, 'staminaMax', 1),
         staminaRecoveryAmount: integerOf(raw.staminaRecoveryAmount, 'staminaRecoveryAmount', 1),
@@ -146,5 +190,18 @@ export function parseExpeditionPreparationConfig(value: unknown): ExpeditionPrep
         partyUnlockCosts,
         items,
         maps,
+        field: {
+            restUseLimitsByForgeLevel,
+            grainDepletionStepLimit: integerOf(
+                fieldRaw.grainDepletionStepLimit,
+                'field.grainDepletionStepLimit',
+                1,
+            ),
+            healingPercent,
+            defaultLootWeight: integerOf(fieldRaw.defaultLootWeight, 'field.defaultLootWeight', 1),
+            foodItems,
+            returnTalismanItemId: stringOf(fieldRaw.returnTalismanItemId, 'field.returnTalismanItemId'),
+            returnTalismanNameKey: stringOf(fieldRaw.returnTalismanNameKey, 'field.returnTalismanNameKey'),
+        },
     };
 }

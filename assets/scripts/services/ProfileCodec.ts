@@ -15,7 +15,9 @@ export {
     migrateProfileV3ToV4,
     migrateProfileV4ToV5,
     migrateProfileV5ToV6,
+    migrateProfileV6ToV7,
 } from './profile/ProfileMigrations';
+export { migrateProfileV7ToV8 } from './profile/ProfileMapMigrations';
 
 /** 从 shared Bundle 的新档数据种子创建独立 Profile。 */
 export function createDefaultProfile(seed: unknown, nowUtcSeconds: number): Profile {
@@ -65,8 +67,16 @@ export function serializeProfile(profile: Profile): Record<string, unknown> {
         expedition: expedition
             ? {
                   mapId: expedition.mapId,
+                  partyPresetId: expedition.partyPresetId,
+                  partyMemberIds: [...expedition.partyMemberIds],
                   position: { x: expedition.position.x, y: expedition.position.y },
                   remainingGrain: expedition.remainingGrain,
+                  grainCapacity: expedition.grainCapacity,
+                  grainDepletionSteps: expedition.grainDepletionSteps,
+                  carriedItems: { ...expedition.carriedItems },
+                  restUsesRemaining: expedition.restUsesRemaining,
+                  isResting: expedition.isResting,
+                  restHealingUsed: expedition.restHealingUsed,
                   revealedTiles: Array.from(expedition.revealedTiles).sort(),
                   temporaryLoot: { ...expedition.temporaryLoot },
               }

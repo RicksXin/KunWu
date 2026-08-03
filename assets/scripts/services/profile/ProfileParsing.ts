@@ -135,17 +135,40 @@ function campOf(value: unknown, defaultSettledAtUtc?: number): CampState {
     };
 }
 
-function expeditionOf(value: unknown): ExpeditionState | null {
+function expeditionOf(
+    value: unknown,
+    preparation: ExpeditionPreparationState,
+): ExpeditionState | null {
     if (value === null) return null;
     const raw = recordOf(value, 'profile.expedition');
     const position = recordOf(raw.position, 'profile.expedition.position');
+    const partyPresetId = stringOf(raw.partyPresetId, 'profile.expedition.partyPresetId');
+    if (!preparation.partyPresets.some((preset) => preset.presetId === partyPresetId)) {
+        throw new Error(`profile.expedition.partyPresetId ${partyPresetId} 不在已解锁队伍中`);
+    }
+    const remainingGrain = integerOf(raw.remainingGrain, 'profile.expedition.remainingGrain');
+    const grainCapacity = integerOf(raw.grainCapacity, 'profile.expedition.grainCapacity');
+    if (remainingGrain > grainCapacity) {
+        throw new Error('profile.expedition.remainingGrain 不得超过 grainCapacity');
+    }
     return {
         mapId: stringOf(raw.mapId, 'profile.expedition.mapId'),
+        partyPresetId,
+        partyMemberIds: stringArrayOf(raw.partyMemberIds, 'profile.expedition.partyMemberIds'),
         position: new GridCoord(
             integerOf(position.x, 'profile.expedition.position.x'),
             integerOf(position.y, 'profile.expedition.position.y'),
         ),
-        remainingGrain: integerOf(raw.remainingGrain, 'profile.expedition.remainingGrain'),
+        remainingGrain,
+        grainCapacity,
+        grainDepletionSteps: integerOf(
+            raw.grainDepletionSteps,
+            'profile.expedition.grainDepletionSteps',
+        ),
+        carriedItems: numberRecordOf(raw.carriedItems, 'profile.expedition.carriedItems'),
+        restUsesRemaining: integerOf(raw.restUsesRemaining, 'profile.expedition.restUsesRemaining'),
+        isResting: booleanOf(raw.isResting, 'profile.expedition.isResting'),
+        restHealingUsed: booleanOf(raw.restHealingUsed, 'profile.expedition.restHealingUsed'),
         revealedTiles: new Set(stringArrayOf(raw.revealedTiles, 'profile.expedition.revealedTiles')),
         temporaryLoot: numberRecordOf(raw.temporaryLoot, 'profile.expedition.temporaryLoot'),
     };
@@ -232,6 +255,6 @@ export function parseProfile(value: unknown, defaultSettledAtUtc?: number): Prof
             'profile.completedMapObjects',
         ),
         expeditionPreparation,
-        expedition: expeditionOf(raw.expedition),
+        expedition: expeditionOf(raw.expedition, expeditionPreparation),
     };
 }

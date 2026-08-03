@@ -145,7 +145,8 @@
   ],
   "inventory": {
     "pickaxe": 3,
-    "lens": 1
+    "lens": 1,
+    "return_talisman": 1
   },
   "storyFlags": {
     "tutorial_started": false

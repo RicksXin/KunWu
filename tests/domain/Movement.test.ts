@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     moveCostFor,
-    tryMove,
+    tryMove as resolveMove,
     isInBounds,
     pathGrainCost,
     findPath,
@@ -13,6 +13,19 @@ import { GridCoord } from 'db://assets/scripts/domain/GridCoord';
 import type { TileDefinition } from 'db://assets/scripts/domain/MapTypes';
 
 const BOUNDS = { width: 10, height: 10 };
+
+type MoveParams = Omit<
+    Parameters<typeof resolveMove>[0],
+    'grainDepletionSteps' | 'grainDepletionStepLimit'
+>;
+
+function tryMove(params: MoveParams) {
+    return resolveMove({
+        ...params,
+        grainDepletionSteps: 0,
+        grainDepletionStepLimit: 4,
+    });
+}
 
 function tile(overrides: Partial<TileDefinition> = {}): TileDefinition {
     return {
@@ -145,7 +158,7 @@ describe('逐格移动（PRD-05 §2、§6）', () => {
         }
     });
 
-    test('灵粮不足被拒绝且不扣粮', () => {
+    test('剩余灵粮不足支付整步时全部耗尽，衰竭步数从下一步计', () => {
         const result = tryMove({
             from: new GridCoord(5, 5),
             to: new GridCoord(5, 6),
@@ -153,11 +166,41 @@ describe('逐格移动（PRD-05 §2、§6）', () => {
             tile: tile({ moveCost: 3 }),
             remainingGrain: 2,
         });
-        // 先校验后扣除：不该出现扣成负数才发现走不了
-        assert.equal(result.ok, false);
-        if (!result.ok) {
-            assert.equal(result.reason, 'insufficient_grain');
+        assert.equal(result.ok, true);
+        if (result.ok) {
+            assert.equal(result.grainSpent, 2);
+            assert.equal(result.remainingGrain, 0);
+            assert.equal(result.grainDepletionSteps, 0);
         }
+    });
+
+    test('断粮后可再移动四步，第四步触发全队阵亡', () => {
+        let depletionSteps = 0;
+        for (let step = 1; step <= 4; step += 1) {
+            const result = resolveMove({
+                from: new GridCoord(5, 5),
+                to: new GridCoord(5, 6),
+                bounds: BOUNDS,
+                tile: tile(),
+                remainingGrain: 0,
+                grainDepletionSteps: depletionSteps,
+                grainDepletionStepLimit: 4,
+            });
+            assert.equal(result.ok, true);
+            if (!result.ok) return;
+            depletionSteps = result.grainDepletionSteps;
+            assert.equal(result.partyWiped, step === 4);
+        }
+        const blocked = resolveMove({
+            from: new GridCoord(5, 5),
+            to: new GridCoord(5, 6),
+            bounds: BOUNDS,
+            tile: tile(),
+            remainingGrain: 0,
+            grainDepletionSteps: depletionSteps,
+            grainDepletionStepLimit: 4,
+        });
+        assert.equal(blocked.ok, false);
     });
 
     test('灵粮恰好够时允许移动', () => {
@@ -183,6 +226,7 @@ describe('逐格移动（PRD-05 §2、§6）', () => {
             remainingGrain: 0,
         });
         assert.equal(result.ok, true);
+        if (result.ok) assert.equal(result.grainDepletionSteps, 1);
     });
 
     test('不可通行优先于灵粮不足', () => {

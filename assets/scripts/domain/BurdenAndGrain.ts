@@ -120,8 +120,8 @@ export function returnSafetyAlertLevel(state: GrainState): AlertLevel | null {
 }
 
 /**
- * 移动一步是否可行。每步先校验灵粮，再扣除（PRD-05 §6）。
- * 返回 false 时调用方不应扣粮也不应移动。
+ * 有粮阶段是否足以完整支付一步地形成本。
+ * 断粮衰竭移动由 Movement 统一结算，不能仅用本函数决定是否可移动。
  */
 export function canAffordStep(remainingGrain: number, moveCost: number): boolean {
     if (!Number.isInteger(moveCost) || moveCost < 0) {

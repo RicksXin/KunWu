@@ -17,8 +17,10 @@ export type SaveStore = (typeof SAVE_STORES)[number];
  * v4：增加修士灵息、队伍预设、入山携带物与自然恢复结算锚点。
  * v5：旧七档品级迁移为六档 spiritualRootId，并为修士保存稳定 realmId。
  * v6：增加永久地图对象完成状态，防止事件和宝箱重复触发、重复领奖。
+ * v7：冻结入山队伍与携带物，并保存野外休整状态。
+ * v8：保存灵粮归零后的断粮衰竭移动步数。
  */
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 export interface SaveEnvelope {
     readonly schema_version: number;

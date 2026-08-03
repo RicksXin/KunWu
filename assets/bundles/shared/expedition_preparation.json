@@ -28,6 +28,28 @@
         "weight": 4
       }
     ],
+    "field": {
+      "restUseLimitsByForgeLevel": [1],
+      "grainDepletionStepLimit": 4,
+      "healingPercent": 25,
+      "defaultLootWeight": 1,
+      "foodItems": [
+        {
+          "itemId": "beast_meat",
+          "nameKey": "item.beast_meat",
+          "weight": 2,
+          "grainRestored": 8
+        },
+        {
+          "itemId": "bigu_cake",
+          "nameKey": "item.bigu_cake",
+          "weight": 1,
+          "grainRestored": 12
+        }
+      ],
+      "returnTalismanItemId": "return_talisman",
+      "returnTalismanNameKey": "item.return_talisman"
+    },
     "maps": [
       {
         "mapId": "map_01",

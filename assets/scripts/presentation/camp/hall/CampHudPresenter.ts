@@ -4,6 +4,7 @@ import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
 import { CAMP_TOP_HUD_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
 import { CampApplicationError } from 'db://assets/scripts/services/camp/CampApplicationError';
 import type { CampHudViewModel } from 'db://assets/scripts/services/camp/CampApplicationModels';
+import { MainTaskSummary } from 'db://assets/scripts/presentation/core/MainTaskSummary';
 import { ResourceBar } from './ResourceBar';
 import {
     bindCampButton,
@@ -20,6 +21,7 @@ const { ccclass } = _decorator;
 export class CampHudPresenter extends Component {
     private readonly disposers: (() => void)[] = [];
     private readonly activationGate = new EntryActivationGate();
+    private mainTaskSummary: MainTaskSummary | null = null;
 
     protected override onLoad(): void {
         const app = AppRoot.instance;
@@ -38,6 +40,12 @@ export class CampHudPresenter extends Component {
 
         const avatar = campNode(this.node, CAMP_TOP_HUD_PATHS.avatar);
         const mainTask = campNode(this.node, CAMP_TOP_HUD_PATHS.mainTask);
+        const objective = campLabel(this.node, CAMP_TOP_HUD_PATHS.mainTaskObjective);
+        if (mainTask && objective) {
+            this.mainTaskSummary = mainTask.getComponent(MainTaskSummary)
+                ?? mainTask.addComponent(MainTaskSummary);
+            this.mainTaskSummary.bind(objective);
+        }
         bindCampButton(
             this,
             avatar,
@@ -55,7 +63,7 @@ export class CampHudPresenter extends Component {
     }
 
     protected override start(): void {
-        this.renderAll(null);
+        this.renderAll(AppRoot.instance.campHud.current);
         this.requestRefresh();
     }
 
@@ -85,29 +93,20 @@ export class CampHudPresenter extends Component {
     }
 
     private renderMainTask(model: CampHudViewModel | null): void {
-        const label = campLabel(this.node, CAMP_TOP_HUD_PATHS.mainTaskObjective);
-        if (!label) {
-            return;
-        }
-        if (!model) {
-            label.string = '主线：--';
-            return;
-        }
-        const objective = model.mainTaskObjective;
-        label.string = objective ? `主线：${truncateLine(objective)}` : '暂无主线任务';
+        this.mainTaskSummary?.render(model?.mainTaskObjective);
     }
 
     private requestRefresh(): void {
-        void AppRoot.instance.campHud.refresh().catch((error) => {
-            console.error('[顶部 HUD] 数据刷新失败', error);
-            const message = error instanceof CampApplicationError
-                ? error.message
-                : '顶部信息加载失败，请稍后重试';
-            AppRoot.instance.showFeedback(message);
-        });
+        void AppRoot.instance.campHud.refresh()
+            .then((model) => {
+                if (this.node.isValid) this.renderAll(model);
+            })
+            .catch((error) => {
+                console.error('[顶部 HUD] 数据刷新失败', error);
+                const message = error instanceof CampApplicationError
+                    ? error.message
+                    : '顶部信息加载失败，请稍后重试';
+                AppRoot.instance.showFeedback(message);
+            });
     }
-}
-
-function truncateLine(text: string, maxCharacters = 24): string {
-    return text.length > maxCharacters ? `${text.slice(0, maxCharacters - 1)}…` : text;
 }

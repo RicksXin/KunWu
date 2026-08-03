@@ -167,8 +167,16 @@ describe('Profile 存档往返', () => {
         const profile = createDefaultProfile(loadSeed(), 1_000);
         profile.expedition = {
             mapId: 'map_01',
+            partyPresetId: 'party_01',
+            partyMemberIds: ['hero_wu_xiu_01', 'hero_fa_xiu_01'],
             position: new GridCoord(2, 3),
             remainingGrain: 88,
+            grainCapacity: 100,
+            grainDepletionSteps: 2,
+            carriedItems: { pickaxe: 1 },
+            restUsesRemaining: 0,
+            isResting: true,
+            restHealingUsed: true,
             revealedTiles: new Set(['1,1', '2,3']),
             temporaryLoot: { herb: 2 },
         };
@@ -180,6 +188,11 @@ describe('Profile 存档往返', () => {
             Array.from(restored.expedition?.revealedTiles ?? []).sort(),
             ['1,1', '2,3'],
         );
+        assert.deepEqual(restored.expedition?.carriedItems, { pickaxe: 1 });
+        assert.equal(restored.expedition?.grainCapacity, 100);
+        assert.equal(restored.expedition?.grainDepletionSteps, 2);
+        assert.equal(restored.expedition?.isResting, true);
+        assert.equal(restored.expedition?.restHealingUsed, true);
     });
 });
 
