@@ -207,6 +207,7 @@ GenerateEquipment(template, equipmentLevel, qualityRule, source, seed)
 
 - 按制式模板与等级档重复打造。
 - 按已解锁配方重复打造特定装备。
+- 炼制降尘丹等上游明确配置的非装备道具。
 - 整件重铸。
 - 装备分解。
 - 探索工具和上游允许的材料制作。
@@ -222,6 +223,11 @@ GenerateEquipment(template, equipmentLevel, qualityRule, source, seed)
 - 制式配方的品质上限与概率读取上游地图档规则。
 - 特定装备固定品质、等级与效果，只随机七维。
 - 同名特定装备可以存在多个实例；饰品仍受同修士同定义 ID 限制。
+
+降尘丹使用独立的固定产出流程：第三章 Boss 结算解锁 `rcp_dustfall_pill`，每次消耗凝丹灵草1、
+灵晶15，固定产出 `item_breakthrough_dustfall_pill` 降尘丹1。该流程不读取装备等级、品质、随机种子、
+七维或装备容量；材料不足时可追踪地图3保底来源，保存失败时材料与产物全部回滚。配方可重复炼制，
+但降尘丹不可出售、分解或用于结丹之外的系统。
 
 ## 10. 整件重铸
 
@@ -286,6 +292,7 @@ GenerateEquipment(template, equipmentLevel, qualityRule, source, seed)
 | V01-ITEM-006 | 重复打造、整件重铸、新旧二选一、分解与锻纹尘 |
 | V01-ITEM-007 | 交易行商品实例、购买、出售和原实例回购 |
 | V01-ITEM-008 | 正常归营、全队阵亡减半及装备实例完整保存 |
+| V01-ITEM-009 | 炼器坊按固定配方炼制降尘丹，并支持从结丹页跳转 |
 
 ## 15. 验收
 
@@ -300,6 +307,7 @@ GenerateEquipment(template, equipmentLevel, qualityRule, source, seed)
 - 仓库满时所有实例进入待处理区；整理后领取不重复、不丢失。
 - 阵亡保留下来的实例不改变等级、品质、七维和特效。
 - 不获得指定紫装或古宝仍可全员结丹并完成主线。
+- 第三章解锁配方后，凝丹灵草1与灵晶15恰好产出降尘丹1；重复点击或保存失败不多扣材料、不复制产物。
 
 ## 16. 当前不做
 
