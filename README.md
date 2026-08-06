@@ -95,7 +95,7 @@ assets/
 │   └── Boot.scene                 启动场景
 ├── bundles/
 │   ├── camp/                      营地场景、页面 Prefab、建筑和 HUD 素材
-│   ├── shared/                    默认存档、灵圃和入山整备共享配置
+│   ├── shared/                    默认存档、灵源院和入山整备共享配置
 │   ├── map_01/                    地图 1 Bundle 清单；地图页面尚未落地
 │   └── map_02/                    地图 2 Bundle 清单；地图页面尚未落地
 ├── scripts/
@@ -139,7 +139,7 @@ assets/scripts/presentation/
 │   └── GameBootstrap.ts
 ├── camp/
 │   ├── hall/                     营地主大厅、HUD、建筑、NPC 和设置
-│   ├── ling_pu/                  灵圃页面、节点绑定、渲染和素材
+│   ├── ling_pu/                  灵源院页面、节点绑定、渲染和素材
 │   ├── expedition/               入山整备、修士选择、地图选择和素材
 │   └── shared/                   营地页面共享的 Cocos 视图工具
 ├── core/                         跨页面基础组件与视窗适配
@@ -155,7 +155,7 @@ assets/scripts/presentation/
 - `assets/data/heroes/starting.json`：四名初始修士。
 - `assets/data/localization/zh_cn.json`：显示文案和正式术语。
 - `assets/bundles/shared/default_profile.json`：新档默认 Profile。
-- `assets/bundles/shared/ling_pu_config.json`：灵圃运行时配置。
+- `assets/bundles/shared/ling_pu_config.json`：灵源院运行时配置。
 - `assets/bundles/shared/expedition_preparation.json`：入山整备配置。
 - `assets/bundles/map_01|map_02/bundle_manifest.json`：地图 Bundle 清单，目前不是完整地图场景。
 
@@ -173,7 +173,7 @@ Cocos 项目没有 CSS。节点位置、尺寸、字体、颜色和图片引用�
 | 底部 HUD | 当前位于 `Camp.scene/Canvas/SafeAreaRoot/BottomHUD` | `presentation/camp/hall/CampBottomHudPresenter.ts` | `camp/ui/bottom/` |
 | NPC 列表与对话 | 当前位于 `Camp.scene` 的 `NpcListPanel`、`NpcDialogPanel` | `presentation/camp/hall/CampNpcPresenter.ts` | 尚无独立 NPC 素材目录 |
 | 设置页 | 当前位于 `Camp.scene` 的 `SettingsPanel` | `presentation/camp/hall/CampSettingsPresenter.ts` | 尚无独立设置素材目录 |
-| 灵圃 | `camp/prefabs/CampLingPuPage.prefab` | `presentation/camp/ling_pu/` | `camp/ui/ling_pu/`、`camp/ui/common/` |
+| 灵源院 | `camp/prefabs/CampLingPuPage.prefab` | `presentation/camp/ling_pu/` | `camp/ui/ling_pu/`、`camp/ui/common/` |
 | 入山整备、编辑队伍、地图选择 | `camp/prefabs/CampExpeditionPage.prefab` | `presentation/camp/expedition/` | `camp/ui/expedition/`、`camp/ui/common/` |
 | 野外地图 | 尚无页面场景 | 领域基础位于 `Movement.ts`、`FogOfWar.ts`、`TiledImport.ts` | `map_01/`、`map_02/` 当前只有清单 |
 | 战斗 | 尚无页面场景 | `CombatResolver.ts`、`CombatState.ts` 等领域基础 | 战斗表现资源尚未落地 |
@@ -191,7 +191,7 @@ Cocos 项目没有 CSS。节点位置、尺寸、字体、颜色和图片引用�
 | 点击状态 | `cc.Button` |
 | 自动布局 | `cc.Widget`、`cc.Layout` |
 
-如果编辑器里能看到节点，优先在对应场景或 Prefab 中调整；如果某个列表项、卡片或颜色只在运行时出现，再查看对应页面目录。入山整备的动态列表、滚动内容、修士卡片和图形占位位于 `presentation/camp/expedition/`，灵圃的节点绑定、动态渲染和 SpriteFrame 替换位于 `presentation/camp/ling_pu/`。
+如果编辑器里能看到节点，优先在对应场景或 Prefab 中调整；如果某个列表项、卡片或颜色只在运行时出现，再查看对应页面目录。入山整备的动态列表、滚动内容、修士卡片和图形占位位于 `presentation/camp/expedition/`，灵源院的节点绑定、动态渲染和 SpriteFrame 替换位于 `presentation/camp/ling_pu/`。
 
 ### 5.1 营地三层事实源
 
@@ -210,7 +210,7 @@ UI 的唯一新设计基准是 `375×817`，但仓库还没有完成旧坐标迁
 - `Camp.scene`、`settings/v2/packages/project.json`、`ViewportLayout.ts` 和部分工具仍保留旧 `1080×1920` 工程坐标。
 - `CampExpeditionPage.prefab` 已按 `375×817` 编排。
 - `CampLingPuPage.prefab` 仍保留约 3 倍坐标（根节点约 `1125×2451`）。
-- `CampSceneContract.ts` 已描述 `CampPanorama`、`CampTopHud`、`CampBottomHud`、`CampNpcPage`、`CampSettingsPage` 等目标 Prefab；截至 2026-08-02，实际 `prefabs/` 中只有灵圃和入山整备两个页面 Prefab。
+- `CampSceneContract.ts` 已描述 `CampPanorama`、`CampTopHud`、`CampBottomHud`、`CampNpcPage`、`CampSettingsPage` 等目标 Prefab；截至 2026-08-02，实际 `prefabs/` 中只有灵源院和入山整备两个页面 Prefab。
 - `presentation/camp/hall/CampPresenter.ts` 目前是旧场景兼容安装器，运行时安装大厅 HUD、全景、建筑、NPC 和设置组件；调整前仍应检查 `Camp.scene` 的实际组件接线。
 
 `1080×1920` 只能视为待迁移的旧 Cocos 工程坐标，不能继续作为新 UI 或美术尺寸基准。
@@ -228,11 +228,11 @@ Docs/
 ├── 07_分阶段产品需求文档_PRD.md   PRD 总入口和事实源表
 ├── 08_开发进度与待办.md           正式项目阶段状态与 Demo 后待办
 ├── 09_编辑器操作清单.md           必须在 Cocos 编辑器中完成的人工步骤
-├── 13_数值设计方案.md             成长、战斗和灵圃经济设计
+├── 13_数值设计方案.md             成长、战斗和灵源院经济设计
 ├── 14_美术素材制作总清单.md       美术分册总入口
 ├── Demo/                           D0/D1 范围、前后端技术、API、进度与验收
 ├── PRD/                            PRD-00 至 PRD-12 正式系统需求
-└── ArtAssets/                      营地、HUD、灵圃和入山整备素材清单
+└── ArtAssets/                      营地、HUD、灵源院和入山整备素材清单
 ```
 
 `Docs/PRD/` 规定正式产品“做什么、何时做、怎样验收”；`Docs/Demo/` 负责从正式规则中裁剪当前 Demo，并独立维护其技术、API、进度和验收。Demo 日常进度只更新 `Docs/Demo/05_Demo开发进度与待办.md`，正式阶段状态才更新根 `Docs/08_开发进度与待办.md`。
@@ -259,7 +259,7 @@ Docs/
 
 ```text
 tests/
-├── domain/           战斗、地图、迷雾、职业、灵圃、编队等纯逻辑测试
+├── domain/           战斗、地图、迷雾、职业、灵源院、编队等纯逻辑测试
 ├── services/         存档、Bundle、生命周期、时间和全局状态测试
 ├── register.mjs      Node 测试注册入口
 ├── resolver.mjs      兼容 `db://` 与省略扩展名的测试解析器
@@ -334,7 +334,7 @@ strength magic technique speed constitution armor resistance
 | 查看 Demo 当前做到哪里 | `Docs/Demo/05_Demo开发进度与待办.md` |
 | 查看正式项目阶段状态 | `Docs/08_开发进度与待办.md` |
 | 调整营地主大厅节点 | `assets/bundles/camp/Camp.scene` |
-| 调整灵圃页面 | `CampLingPuPage.prefab` + `assets/scripts/presentation/camp/ling_pu/` |
+| 调整灵源院页面 | `CampLingPuPage.prefab` + `assets/scripts/presentation/camp/ling_pu/` |
 | 调整入山整备页面 | `CampExpeditionPage.prefab` + `assets/scripts/presentation/camp/expedition/` |
 | 替换营地建筑或背景图 | `assets/bundles/camp/buildings/`、`env_camp_panorama_bg.png` |
 | 调整 HUD 图标 | `assets/bundles/camp/ui/top/`、`ui/bottom/` |

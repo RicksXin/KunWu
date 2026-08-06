@@ -185,7 +185,7 @@ export class GameBootstrap extends Component {
         return this.loadSharedJson('default_profile');
     }
 
-    /** 灵圃数值表在读取/迁移 Profile 前完成注册，Presenter 不持有硬编码费用。 */
+    /** 灵源院数值表在读取/迁移 Profile 前完成注册，Presenter 不持有硬编码费用。 */
     private async loadLingPuConfig(): Promise<void> {
         const app = AppRoot.instance;
         if (app.data.has(LING_PU_CONFIG_TABLE)) {

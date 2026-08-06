@@ -93,7 +93,7 @@ console.table(
     }),
 );
 
-console.log('\n===== 灵圃经济 =====');
+console.log('\n===== 灵源院经济 =====');
 for (const workerCount of [6, 11, 16]) {
     const all = economySolutions(tables, workerCount);
     const withSide = all.filter((s) => s.hasSideJob);

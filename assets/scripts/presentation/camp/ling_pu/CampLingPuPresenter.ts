@@ -20,7 +20,7 @@ import { loadAndApplyLingPuVisuals } from './LingPuVisualAssets';
 
 const { ccclass } = _decorator;
 
-/** 灵圃页面协调器：只管理生命周期、Application Service 调用和确认流程。 */
+/** 灵源院页面协调器：只管理生命周期、Application Service 调用和确认流程。 */
 @ccclass('CampLingPuPresenter')
 export class CampLingPuPresenter extends Component {
     private readonly disposers: (() => void)[] = [];
@@ -105,7 +105,7 @@ export class CampLingPuPresenter extends Component {
 
     private openRecruitConfirmation(): void {
         if (!this.view || !AppRoot.instance.lingPu.current) {
-            AppRoot.instance.showFeedback('灵圃数据尚未加载');
+            AppRoot.instance.showFeedback('灵源院数据尚未加载');
             return;
         }
         this.confirmationMode = { kind: 'recruit' };
@@ -117,7 +117,7 @@ export class CampLingPuPresenter extends Component {
     private openUpgradeConfirmation(job: P1LingPuJob): void {
         const model = AppRoot.instance.lingPu.current;
         if (!model || !this.view) {
-            AppRoot.instance.showFeedback('灵圃数据尚未加载');
+            AppRoot.instance.showFeedback('灵源院数据尚未加载');
             return;
         }
         if (model.resources[job].upgrade.isMaxLevel) {
@@ -158,10 +158,10 @@ export class CampLingPuPresenter extends Component {
 
     private enqueueOperation(operation: () => Promise<void>): void {
         this.operationQueue = this.operationQueue.then(operation).catch((error) => {
-            console.error('[灵圃] 操作失败', error);
+            console.error('[灵源院] 操作失败', error);
             const message = error instanceof CampApplicationError
                 ? error.message
-                : '灵圃操作失败，请稍后重试';
+                : '灵源院操作失败，请稍后重试';
             AppRoot.instance.showFeedback(message);
             if (error instanceof CampApplicationError && error.code === 'save_failed') {
                 this.cancelConfirmation();
@@ -208,8 +208,8 @@ export class CampLingPuPresenter extends Component {
             await loadAndApplyLingPuVisuals(this.view, () => this.destroyed);
             this.render();
         } catch (error) {
-            console.error('[灵圃] 美术素材加载失败', error);
-            AppRoot.instance.showFeedback('灵圃素材加载失败');
+            console.error('[灵源院] 美术素材加载失败', error);
+            AppRoot.instance.showFeedback('灵源院素材加载失败');
         }
     }
 }

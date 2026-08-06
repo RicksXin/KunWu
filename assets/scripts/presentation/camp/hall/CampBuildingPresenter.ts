@@ -145,7 +145,7 @@ export class CampBuildingPresenter extends Component {
 
 const BUILDING_NAMES: Readonly<Record<BuildingId, string>> = {
     yi_shi_dian: '议事殿',
-    ling_pu: '灵圃',
+    ling_pu: '灵源院',
     zhao_xian_tai: '招贤馆',
     bai_bao_ku: '百宝库',
     lian_qi_fang: '炼器坊',

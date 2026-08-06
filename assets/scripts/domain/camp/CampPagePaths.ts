@@ -49,7 +49,7 @@ export const CAMP_EXPEDITION_CONTENT_PATHS = Object.freeze({
     lensRow: 'LoadoutRows/LensRow',
 });
 
-/** 灵圃面板固定展示的五种资源；P1 后两行保留为 P2 锁定态。 */
+/** 灵源院面板固定展示的五种资源；P1 后两行保留为 P2 锁定态。 */
 export const CAMP_LING_PU_RESOURCE_ROW_IDS = [
     'spiritGrain',
     'spiritWood',

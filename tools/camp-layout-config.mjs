@@ -52,7 +52,7 @@ export const CAMP_LAYOUT = Object.freeze({
 /** 七座建筑的灰盒落点与显示名，键为 HallBadges.BUILDING_IDS。 */
 export const CAMP_BUILDING_LAYOUT = Object.freeze({
     yi_shi_dian: Object.freeze({ label: '议事殿', position: Object.freeze({ x: 0, y: 300 }) }),
-    ling_pu: Object.freeze({ label: '灵圃', position: Object.freeze({ x: 1050, y: 80 }) }),
+    ling_pu: Object.freeze({ label: '灵源院', position: Object.freeze({ x: 1050, y: 80 }) }),
     zhao_xian_tai: Object.freeze({ label: '招贤馆', position: Object.freeze({ x: -350, y: 0 }) }),
     bai_bao_ku: Object.freeze({ label: '百宝库', position: Object.freeze({ x: -1050, y: 260 }) }),
     lian_qi_fang: Object.freeze({ label: '炼器坊', position: Object.freeze({ x: 552, y: -250 }) }),

@@ -40,20 +40,20 @@ export function bindLingPuView(
     const labels: Label[] = [];
     const label = (path: string): Label | null => {
         const result = campNode(owner.node, path)?.getComponent(Label) ?? null;
-        if (!result) console.error(`[灵圃] ${path} 缺少 Label`);
+        if (!result) console.error(`[灵源院] ${path} 缺少 Label`);
         else labels.push(result);
         return result;
     };
     const sprite = (path: string): Sprite | null => {
         const result = campNode(owner.node, path)?.getComponent(Sprite) ?? null;
-        if (!result) console.error(`[灵圃] ${path} 缺少 Sprite`);
+        if (!result) console.error(`[灵源院] ${path} 缺少 Sprite`);
         return result;
     };
     const background = (path: string): VisualBackground | null => {
         const node = campNode(owner.node, path);
         const image = node?.getComponent(Sprite) ?? null;
         if (!node || !image) {
-            console.error(`[灵圃] ${path} 缺少 Sprite 背景`);
+            console.error(`[灵源院] ${path} 缺少 Sprite 背景`);
             return null;
         }
         return { node, sprite: image };
@@ -64,7 +64,7 @@ export function bindLingPuView(
         const visual = background(visualPath);
         const text = labelPath ? label(labelPath) : null;
         if (!node || !control || !visual || (labelPath && !text)) {
-            console.error(`[灵圃] ${nodePath} 按钮结构不完整`);
+            console.error(`[灵源院] ${nodePath} 按钮结构不完整`);
             return null;
         }
         configureButton(control, visual.node);
@@ -108,7 +108,7 @@ export function bindLingPuView(
         confirmationDetail, confirmationError, confirmationPrimary, confirmationCancel,
         confirmationBackdrop];
     if (required.some((value) => !value)) {
-        console.error('[灵圃] Prefab 节点或组件不完整，面板绑定失败');
+        console.error('[灵源院] Prefab 节点或组件不完整，面板绑定失败');
         return null;
     }
 
@@ -116,7 +116,7 @@ export function bindLingPuView(
     for (const definition of RESOURCE_ROW_DEFINITIONS) {
         const row = bindResourceRow(owner, disposers, definition, callbacks, label, sprite, background, button);
         if (!row) {
-            console.error(`[灵圃] ${definition.name}资源栏绑定失败`);
+            console.error(`[灵源院] ${definition.name}资源栏绑定失败`);
             return null;
         }
         rows.set(definition.id, row);
@@ -127,10 +127,10 @@ export function bindLingPuView(
     bindCampButton(owner, closeButton!.node, callbacks.close, disposers);
     bindCampButton(owner, confirmationPrimary!.node, callbacks.confirm, disposers);
     bindCampButton(owner, confirmationCancel!.node, callbacks.cancel, disposers);
-    warnCampTouchTarget(recruitButton!.node, '灵圃杂役招募');
-    warnCampTouchTarget(closeButton!.node, '灵圃关闭');
-    warnCampTouchTarget(confirmationPrimary!.node, '灵圃二次确认');
-    warnCampTouchTarget(confirmationCancel!.node, '灵圃二次确认取消');
+    warnCampTouchTarget(recruitButton!.node, '灵源院杂役招募');
+    warnCampTouchTarget(closeButton!.node, '灵源院关闭');
+    warnCampTouchTarget(confirmationPrimary!.node, '灵源院二次确认');
+    warnCampTouchTarget(confirmationCancel!.node, '灵源院二次确认取消');
     panelRoot!.active = false;
     confirmationRoot!.active = false;
     const view: LingPuView = {
@@ -166,7 +166,7 @@ async function installLingPuModalFrame(
     if (!frame || !view.panelRoot.isValid) return;
     fitLingPuFrameToLegacyContent(view.panelRoot, view, frame);
     frame.mountContents(view.contentNodes);
-    // 共享框架异步挂载期间，灵圃默认仍处于关闭态。
+    // 共享框架异步挂载期间，灵源院默认仍处于关闭态。
     // 单独同步框架自身的 active，避免编辑器热刷新或重挂父节点时露出空壳。
     frame.node.active = view.panelRoot.active;
     view.backdrop.active = false;
@@ -261,7 +261,7 @@ export function syncLingPuViewSize(root: Node, view: LingPuView): void {
     if (view.modalFrame) fitLingPuFrameToLegacyContent(view.panelRoot, view, view.modalFrame);
 }
 
-/** 旧灵圃内容按 1029 宽保存；共享框架沿用该比例以保持资源栏可见。 */
+/** 旧灵源院内容按 1029 宽保存；共享框架沿用该比例以保持资源栏可见。 */
 function fitLingPuFrameToLegacyContent(
     host: Node,
     view: LingPuView,

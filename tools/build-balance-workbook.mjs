@@ -65,7 +65,7 @@ function sheetReadme() {
             ['单挑 TTK', '同级同灵根 1v1 几秒打死。看是否存在一击秒杀'],
             ['续航核算', '医修奶量对比承伤。看治疗是否够用'],
             ['技能表', '18 个技能的倍率与间隔'],
-            ['灵圃经济', '各杂役数下的可行岗位配置。看是否只有一个最优解'],
+            ['灵源院经济', '各杂役数下的可行岗位配置。看是否只有一个最优解'],
         ],
     };
 }
@@ -358,7 +358,7 @@ function sheetSkills() {
     };
 }
 
-/** sheet 9：灵圃经济解空间。 */
+/** sheet 9：灵源院经济解空间。 */
 function sheetEconomy() {
     const jobs = tables.production.jobs;
     const cycle = tables.production.cycleSeconds;
@@ -410,7 +410,7 @@ function sheetEconomy() {
     rows.push(['判据', '初始杂役数下能开副岗的可持续配置不少于 5 个，否则前期无岗位决策']);
 
     return {
-        name: '灵圃经济',
+        name: '灵源院经济',
         header: [
             '杂役数',
             '配置',

@@ -80,7 +80,7 @@ describe('CampSceneContract', () => {
         assert.equal(new Set(nodeNames).size, nodeNames.length, '入口节点名重复');
     });
 
-    it('灵圃模块声明五条可编辑资源栏及其全部内部节点', () => {
+    it('灵源院模块声明五条可编辑资源栏及其全部内部节点', () => {
         const paths = new Set(campModule('lingPuPage').presenterPaths);
         assert.equal(CAMP_LING_PU_RESOURCE_ROW_IDS.length, 5);
         for (const resourceId of CAMP_LING_PU_RESOURCE_ROW_IDS) {

@@ -19,7 +19,7 @@
 ```text
 CampQueryService
 ├─ 查询顶部资源、主线摘要、底部入口状态
-└─ 查询灵圃完整快照
+└─ 查询灵源院完整快照
 
 LingPuCommandService
 ├─ 在线周期结算
@@ -90,7 +90,7 @@ camp_idempotency_record
 
 ### 4.1 通用顺序
 
-所有灵圃命令在同一数据库事务中执行：
+所有灵源院命令在同一数据库事务中执行：
 
 1. 验证账号身份、资源 ID、幂等键和请求体。
 2. 查询幂等记录；同键同请求直接返回首次结果，同键不同请求返回冲突。
@@ -144,12 +144,12 @@ camp_idempotency_record
 - 所有 POST/PUT 命令要求 `Idempotency-Key`。
 - 推荐保留幂等记录至少 24 小时。
 - 同一账号同一 Key 的请求体哈希不一致时返回 `409 idempotency_key_reused`。
-- `If-Match` 与当前 `state_version` 不一致时返回 `409 conflict`，附最新灵圃快照。
+- `If-Match` 与当前 `state_version` 不一致时返回 `409 conflict`，附最新灵源院快照。
 - 多设备同时操作时以先提交成功者为准；后提交者必须刷新后重试，不做静默覆盖。
 
 ## 7. 配置与版本
 
-灵圃状态记录生效的 `balance_version`。配置发布遵循：
+灵源院状态记录生效的 `balance_version`。配置发布遵循：
 
 - 老状态可用当前兼容配置读取。
 - 降低容量时不得直接吞掉玩家已有库存；需要单独迁移策略。
@@ -160,7 +160,7 @@ camp_idempotency_record
 
 - `GET /camp/hud` 可按账号做 1–3 秒短缓存。
 - `GET /camp/ling-pu` 默认不做跨请求长缓存。
-- 任一营地命令提交后使 HUD 与灵圃查询缓存同时失效。
+- 任一营地命令提交后使 HUD 与灵源院查询缓存同时失效。
 - 主线或运营入口状态变更后使 HUD 缓存失效。
 - 服务端响应必须带 `state_version` 和 `server_time_utc`。
 

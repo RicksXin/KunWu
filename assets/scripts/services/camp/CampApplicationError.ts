@@ -28,7 +28,7 @@ export function toCampApplicationError(error: unknown): CampApplicationError {
 function messageFor(code: CampApiErrorCode): string {
     switch (code) {
         case 'profile_not_loaded': return '营地数据尚未加载';
-        case 'config_unavailable': return '灵圃配置尚未加载';
+        case 'config_unavailable': return '灵源院配置尚未加载';
         case 'unauthorized': return '登录状态已失效，请重新登录';
         case 'forbidden': return '当前账号无权执行此操作';
         case 'offline': return '当前网络不可用，请恢复连接后重试';

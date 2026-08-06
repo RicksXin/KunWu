@@ -26,7 +26,7 @@ function loadConfig() {
     return parseLingPuConfig(raw.ling_pu);
 }
 
-describe('灵圃数据配置', () => {
+describe('灵源院数据配置', () => {
     test('新档杂役、招募和三种资源容量均来自数据表', () => {
         const config = loadConfig();
         assert.equal(config.initialWorkerCount, 6);

@@ -123,10 +123,10 @@ const lingPuConfigPath = path.join(
 try {
     const table = JSON.parse(readFileSync(lingPuConfigPath, 'utf8'));
     parseLingPuConfig(table.ling_pu);
-    console.log('灵圃数值配置校验通过');
+    console.log('灵源院数值配置校验通过');
 } catch (error) {
     lingPuConfigError = error;
-    console.error(`灵圃数值配置校验失败：${error.message}`);
+    console.error(`灵源院数值配置校验失败：${error.message}`);
 }
 
 let expeditionConfigError = null;

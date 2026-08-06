@@ -3,14 +3,14 @@
 适用产品版本：0.1 Demo  
 文档修订：1.0  
 日期：2026-08-02  
-范围：顶部固定 HUD、底部固定 HUD、灵圃生产面板
+范围：顶部固定 HUD、底部固定 HUD、灵源院生产面板
 归属：D0 可玩样机
 
 关联 Demo 事实源：
 
 - [Demo 范围与体验闭环](../01_Demo范围与体验闭环.md)
 - [Demo 开发进度与待办 §1.3](../05_Demo开发进度与待办.md#13-建筑与生产页面)
-- [Demo 灵圃美术制作资料](../ArtAssets/03_灵圃生产弹窗.md)
+- [Demo 灵源院美术制作资料](../ArtAssets/03_灵源院生产弹窗.md)
 - [API 契约](../API/P1_CAMP_HUD_LING_PU_API.md)
 - [服务端技术设计](P1_HALL_ECO_服务端技术设计.md)
 - [本地适配器与验收清单](P1_HALL_ECO_本地适配器与验收.md)
@@ -33,7 +33,7 @@ Presenter
 禁止事项：
 
 - Presenter 直接读取或修改 `GameState.require()`。
-- Presenter 读取灵圃配置表、计算产量、停工、费用、容量或事务结果。
+- Presenter 读取灵源院配置表、计算产量、停工、费用、容量或事务结果。
 - Presenter 调用 `fetch`、拼装 HTTP JSON、处理鉴权或服务端错误体。
 - Local Adapter 直接修改 Cocos 节点或绕过 Application Service 广播 UI 事件。
 - API DTO 直接复用 `Profile`、`Wallet`、`CampState` 等存档模型。
@@ -52,7 +52,7 @@ assets/scripts/
 │     ├─ CampApplicationMappers.ts      # DTO ↔ GameState / ViewModel
 │     ├─ CampApplicationError.ts        # 应用层错误
 │     ├─ CampHudApplicationService.ts   # 顶部、底部 HUD 查询服务
-│     ├─ LingPuApplicationService.ts    # 灵圃查询与命令服务
+│     ├─ LingPuApplicationService.ts    # 灵源院查询与命令服务
 │     └─ api/
 │        ├─ CampApiDtos.ts              # 传输无关 DTO
 │        ├─ CampApiPort.ts              # API Port、请求与错误
@@ -111,7 +111,7 @@ CampHudPresenter / CampBottomHudPresenter
 
 `refresh()` 对并发请求做 Promise 合并。顶部和底部在同一帧同时请求时，只执行一次
 Port 调用。钱包、主线或档案变更时先使 HUD 快照失效；Application Service
-用请求代次拦截失效前发出的延迟响应，避免旧 GET 覆盖灵圃命令后的新余额。
+用请求代次拦截失效前发出的延迟响应，避免旧 GET 覆盖灵源院命令后的新余额。
 
 ### 4.2 展示职责
 
@@ -133,7 +133,7 @@ Port 调用。钱包、主线或档案变更时先使 HUD 快照失效；Applica
 
 API 不暴露历史字段名，因此后续服务端数据模型不需要继承客户端存档命名。
 
-## 5. 灵圃数据流
+## 5. 灵源院数据流
 
 ### 5.1 打开与关闭
 
@@ -182,7 +182,7 @@ Application Service 中用 `TimeService` 插值，不产生高频 API 请求，�
 |---|---|---|
 | 权威客户端镜像 | `GameState` | 当前档案 |
 | HUD ViewModel | `CampHudApplicationService.current` | 档案切换时失效 |
-| 灵圃 ViewModel | `LingPuApplicationService.current` | 档案切换时失效 |
+| 灵源院 ViewModel | `LingPuApplicationService.current` | 档案切换时失效 |
 | 并发查询 | `refreshInFlight` | 请求完成后清空 |
 | 幂等结果 | Local Adapter 内存缓存 | 当前应用会话 |
 | 弹窗开关、确认模式 | Presenter | 当前节点生命周期 |
@@ -192,20 +192,20 @@ Application Service 中用 `TimeService` 插值，不产生高频 API 请求，�
 | 事件 | 生产者 | 消费者 |
 |---|---|---|
 | `camp.hudChanged` | HUD Application Service | 顶部、底部 Presenter |
-| `camp.lingPuStateChanged` | 灵圃 Application Service | 灵圃 Presenter |
-| `wallet.changed` | 灵圃及其他业务 Service | HUD 刷新触发器、兼容模块 |
-| `camp.productionChanged` | 灵圃 Application Service | 生产相关兼容模块 |
-| `camp.lingPuNotice` | 灵圃 Application Service | 全局反馈 |
+| `camp.lingPuStateChanged` | 灵源院 Application Service | 灵源院 Presenter |
+| `wallet.changed` | 灵源院及其他业务 Service | HUD 刷新触发器、兼容模块 |
+| `camp.productionChanged` | 灵源院 Application Service | 生产相关兼容模块 |
+| `camp.lingPuNotice` | 灵源院 Application Service | 全局反馈 |
 
 ## 7. 异常、断网与冲突
 
 - `offline`、`timeout`：保留当前 ViewModel，显示可重试提示，不清空页面。
-- `conflict`：优先应用错误响应中的最新灵圃快照；没有快照时自动重新查询，再提示重试。
+- `conflict`：优先应用错误响应中的最新灵源院快照；没有快照时自动重新查询，再提示重试。
 - 业务失败：错误响应可携带最新快照，因为失败操作之前可能已完成一个生产周期结算。
 - `save_failed`：内存中的服务端响应结果不回滚，明确提示“操作已生效，
   但存档失败”并关闭消费确认弹窗，防止把再次点击误当成仅重试存档；后续应提供独立的重试保存入口。
 - `profile_not_loaded`、`config_unavailable`：显示加载占位，不使用 Prefab 假数值。
-- 快速点击：Presenter 交互队列 + Application Service 全局灵圃命令队列 +
+- 快速点击：Presenter 交互队列 + Application Service 全局灵源院命令队列 +
   服务端版本校验 + 幂等键四层防护。面板命令、每秒结算和前后台生命周期命令
   共用同一 Application Service 队列，避免快速 `hide/show` 跳过前台会话恢复。
 
@@ -225,5 +225,5 @@ Application Service 中用 `TimeService` 插值，不产生高频 API 请求，�
 - 顶部头像和主线提示的最终跳转行为。
 - 设置页面内部功能。
 - 成就、排行榜、邮件、日常进度功能。
-- 灵晶、庚精岗位、离线收益和整座灵圃建筑升级。
+- 灵晶、庚精岗位、离线收益和整座灵源院建筑升级。
 - 已确认的 Cocos Prefab 节点、尺寸和美术资源。

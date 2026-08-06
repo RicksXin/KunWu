@@ -13,7 +13,7 @@
 ```text
 Boot.scene
 → Camp.scene
-   ├─ 灵圃模态页
+   ├─ 灵源院模态页
    └─ 入山整备模态页
 → Map.scene
    ├─ Map 逻辑页
@@ -37,7 +37,7 @@ Presenter
 - Presenter 只负责节点、输入、动画和 ViewModel 渲染。
 - Application Service 负责一次玩家操作的排队、请求、状态应用、保存和事件。
 - `domain/` 不依赖 Cocos、HTTP、DTO、事件总线或存档实现。
-- Demo 不强制 API Port、服务端 DTO 或 Local Adapter；大厅/灵圃已有实现可以保留。
+- Demo 不强制 API Port、服务端 DTO 或 Local Adapter；大厅/灵源院已有实现可以保留。
 - 页面不得直接修改 `GameState` 后自行保存，业务变更统一交给 Service 串行处理。
 
 ## 3. 页面模块
@@ -72,7 +72,7 @@ Presenter
 - 所有消费、奖励、队伍和地图状态变更必须经过 Application Service 串行提交。
 - D0 使用 IndexedDB 主档与备份；重要命令成功后立即保存。
 - 重复点击、场景加载失败和刷新恢复必须有稳定结果；消费与奖励使用本地事务标识防止重复执行。
-- 刷新后至少恢复 Wallet、灵圃、队伍、装载、地图位置、迷雾和敌人状态。
+- 刷新后至少恢复 Wallet、灵源院、队伍、装载、地图位置、迷雾和敌人状态。
 
 ## 6. 性能与资源
 
@@ -84,7 +84,7 @@ Presenter
 
 ## 7. 当前技术文档
 
-大厅 HUD 与灵圃的已落地详细设计见：
+大厅 HUD 与灵源院的已落地详细设计见：
 
 - [客户端详细设计](Tech/P1_HALL_ECO_客户端技术设计.md)
 - [本地适配器与验收](Tech/P1_HALL_ECO_本地适配器与验收.md)

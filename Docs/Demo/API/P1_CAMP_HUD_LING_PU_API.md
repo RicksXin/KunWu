@@ -1,4 +1,4 @@
-# P1 Camp HUD 与灵圃 API 契约
+# P1 Camp HUD 与灵源院 API 契约
 
 适用产品版本：0.1 Demo  
 文档修订：1.0  
@@ -40,7 +40,7 @@ API 主版本：`v1`
 | `geng_jing` | 庚精 | `gengJing` |
 | `spirit_stone_balance` | 灵石余额 | `immortalCoin` |
 
-灵圃 P1 命令的 `resource_id` 只接受前三项。
+灵源院 P1 命令的 `resource_id` 只接受前三项。
 
 ## 3. GET `/camp/hud`
 
@@ -77,7 +77,7 @@ API 主版本：`v1`
 
 ## 4. GET `/camp/ling-pu`
 
-用途：读取灵圃完整展示快照；GET 不执行生产结算。
+用途：读取灵源院完整展示快照；GET 不执行生产结算。
 
 响应 `200`：
 
@@ -215,10 +215,10 @@ P1 用途：浏览器从后台恢复时丢弃后台时长，把在线结算锚�
   "trace_id": "01J...",
   "error": {
     "code": "conflict",
-    "message": "灵圃状态版本已变化",
+    "message": "灵源院状态版本已变化",
     "retryable": true
   },
-  "latest_ling_pu_snapshot": {"...": "可选，结构同灵圃快照"}
+  "latest_ling_pu_snapshot": {"...": "可选，结构同灵源院快照"}
 }
 ```
 

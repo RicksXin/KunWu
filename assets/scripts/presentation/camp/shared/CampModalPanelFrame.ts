@@ -45,7 +45,7 @@ export interface CampModalFooterSlot {
 let framePrefabPromise: Promise<Prefab> | null = null;
 
 /**
- * 营地模态面板的纯外壳：全屏遮罩、灵圃风格框体、内容挂载点和底部按钮槽。
+ * 营地模态面板的纯外壳：全屏遮罩、灵源院风格框体、内容挂载点和底部按钮槽。
  * 业务内容、按钮文案、禁用态与点击行为全部由调用层注入。
  */
 @ccclass('CampModalPanelFrame')

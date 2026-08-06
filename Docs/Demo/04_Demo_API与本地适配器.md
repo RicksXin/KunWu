@@ -5,7 +5,7 @@
 日期：2026-08-02  
 API 主版本：`v1`
 
-状态：大厅/灵圃已有实现与未来联网参考；D0/D1 后续模块不要求按本文件先行设计。
+状态：大厅/灵源院已有实现与未来联网参考；D0/D1 后续模块不要求按本文件先行设计。
 
 ## 1. 通用约定
 
@@ -29,8 +29,8 @@ API 主版本：`v1`
 | Combat | `CombatApiPort` | 创建战斗、提交命令、读取事件、结束 | Demo 不要求，正式项目再评估 |
 | Settlement | `SettlementApiPort` | 预览、确认入账、返回营地 | Demo 不要求，正式项目再评估 |
 
-大厅与灵圃详细契约见
-[P1 Camp HUD 与灵圃 API](API/P1_CAMP_HUD_LING_PU_API.md)。其余 Demo 模块可以直接采用
+大厅与灵源院详细契约见
+[P1 Camp HUD 与灵源院 API](API/P1_CAMP_HUD_LING_PU_API.md)。其余 Demo 模块可以直接采用
 本地 Application Service 与 Repository，不需要先登记详细 API 契约。
 
 ## 3. 建议端点
@@ -88,5 +88,5 @@ POST /settlements/{settlement_id}:commit
 - 刷新浏览器后恢复最后一次成功响应形成的业务状态。
 - Presenter 不直接读取领域配置、修改 `GameState` 或调用本地结算器。
 
-已落地的大厅/灵圃验收见
+已落地的大厅/灵源院验收见
 [P1-HALL / P1-ECO 本地适配器与验收](Tech/P1_HALL_ECO_本地适配器与验收.md)。

@@ -41,7 +41,7 @@ function makeProfile(): Profile {
     );
 }
 
-describe('灵圃服务编排', () => {
+describe('灵源院服务编排', () => {
     test('调岗前先结算旧岗位，再应用新人数', () => {
         const time = new FakeTimeService();
         const service = new LingPuService(time);

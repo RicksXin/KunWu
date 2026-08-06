@@ -128,7 +128,7 @@ function requireResource(
     resourceId: LingPuApiResourceId,
 ): LingPuResourceDto {
     const resource = dto.resources.find((item) => item.resource_id === resourceId);
-    if (!resource) throw new Error(`灵圃响应缺少资源 ${resourceId}`);
+    if (!resource) throw new Error(`灵源院响应缺少资源 ${resourceId}`);
     return resource;
 }
 

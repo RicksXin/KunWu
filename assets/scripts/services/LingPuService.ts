@@ -32,7 +32,7 @@ export interface LingPuOperationResult {
 }
 
 /**
- * 灵圃业务编排。只修改传入 Profile，不依赖 Cocos，UI 只消费结果。
+ * 灵源院业务编排。只修改传入 Profile，不依赖 Cocos，UI 只消费结果。
  * 所有操作先结算旧配置，再执行调岗、招募或储量升级。
  */
 export class LingPuService {

@@ -253,7 +253,7 @@ export class AppRoot extends Component {
         try {
             await this.lingPu.settleIfDue();
         } catch (error) {
-            console.error('[灵圃] 自动结算失败', error);
+            console.error('[灵源院] 自动结算失败', error);
             this.showFeedback('生产结算失败，请稍后重试');
         } finally {
             this.productionTickInFlight = false;
@@ -265,7 +265,7 @@ export class AppRoot extends Component {
         try {
             await this.lingPu.settle(reason);
         } catch (error) {
-            console.error('[灵圃] 生命周期结算失败', error);
+            console.error('[灵源院] 生命周期结算失败', error);
             this.showFeedback('生产结算失败，请稍后重试');
         }
     }
@@ -275,7 +275,7 @@ export class AppRoot extends Component {
         try {
             await this.lingPu.resumeOnlineSession();
         } catch (error) {
-            console.error('[灵圃] 恢复前台失败', error);
+            console.error('[灵源院] 恢复前台失败', error);
             this.showFeedback('生产状态恢复失败，请稍后重试');
         }
     }

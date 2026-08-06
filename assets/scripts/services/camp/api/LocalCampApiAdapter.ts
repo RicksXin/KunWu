@@ -180,7 +180,7 @@ export class LocalCampApiAdapter implements CampApiPort {
             const config = this.config();
             throw new CampApiError({
                 code: 'conflict',
-                message: '灵圃状态版本已变化',
+                message: '灵源院状态版本已变化',
                 httpStatus: 409,
                 retryable: true,
                 latestLingPuSnapshot: this.snapshot(profile, config),
@@ -241,7 +241,7 @@ export class LocalCampApiAdapter implements CampApiPort {
 
     private config(): LingPuConfig {
         const config = this.deps.readLingPuConfig();
-        if (!config) throw this.error('config_unavailable', '灵圃配置尚未加载', 503, true);
+        if (!config) throw this.error('config_unavailable', '灵源院配置尚未加载', 503, true);
         return config;
     }
 
