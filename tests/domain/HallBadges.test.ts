@@ -171,7 +171,7 @@ describe('红点规则（PRD-01 §7）', () => {
     });
 
     test('已提醒过的批次不再产生红点', () => {
-        // 招贤台高品级候选同一批只提醒一次
+        // 招贤馆高品级候选同一批只提醒一次
         const candidates = action('zhao_xian_tai', { batchId: 'batch_001' });
         assert.deepEqual(computeBadges([candidates]).primaryBadges, ['zhao_xian_tai']);
         assert.deepEqual(computeBadges([candidates], ['batch_001']).primaryBadges, []);

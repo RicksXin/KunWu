@@ -94,9 +94,9 @@ export const REALM_LEVEL_RANGES: Readonly<Record<RealmId, { min: number; max: nu
     da_cheng: { min: 71, max: 80 },
 };
 
-/** MVP 等级上限。 */
+/** 旧兼容成长实现的等级上限；1.0可玩范围由PRD-03限制为Lv1–30。 */
 export const MAX_LEVEL = 60;
-/** 一转开放等级（PRD-03 §6）。 */
+/** 筑基分支开放等级（PRD-03 §6）。 */
 export const TIER_1_LEVEL = 10;
 
 /**

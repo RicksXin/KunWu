@@ -2,7 +2,7 @@
 
 整理日期：2026-07-29
 
-本目录仅用于玩法 Demo 和灰盒验证。正式 MVP 应逐项替换为统一风格的原创素材，或重新确认届时的授权状态。
+本目录仅用于0.1 Demo和灰盒验证。1.0正式资产应逐项替换为统一风格的原创素材，或重新确认届时的授权状态。
 
 ## 使用原则
 
@@ -17,7 +17,7 @@
 | 类别 | 本地目录 | 作者/来源 | 许可 | Demo 用途 | 备注 |
 |---|---|---|---|---|---|
 | 俯视武者动画 | `Characters/SamuraiTopdown_CC0` | [sebshady / OpenGameArt](https://opengameart.org/content/samurai-sprites) | CC0 | 探索角色、攻击、死亡、斩击 | 48×48帧，适合换色并增加道袍、发髻、剑匣 |
-| 侧视武者动作参考 | `Characters/SamuraiSideview_CC0` | [Segel / OpenGameArt](https://opengameart.org/content/samurai-character) | CC0 | 战斗动作节奏参考 | 原图是高清卡通而非像素，Demo 可缩小占位，MVP 不建议直接使用 |
+| 侧视武者动作参考 | `Characters/SamuraiSideview_CC0` | [Segel / OpenGameArt](https://opengameart.org/content/samurai-character) | CC0 | 战斗动作节奏参考 | 原图是高清卡通而非像素，Demo 可缩小占位，1.0不建议直接使用 |
 | 僧侣/施法者动画 | `Characters/Monk_CC0` | [rehcub / OpenGameArt](https://opengameart.org/content/2d-character-monk) | CC0 | 阵修、符修、御器占位 | 有待机、攻击、飞行、阅读、转换动作 |
 | 动画怪物 | `Enemies/AnimatedMonsters_CC0` | [stealthix / OpenGameArt](https://opengameart.org/content/animated-monsters) | CC0 | 骷髅、尸傀、邪修占位 | 含待机、行走、攻击、受击、倒地 |
 | 法术序列帧 | `VFX/SpellEffects_CC0` | [StarsteelGaming / OpenGameArt](https://opengameart.org/content/spell-effects-by-starsteelgaming) | CC0 | 火法、冰锥、雷法 | 可换色为剑气、煞气、灵焰 |

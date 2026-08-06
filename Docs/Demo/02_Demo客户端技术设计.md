@@ -1,6 +1,7 @@
 # 《昆吾禁地》Demo 客户端技术设计
 
-版本：1.0  
+适用产品版本：0.1 Demo  
+文档修订：1.0  
 日期：2026-08-02  
 技术基线：Cocos Creator 3.8.7 + TypeScript + WebGL
 

@@ -10,7 +10,7 @@ import type { SaveEnvelope, SaveMigration } from './SaveService';
 import { CURRENT_SCHEMA_VERSION } from './SaveService';
 import { computeChecksum } from './SaveChecksum';
 
-/** 主档在 profiles store 中的固定键。MVP 只有单档。 */
+/** 主档在 profiles store 中的固定键。当前产品只使用单档。 */
 export const PRIMARY_PROFILE_KEY = 'primary';
 
 /** 备份保留数量。超出后淘汰最旧的一份。 */
