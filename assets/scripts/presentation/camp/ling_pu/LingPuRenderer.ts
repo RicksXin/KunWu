@@ -17,6 +17,8 @@ export function renderLingPuPanel(
     confirmationMode: ConfirmationMode | null,
     confirmationLocked: boolean,
 ): void {
+    view.titleLabel.string = '灵源院';
+    view.idleWorkerLabel.string = `闲置杂役： ${model.workerIdle}`;
     for (const job of P1_LING_PU_JOBS) {
         const row = view.rows.get(job);
         const resource = model.resources[job];

@@ -1,0 +1,136 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "11312f7a-6a54-4c8e-b368-5045d935532e",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "11312f7a-6a54-4c8e-b368-5045d935532e@6c48a",
+      "displayName": "icon_camp_building_attention",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "11312f7a-6a54-4c8e-b368-5045d935532e",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "11312f7a-6a54-4c8e-b368-5045d935532e@f9941",
+      "displayName": "icon_camp_building_attention",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 6.5,
+        "offsetY": 3.5,
+        "trimX": 34,
+        "trimY": 7,
+        "width": 17,
+        "height": 51,
+        "rawWidth": 72,
+        "rawHeight": 72,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -8.5,
+            -25.5,
+            0,
+            8.5,
+            -25.5,
+            0,
+            -8.5,
+            25.5,
+            0,
+            8.5,
+            25.5,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            34,
+            65,
+            51,
+            65,
+            34,
+            14,
+            51,
+            14
+          ],
+          "nuv": [
+            0.4722222222222222,
+            0.19444444444444445,
+            0.7083333333333334,
+            0.19444444444444445,
+            0.4722222222222222,
+            0.9027777777777778,
+            0.7083333333333334,
+            0.9027777777777778
+          ],
+          "minPos": [
+            -8.5,
+            -25.5,
+            0
+          ],
+          "maxPos": [
+            8.5,
+            25.5,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "11312f7a-6a54-4c8e-b368-5045d935532e@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "filterMode": "nearest",
+    "premultiplyAlpha": false,
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "11312f7a-6a54-4c8e-b368-5045d935532e@6c48a"
+  }
+}

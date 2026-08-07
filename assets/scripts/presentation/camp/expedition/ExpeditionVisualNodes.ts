@@ -8,6 +8,42 @@ import {
 } from 'cc';
 import type { ExpeditionItemId } from 'db://assets/scripts/domain/ExpeditionPreparation';
 import { EXPEDITION_COLORS } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionTheme';
+import type { ExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionViewTypes';
+
+export function applyExpeditionPanelVisual(node: Node, assets: ExpeditionVisualAssets): void {
+    node.getChildByName('ExpeditionPanelVisual')?.destroy();
+    const rootSprite = node.getComponent(Sprite);
+    if (!assets.panelFrame) {
+        if (rootSprite) rootSprite.enabled = true;
+        return;
+    }
+    if (rootSprite) rootSprite.enabled = false;
+    const visual = new Node('ExpeditionPanelVisual');
+    visual.layer = node.layer;
+    node.addChild(visual);
+    visual.setSiblingIndex(0);
+    visual.addComponent(UITransform).setContentSize(360, 607);
+    createSpriteNode(visual, 'PanelBody', assets.panelFrame, 0, 18.5, 335, 506);
+    assets.panelDecorationTop && createSpriteNode(
+        visual,
+        'TopDecoration',
+        assets.panelDecorationTop,
+        0,
+        261,
+        360,
+        65,
+    );
+    assets.panelDecorationBottom && createSpriteNode(
+        visual,
+        'BottomDecoration',
+        assets.panelDecorationBottom,
+        0,
+        -214,
+        360,
+        55,
+    );
+    node.getChildByName('ContentMount')?.setSiblingIndex(node.children.length - 1);
+}
 
 export function applyPanelBackground(node: Node, frame: SpriteFrame | null): void {
     const sprite = node.getComponent(Sprite);
@@ -29,6 +65,28 @@ export function applyPanelBackground(node: Node, frame: SpriteFrame | null): voi
     sprite.type = Sprite.Type.SLICED;
     sprite.sizeMode = Sprite.SizeMode.CUSTOM;
     transform?.setContentSize(width, height);
+}
+
+/** Figma 固定尺寸面板实例：保持导出比例，不做九宫格或二次拉伸。 */
+export function applyFixedPanelBackground(
+    node: Node,
+    frame: SpriteFrame | null,
+    width: number,
+    height: number,
+): void {
+    const transform = node.getComponent(UITransform) ?? node.addComponent(UITransform);
+    transform.setContentSize(width, height);
+    const sprite = node.getComponent(Sprite) ?? node.addComponent(Sprite);
+    sprite.enabled = true;
+    if (!frame) {
+        sprite.color = EXPEDITION_COLORS.panel.clone();
+        return;
+    }
+    sprite.spriteFrame = frame;
+    sprite.color = new Color(255, 255, 255, 255);
+    sprite.type = Sprite.Type.SIMPLE;
+    sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+    transform.setContentSize(width, height);
 }
 
 export function drawSolidBackground(node: Node, color: Color): void {

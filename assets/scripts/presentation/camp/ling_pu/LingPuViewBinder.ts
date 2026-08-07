@@ -1,4 +1,13 @@
-import { Button, Color, Component, Graphics, Label, Node, Sprite, UITransform } from 'cc';
+import {
+    Button,
+    Color,
+    Component,
+    Graphics,
+    Label,
+    Node,
+    Sprite,
+    UITransform,
+} from 'cc';
 import {
     CAMP_LING_PU_PATHS,
     campLingPuResourceRowPath,
@@ -10,7 +19,13 @@ import {
     warnCampTouchTarget,
 } from '../shared/CampViewUtils';
 import { mountCampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
-import type { CampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
+import {
+    createLingPuIdleWorkerLabel,
+    fitLingPuFrameToLegacyContent,
+    prepareLingPuContentLayout,
+    prepareLingPuResizableButton,
+    refreshLingPuPanelVisual,
+} from './LingPuVisualAssets';
 import {
     LingPuResourceRowComponent,
     RESOURCE_ROW_DEFINITIONS,
@@ -111,6 +126,11 @@ export function bindLingPuView(
         console.error('[灵源院] Prefab 节点或组件不完整，面板绑定失败');
         return null;
     }
+    const idleWorkerLabel = createLingPuIdleWorkerLabel(mainPanel!, labels);
+    timerLabel!.node.active = false;
+    progressTrack!.node.active = false;
+    prepareLingPuResizableButton(confirmationPrimary!, 'footer', 396, 132);
+    prepareLingPuResizableButton(confirmationCancel!, 'footer', 396, 132);
 
     const rows = new Map();
     for (const definition of RESOURCE_ROW_DEFINITIONS) {
@@ -135,8 +155,10 @@ export function bindLingPuView(
     confirmationRoot!.active = false;
     const view: LingPuView = {
         mount: mount!, panelRoot: panelRoot!, backdrop: backdrop!, mainPanel: mainPanel!,
-        contentNodes: [title!.node, resourceRows!, timerLabel!.node, progressTrack!.node],
+        contentNodes: [title!.node, idleWorkerLabel.node, resourceRows!],
         panelBackground: panelBackground!, modalFrame: null,
+        titleLabel: title!, idleWorkerLabel,
+        panelBodyFrame: null, panelDecorationTopFrame: null, panelDecorationBottomFrame: null,
         timerLabel: timerLabel!, progressTrack: progressTrack!, progressFill: progressFill!,
         recruitButton: recruitButton!, closeButton: closeButton!,
         confirmationRoot: confirmationRoot!, confirmationPanel: confirmationPanel!,
@@ -146,6 +168,7 @@ export function bindLingPuView(
         confirmationCancel: confirmationCancel!, rows, labels,
         resourceIconFrames: new Map(),
     };
+    prepareLingPuContentLayout(view);
     void installLingPuModalFrame(view, callbacks);
     return view;
 }
@@ -155,9 +178,13 @@ async function installLingPuModalFrame(
     callbacks: LingPuViewCallbacks,
 ): Promise<void> {
     const frame = await mountCampModalPanelFrame(view.panelRoot, {
-        panelWidth: 343,
-        panelHeight: 650,
-        footerBottomInset: 43,
+        panelWidth: 359,
+        panelHeight: 570,
+        panelOffsetY: 1.5,
+        footerBottomInset: 0,
+        footerButtonWidth: 132,
+        footerButtonHeight: 44,
+        footerButtonPositions: [-79, 79],
         footerActions: [
             { text: '杂役招募', primary: true, onClick: callbacks.recruit },
             { text: '关闭', onClick: callbacks.close },
@@ -172,6 +199,7 @@ async function installLingPuModalFrame(
     view.backdrop.active = false;
     view.mainPanel.active = false;
     view.modalFrame = frame;
+    refreshLingPuPanelVisual(view);
     frame.setFooterFont(view.recruitButton.label?.font ?? null);
     view.confirmationRoot.setSiblingIndex(view.panelRoot.children.length - 1);
 }
@@ -208,6 +236,7 @@ function bindResourceRow(
         bindCampButton(owner, plus.node, () => callbacks.reassign(job, 1), disposers);
         bindCampButton(owner, upgrade.node, () => callbacks.upgrade(job), disposers);
     }
+    prepareLingPuResizableButton(upgrade, 'inline', 216, 84);
     warnCampTouchTarget(minus.node, `${definition.name}岗位减少`);
     warnCampTouchTarget(plus.node, `${definition.name}岗位增加`);
     warnCampTouchTarget(upgrade.node, `${definition.name}储量升级`);
@@ -250,30 +279,7 @@ function configureOutline(node: Node): boolean {
     return true;
 }
 
-export function syncLingPuViewSize(root: Node, view: LingPuView): void {
-    const size = root.getComponent(UITransform)?.contentSize;
-    if (!size) return;
-    view.mount.getComponent(UITransform)?.setContentSize(size);
-    view.panelRoot.getComponent(UITransform)?.setContentSize(size);
-    view.confirmationRoot.getComponent(UITransform)?.setContentSize(size);
-    redrawSolid(view.backdrop, size.width, size.height);
-    redrawSolid(view.confirmationRoot.getChildByName('ConfirmBackdrop'), size.width, size.height);
-    if (view.modalFrame) fitLingPuFrameToLegacyContent(view.panelRoot, view, view.modalFrame);
-}
-
-/** 旧灵源院内容按 1029 宽保存；共享框架沿用该比例以保持资源栏可见。 */
-function fitLingPuFrameToLegacyContent(
-    host: Node,
-    view: LingPuView,
-    frame: CampModalPanelFrame,
-): void {
-    const width = view.mainPanel.getComponent(UITransform)?.contentSize.width ?? 0;
-    const legacyScale = width > 0 ? width / 343 : undefined;
-    frame.fitToHost(host, legacyScale);
-}
-
-function redrawSolid(node: Node | null, width: number, height: number): void {
-    if (!node) return;
+function redrawSolid(node: Node, width: number, height: number): void {
     node.getComponent(UITransform)?.setContentSize(width, height);
     const graphics = node.getComponent(Graphics);
     if (!graphics) return;

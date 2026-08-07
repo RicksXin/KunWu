@@ -14,11 +14,20 @@ import {
     COMMON_ART_BUTTON_NAMES,
     EXPEDITION_COLORS,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionTheme';
+import { applyCampResizableButtonStyle } from 'db://assets/scripts/presentation/camp/shared/CampResizableButtonStyle';
 
 export interface CreatedButton {
     readonly node: Node;
     readonly button: Button;
     readonly label: Label;
+}
+
+const EXPEDITION_FONT_FAMILY = 'Noto Sans SC';
+
+export interface LabelStyleOptions {
+    readonly lineHeight?: number;
+    readonly bold?: boolean;
+    readonly overflow?: Label.Overflow;
 }
 
 export interface ButtonOptions {
@@ -74,6 +83,7 @@ export function createLabel(
     fontSize: number,
     color: Color,
     horizontalAlign: HorizontalTextAlignment = HorizontalTextAlignment.CENTER,
+    style: LabelStyleOptions = {},
 ): Label {
     const node = new Node(name);
     node.layer = parent.layer;
@@ -83,7 +93,7 @@ export function createLabel(
     transform.setContentSize(width, height);
     transform.setAnchorPoint(0.5, 0.5);
     const label = node.addComponent(Label);
-    configureExistingLabel(label, text, fontSize, color, horizontalAlign);
+    configureExistingLabel(label, text, fontSize, color, horizontalAlign, style);
     return label;
 }
 
@@ -115,7 +125,9 @@ export function createButton(parent: Node, options: ButtonOptions): CreatedButto
         options.width - 8,
         options.height - 6,
         14,
-        enabled ? EXPEDITION_COLORS.text : EXPEDITION_COLORS.textSecondary,
+        enabled ? EXPEDITION_COLORS.text : EXPEDITION_COLORS.disabled,
+        HorizontalTextAlignment.CENTER,
+        { lineHeight: 20 },
     );
     if (enabled) {
         node.on(Button.EventType.CLICK, options.onClick);
@@ -129,10 +141,25 @@ export function configureExistingButton(
 ): CreatedButton {
     const enabled = options.enabled ?? true;
     const button = node.getComponent(Button) ?? node.addComponent(Button);
-    button.transition = Button.Transition.NONE;
+    const usesCommonArt = COMMON_ART_BUTTON_NAMES.has(node.name);
+    const usesInlineArt = node.name === 'EditPartyButton'
+        || node.name === 'RestoreStaminaButton'
+        || node.name === 'SelectButton';
+    const visual = usesCommonArt
+        ? applyCampResizableButtonStyle(
+            node,
+            usesInlineArt ? 'inline' : 'footer',
+            enabled ? (options.primary ? 'selected' : 'default') : 'disabled',
+        )
+        : null;
+    button.transition = visual ? Button.Transition.SCALE : Button.Transition.NONE;
+    button.target = visual ?? node;
+    if (visual) {
+        button.zoomScale = 0.96;
+        button.duration = 0.1;
+    }
     const sprite = node.getComponent(Sprite);
-    if (sprite) {
-        const usesCommonArt = COMMON_ART_BUTTON_NAMES.has(node.name);
+    if (sprite && !visual) {
         sprite.color = (usesCommonArt
             ? enabled
                 ? options.primary
@@ -152,6 +179,9 @@ export function configureExistingButton(
         node.on(Button.EventType.CLICK, options.onClick);
     }
 
+    const labelFontSize = usesCommonArt && usesInlineArt
+        ? 12
+        : 14;
     let labelNode = node.getChildByName('Label');
     if (!labelNode) {
         const size = node.getComponent(UITransform)?.contentSize;
@@ -163,16 +193,18 @@ export function configureExistingButton(
             0,
             Math.max(1, (size?.width ?? 100) - 8),
             Math.max(1, (size?.height ?? 40) - 6),
-            14,
-            enabled ? EXPEDITION_COLORS.text : EXPEDITION_COLORS.textSecondary,
+            labelFontSize,
+            enabled ? EXPEDITION_COLORS.text : EXPEDITION_COLORS.disabled,
         ).node;
     }
     const label = labelNode.getComponent(Label) ?? labelNode.addComponent(Label);
     configureExistingLabel(
         label,
         options.text,
-        14,
-        enabled ? EXPEDITION_COLORS.text : EXPEDITION_COLORS.textSecondary,
+        labelFontSize,
+        enabled ? EXPEDITION_COLORS.text : EXPEDITION_COLORS.disabled,
+        HorizontalTextAlignment.CENTER,
+        { lineHeight: labelFontSize === 14 ? 20 : 16 },
     );
     return { node, button, label };
 }
@@ -183,14 +215,19 @@ export function configureExistingLabel(
     fontSize: number,
     color: Color,
     horizontalAlign: HorizontalTextAlignment = HorizontalTextAlignment.CENTER,
+    style: LabelStyleOptions = {},
 ): void {
+    label.font = null;
+    label.useSystemFont = true;
+    label.fontFamily = EXPEDITION_FONT_FAMILY;
     label.string = text;
     label.fontSize = fontSize;
-    label.lineHeight = Math.ceil(fontSize * 1.25);
+    label.lineHeight = style.lineHeight ?? Math.ceil(fontSize * 1.25);
     label.color = color.clone();
+    label.isBold = style.bold ?? false;
     label.horizontalAlign = horizontalAlign;
     label.verticalAlign = Label.VerticalAlign.CENTER;
-    label.overflow = Label.Overflow.SHRINK;
+    label.overflow = style.overflow ?? Label.Overflow.SHRINK;
 }
 
 export function styleExistingRect(node: Node, color: Color): void {

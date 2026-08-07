@@ -41,14 +41,14 @@
       "userData": {
         "trimThreshold": 1,
         "rotated": false,
-        "offsetX": 1.5,
-        "offsetY": -1,
-        "trimX": 13,
-        "trimY": 16,
-        "width": 49,
-        "height": 42,
-        "rawWidth": 72,
-        "rawHeight": 72,
+        "offsetX": 0,
+        "offsetY": 0,
+        "trimX": 0,
+        "trimY": 0,
+        "width": 66,
+        "height": 66,
+        "rawWidth": 66,
+        "rawHeight": 66,
         "borderTop": 0,
         "borderBottom": 0,
         "borderLeft": 0,
@@ -60,17 +60,17 @@
         "meshType": 0,
         "vertices": {
           "rawPosition": [
-            -24.5,
-            -21,
+            -33,
+            -33,
             0,
-            24.5,
-            -21,
+            33,
+            -33,
             0,
-            -24.5,
-            21,
+            -33,
+            33,
             0,
-            24.5,
-            21,
+            33,
+            33,
             0
           ],
           "indexes": [
@@ -82,33 +82,33 @@
             3
           ],
           "uv": [
-            13,
-            56,
-            62,
-            56,
-            13,
-            14,
-            62,
-            14
+            0,
+            66,
+            66,
+            66,
+            0,
+            0,
+            66,
+            0
           ],
           "nuv": [
-            0.18055555555555555,
-            0.19444444444444445,
-            0.8611111111111112,
-            0.19444444444444445,
-            0.18055555555555555,
-            0.7777777777777778,
-            0.8611111111111112,
-            0.7777777777777778
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1
           ],
           "minPos": [
-            -24.5,
-            -21,
+            -33,
+            -33,
             0
           ],
           "maxPos": [
-            24.5,
-            21,
+            33,
+            33,
             0
           ]
         },
@@ -130,7 +130,7 @@
     "filterMode": "nearest",
     "premultiplyAlpha": false,
     "fixAlphaTransparencyArtifacts": false,
-    "hasAlpha": true,
+    "hasAlpha": false,
     "redirect": "dc6ac858-c283-423e-89e4-36e859907af3@6c48a"
   }
 }

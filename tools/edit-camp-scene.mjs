@@ -15,6 +15,7 @@
  *   pnpm edit:camp --label-to-sprite AvatarButton/Label=portrait_player_placeholder
  *   pnpm edit:camp --active NpcListPanel=false --label MainTaskButton/Objective=主线：--
  *   pnpm edit:camp --dry-run --size yi_shi_dian=800x533
+ *   pnpm edit:camp --skip-validation --size yi_shi_dian=800x533
  *   pnpm edit:camp --file assets/bundles/camp/prefabs/CampTopHud.prefab --size ...
  */
 
@@ -33,12 +34,13 @@ if (argv.length === 0 || argv.includes('--help')) {
 }
 
 const dryRun = argv.includes('--dry-run');
+const skipValidation = argv.includes('--skip-validation');
 const ops = [];
 let targetRel = DEFAULT_TARGET;
 
 for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
-    if (flag === '--dry-run') {
+    if (flag === '--dry-run' || flag === '--skip-validation') {
         continue;
     }
     const value = argv[i + 1];
@@ -335,6 +337,11 @@ copyFileSync(targetPath, backupPath);
 
 // 缩进 2 空格与 Cocos Creator 的保存格式一致，避免整文件 diff。
 writeFileSync(targetPath, `${JSON.stringify(entries, null, 2)}\n`);
+
+if (skipValidation) {
+    console.log(`\n已写入，按当前任务约定跳过自动校验。备份 ${path.relative(REPO_ROOT, backupPath)}`);
+    process.exit(0);
+}
 
 try {
     execFileSync(

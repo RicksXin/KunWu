@@ -1,7 +1,10 @@
-import { _decorator, Component } from 'cc';
+import { _decorator, Color, Component, Node, Sprite, UITransform, Widget } from 'cc';
 import { AppRoot } from 'db://assets/scripts/AppRoot';
 import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
-import { CAMP_TOP_HUD_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
+import {
+    CAMP_RESOURCE_NODE_NAMES,
+    CAMP_TOP_HUD_PATHS,
+} from 'db://assets/scripts/domain/CampSceneContract';
 import { CampApplicationError } from 'db://assets/scripts/services/camp/CampApplicationError';
 import type { CampHudViewModel } from 'db://assets/scripts/services/camp/CampApplicationModels';
 import { MainTaskSummary } from 'db://assets/scripts/presentation/core/MainTaskSummary';
@@ -15,6 +18,8 @@ import {
 } from 'db://assets/scripts/presentation/camp/shared/CampViewUtils';
 
 const { ccclass } = _decorator;
+
+const FIGMA_STATUS_BAR_HEIGHT = 126.72;
 
 /** 顶部 HUD：头像、五资源和主线提示。只依赖 TopHUD Prefab 内部节点。 */
 @ccclass('CampHudPresenter')
@@ -46,6 +51,7 @@ export class CampHudPresenter extends Component {
                 ?? mainTask.addComponent(MainTaskSummary);
             this.mainTaskSummary.bind(objective);
         }
+        this.configureVisuals();
         bindCampButton(
             this,
             avatar,
@@ -96,6 +102,53 @@ export class CampHudPresenter extends Component {
         this.mainTaskSummary?.render(model?.mainTaskObjective);
     }
 
+    private configureVisuals(): void {
+        const widget = this.node.getComponent(Widget);
+        if (widget) {
+            // Approved 稿的 TopHUD 从 44px 状态栏参考线下方开始：44 × 2.88。
+            // 真机 SafeAreaRoot 已经扣除顶部 inset 时不重复留白。
+            widget.top = hasPhysicalTopSafeInset(this.node.parent)
+                ? 0
+                : FIGMA_STATUS_BAR_HEIGHT;
+            widget.updateAlignment();
+        }
+        const avatar = campNode(this.node, CAMP_TOP_HUD_PATHS.avatar);
+        const avatarPortrait = avatar?.getChildByName('Label') ?? null;
+        const avatarFrame = avatar?.getComponent(Sprite);
+        const portrait = avatarPortrait?.getComponent(Sprite);
+        avatarFrame && (avatarFrame.type = Sprite.Type.SIMPLE);
+        portrait && (portrait.type = Sprite.Type.SIMPLE);
+
+        for (const resourceName of CAMP_RESOURCE_NODE_NAMES) {
+            const icon = campNode(this.node, `${CAMP_TOP_HUD_PATHS.resourceBar}/${resourceName}/Name`)
+                ?.getComponent(Sprite);
+            const value = campLabel(
+                this.node,
+                `${CAMP_TOP_HUD_PATHS.resourceBar}/${resourceName}/Value`,
+            );
+            icon && (icon.type = Sprite.Type.SIMPLE);
+            if (value) {
+                value.fontSize = 29;
+                value.lineHeight = 49;
+                value.isBold = true;
+                value.color = new Color(232, 220, 187, 255);
+            }
+        }
+
+        const mainTask = campNode(this.node, CAMP_TOP_HUD_PATHS.mainTask);
+        if (mainTask) {
+            const icon = mainTask.getChildByName('Icon')?.getComponent(Sprite);
+            icon && (icon.type = Sprite.Type.SIMPLE);
+        }
+        const objective = campLabel(this.node, CAMP_TOP_HUD_PATHS.mainTaskObjective);
+        if (objective) {
+            objective.fontSize = 32;
+            objective.lineHeight = 58;
+            objective.isBold = true;
+            objective.color = new Color(232, 220, 187, 255);
+        }
+    }
+
     private requestRefresh(): void {
         void AppRoot.instance.campHud.refresh()
             .then((model) => {
@@ -109,4 +162,17 @@ export class CampHudPresenter extends Component {
                 AppRoot.instance.showFeedback(message);
             });
     }
+}
+
+function hasPhysicalTopSafeInset(safeAreaRoot: Node | null): boolean {
+    const canvas = safeAreaRoot?.parent;
+    const safeTransform = safeAreaRoot?.getComponent(UITransform);
+    const canvasTransform = canvas?.getComponent(UITransform);
+    if (!safeAreaRoot || !safeTransform || !canvasTransform) {
+        return false;
+    }
+    const canvasTop = canvasTransform.contentSize.height * (1 - canvasTransform.anchorPoint.y);
+    const safeTop = safeAreaRoot.position.y
+        + safeTransform.contentSize.height * (1 - safeTransform.anchorPoint.y);
+    return canvasTop - safeTop > 0.5;
 }

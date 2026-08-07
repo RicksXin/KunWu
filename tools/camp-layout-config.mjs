@@ -22,42 +22,41 @@ export const CAMP_LAYOUT = Object.freeze({
         panoramaScreens: 2.8,
     }),
     sizes: Object.freeze({
-        topHud: Object.freeze({ width: DESIGN_WIDTH, height: 300 }),
-        resourceBar: Object.freeze({ width: 840, height: 148 }),
-        bottomHud: Object.freeze({ width: DESIGN_WIDTH, height: 120 }),
-        bottomLeftSlots: Object.freeze({ width: 640, height: 120 }),
-        bottomRightCurrency: Object.freeze({ width: 320, height: 120 }),
-        systemEntry: Object.freeze({ width: 112, height: 96 }),
+        topHud: Object.freeze({ width: DESIGN_WIDTH, height: 380.16 }),
+        resourceBar: Object.freeze({ width: 1033.92, height: 141.12 }),
+        bottomHud: Object.freeze({ width: DESIGN_WIDTH, height: 138.24 }),
+        bottomLeftSlots: Object.freeze({ width: 633.6, height: 138.24 }),
+        bottomRightCurrency: Object.freeze({ width: 204.48, height: 69.12 }),
+        systemEntry: Object.freeze({ width: 120.96, height: 92.16 }),
         panoramaContent: Object.freeze({ width: DESIGN_WIDTH * 2.8, height: 2353 }),
         panoramaArtwork: Object.freeze({ width: 3318, height: 2580 }),
-        // 源图 1536×1024（比例 1.5），显示尺寸按同比例，否则建筑被压扁。
-        // 现有落点最密处是 jiao_yi_hang(350,0)↔lian_qi_fang(552,-250)，
-        // 仅隔 202px，因此在不动落点的前提下宽度上限只有 244。
-        // 要让建筑显著变大必须先重排落点，见 Docs/08 §1.2.9。
-        building: Object.freeze({ width: 240, height: 160 }),
-        expedition: Object.freeze({ width: 240, height: 160 }),
+        // Figma 375×817 按宽度换算到 Cocos：1 逻辑像素 = 2.88 Cocos 单位。
+        // 各建筑的准确尺寸记录在 CAMP_BUILDING_LAYOUT；这里保留开放建筑默认值。
+        building: Object.freeze({ width: 711.36, height: 475.2 }),
+        expedition: Object.freeze({ width: 593.28, height: 400.32 }),
         page: Object.freeze({ width: DESIGN_WIDTH, height: DESIGN_HEIGHT }),
-        immortalCoinIcon: Object.freeze({ width: 64, height: 64 }),
-        immortalCoinValue: Object.freeze({ width: 180, height: 48 }),
+        immortalCoinIcon: Object.freeze({ width: 69.12, height: 69.12 }),
+        immortalCoinValue: Object.freeze({ width: 120.96, height: 69.12 }),
         settingsBack: Object.freeze({ width: 160, height: 72 }),
     }),
     positions: Object.freeze({
-        expedition: Object.freeze({ x: 0, y: -330 }),
-        immortalCoinIcon: Object.freeze({ x: -90, y: 0 }),
-        immortalCoinValue: Object.freeze({ x: 45, y: 0 }),
+        topHudTopInset: 126.72,
+        expedition: Object.freeze({ x: -1.44, y: -564.48 }),
+        immortalCoinIcon: Object.freeze({ x: -67.68, y: 0 }),
+        immortalCoinValue: Object.freeze({ x: 41.76, y: 0 }),
         settingsBack: Object.freeze({ x: -420, y: 780 }),
     }),
 });
 
 /** 七座建筑的灰盒落点与显示名，键为 HallBadges.BUILDING_IDS。 */
 export const CAMP_BUILDING_LAYOUT = Object.freeze({
-    yi_shi_dian: Object.freeze({ label: '议事殿', position: Object.freeze({ x: 0, y: 300 }) }),
-    ling_pu: Object.freeze({ label: '灵源院', position: Object.freeze({ x: 1050, y: 80 }) }),
-    zhao_xian_tai: Object.freeze({ label: '招贤馆', position: Object.freeze({ x: -350, y: 0 }) }),
-    bai_bao_ku: Object.freeze({ label: '百宝库', position: Object.freeze({ x: -1050, y: 260 }) }),
-    lian_qi_fang: Object.freeze({ label: '炼器坊', position: Object.freeze({ x: 552, y: -250 }) }),
-    jiao_yi_hang: Object.freeze({ label: '交易行', position: Object.freeze({ x: 350, y: 0 }) }),
-    huan_hun_tan: Object.freeze({ label: '还魂殿', position: Object.freeze({ x: -1050, y: -220 }) }),
+    yi_shi_dian: Object.freeze({ label: '议事殿', position: Object.freeze({ x: 72, y: 495.36 }), size: Object.freeze({ width: 711.36, height: 475.2 }) }),
+    ling_pu: Object.freeze({ label: '灵源院', position: Object.freeze({ x: 930.24, y: -544.32 }), size: Object.freeze({ width: 712.8, height: 475.2 }) }),
+    zhao_xian_tai: Object.freeze({ label: '招贤馆', position: Object.freeze({ x: -432, y: -92.16 }), size: Object.freeze({ width: 711.36, height: 475.2 }) }),
+    bai_bao_ku: Object.freeze({ label: '百宝库', position: Object.freeze({ x: -1009.44, y: 161.28 }), size: Object.freeze({ width: 593.28, height: 394.56 }) }),
+    lian_qi_fang: Object.freeze({ label: '炼器坊', position: Object.freeze({ x: 489.6, y: -37.44 }), size: Object.freeze({ width: 711.36, height: 475.2 }) }),
+    jiao_yi_hang: Object.freeze({ label: '交易行', position: Object.freeze({ x: 937.44, y: 198.72 }), size: Object.freeze({ width: 593.28, height: 394.56 }) }),
+    huan_hun_tan: Object.freeze({ label: '还魂殿', position: Object.freeze({ x: -1104.48, y: -357.12 }), size: Object.freeze({ width: 593.28, height: 394.56 }) }),
 });
 
 /**
@@ -81,9 +80,9 @@ export const CAMP_RESOURCE_LABELS = Object.freeze({
  * 中文显示名不在此重复——它已在 CAMP_SYSTEM_ENTRY_NAMES。
  */
 export const CAMP_SYSTEM_ENTRY_LAYOUT = Object.freeze({
-    settings: Object.freeze({ position: Object.freeze({ x: -260, y: 0 }) }),
-    achievements: Object.freeze({ position: Object.freeze({ x: -130, y: 0 }) }),
+    settings: Object.freeze({ position: Object.freeze({ x: -253.44, y: 0 }) }),
+    achievements: Object.freeze({ position: Object.freeze({ x: -126.72, y: 0 }) }),
     leaderboard: Object.freeze({ position: Object.freeze({ x: 0, y: 0 }) }),
-    mail: Object.freeze({ position: Object.freeze({ x: 130, y: 0 }) }),
-    dailyProgress: Object.freeze({ position: Object.freeze({ x: 260, y: 0 }) }),
+    mail: Object.freeze({ position: Object.freeze({ x: 126.72, y: 0 }) }),
+    dailyProgress: Object.freeze({ position: Object.freeze({ x: 253.44, y: 0 }) }),
 });

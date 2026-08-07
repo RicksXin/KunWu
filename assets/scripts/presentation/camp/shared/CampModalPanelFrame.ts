@@ -14,12 +14,14 @@ import {
     UITransform,
 } from 'cc';
 import type { Font } from 'cc';
+import { applyCampResizableButtonStyle } from 'db://assets/scripts/presentation/camp/shared/CampResizableButtonStyle';
 
 const { ccclass } = _decorator;
 
 const FRAME_PREFAB_PATH = 'prefabs/CampModalPanelFrame';
 const DESIGN_WIDTH = 375;
 const DESIGN_HEIGHT = 817;
+const CAMP_UI_FONT_FAMILY = 'Noto Sans SC';
 
 export interface CampModalFooterAction {
     readonly text: string;
@@ -33,6 +35,10 @@ export interface CampModalPanelFrameOptions {
     readonly panelHeight: number;
     readonly footerBottomInset: number;
     readonly footerActions: readonly CampModalFooterAction[];
+    readonly footerButtonWidth?: number;
+    readonly footerButtonHeight?: number;
+    readonly footerButtonPositions?: readonly number[];
+    readonly panelOffsetY?: number;
 }
 
 export interface CampModalFooterSlot {
@@ -58,6 +64,7 @@ export class CampModalPanelFrame extends Component {
     private slots: CampModalFooterSlot[] = [];
     private panelWidth = 359;
     private panelHeight = 570;
+    private panelOffsetY = 0;
     private footerBottomInset = 30;
 
     get mainPanel(): Node | null {
@@ -76,9 +83,15 @@ export class CampModalPanelFrame extends Component {
         if (!this.bindNodes()) return false;
         this.panelWidth = options.panelWidth;
         this.panelHeight = options.panelHeight;
+        this.panelOffsetY = options.panelOffsetY ?? 0;
         this.footerBottomInset = options.footerBottomInset;
         this.layoutPanel();
-        this.configureFooter(options.footerActions);
+        this.configureFooter(
+            options.footerActions,
+            options.footerButtonWidth,
+            options.footerButtonHeight,
+            options.footerButtonPositions,
+        );
         return true;
     }
 
@@ -104,7 +117,11 @@ export class CampModalPanelFrame extends Component {
     }
 
     setFooterFont(font: Font | null): void {
-        for (const slot of this.slots) slot.label.font = font;
+        for (const slot of this.slots) {
+            slot.label.font = font;
+            slot.label.useSystemFont = !font;
+            if (!font) slot.label.fontFamily = CAMP_UI_FONT_FAMILY;
+        }
     }
 
     mountContent(node: Node): void {
@@ -159,21 +176,30 @@ export class CampModalPanelFrame extends Component {
     private layoutPanel(): void {
         this.node.setPosition(0, 0, 0);
         this.node.getComponent(UITransform)?.setContentSize(DESIGN_WIDTH, DESIGN_HEIGHT);
-        this.panelNode?.setPosition(0, 0, 0);
+        this.panelNode?.setPosition(0, this.panelOffsetY, 0);
         this.panelNode?.getComponent(UITransform)?.setContentSize(this.panelWidth, this.panelHeight);
         this.contentNode?.setPosition(0, 0, 0);
         this.contentNode?.getComponent(UITransform)?.setContentSize(this.panelWidth, this.panelHeight);
-        this.footerNode?.setPosition(0, -this.panelHeight / 2 + this.footerBottomInset, 0);
+        this.footerNode?.setPosition(
+            0,
+            this.panelOffsetY - this.panelHeight / 2 + this.footerBottomInset,
+            0,
+        );
     }
 
-    private configureFooter(actions: readonly CampModalFooterAction[]): void {
+    private configureFooter(
+        actions: readonly CampModalFooterAction[],
+        overrideWidth?: number,
+        overrideHeight?: number,
+        overridePositions?: readonly number[],
+    ): void {
         const visibleCount = Math.min(3, actions.length);
         const compactLayout = visibleCount < 3;
-        const width = compactLayout ? 132 : 105;
-        const height = compactLayout ? 44 : 50;
-        const positions = visibleCount === 1
+        const width = overrideWidth ?? (compactLayout ? 132 : 105);
+        const height = overrideHeight ?? (compactLayout ? 44 : 50);
+        const positions = overridePositions ?? (visibleCount === 1
             ? [0]
-            : visibleCount === 2 ? [-75, 75] : [-121, 0, 121];
+            : visibleCount === 2 ? [-75, 75] : [-121, 0, 121]);
         this.footerNode?.getComponent(UITransform)?.setContentSize(347, height);
         this.slots.forEach((slot, index) => {
             const action = actions[index];
@@ -183,22 +209,27 @@ export class CampModalPanelFrame extends Component {
             slot.node.getComponent(UITransform)?.setContentSize(width, height);
             slot.label.node.getComponent(UITransform)?.setContentSize(width - 8, height - 6);
             slot.label.string = action.text;
-            slot.label.fontSize = compactLayout ? 16 : 14;
-            slot.label.lineHeight = Math.ceil(slot.label.fontSize * 1.25);
-            slot.button.target = slot.node;
-            slot.button.transition = Button.Transition.COLOR;
-            const normalColor = action.enabled === false
-                ? new Color(126, 126, 126, 255)
-                : action.primary
-                    ? new Color(255, 238, 204, 255)
-                    : new Color(255, 255, 255, 255);
-            slot.button.normalColor = normalColor;
-            slot.button.pressedColor = new Color(192, 192, 192, 255);
-            slot.button.hoverColor = new Color(235, 235, 235, 255);
-            slot.button.disabledColor = new Color(126, 126, 126, 255);
-            slot.button.duration = 0.08;
+            slot.label.fontSize = 14;
+            slot.label.lineHeight = 20;
+            slot.label.font = null;
+            slot.label.useSystemFont = true;
+            slot.label.fontFamily = CAMP_UI_FONT_FAMILY;
+            slot.label.isBold = false;
+            slot.label.color = action.enabled === false
+                ? new Color(94, 106, 102, 255)
+                : new Color(232, 220, 187, 255);
+            const visual = applyCampResizableButtonStyle(
+                slot.node,
+                'footer',
+                action.enabled === false
+                    ? 'disabled'
+                    : action.primary ? 'selected' : 'default',
+            );
+            slot.button.target = visual;
+            slot.button.transition = Button.Transition.SCALE;
+            slot.button.zoomScale = 0.96;
+            slot.button.duration = 0.1;
             slot.button.interactable = action.enabled ?? true;
-            slot.sprite.color = normalColor;
             slot.node.off(Button.EventType.CLICK);
             slot.node.on(Button.EventType.CLICK, action.onClick, this);
         });

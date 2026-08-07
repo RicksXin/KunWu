@@ -9,13 +9,41 @@ export async function loadExpeditionVisualAssets(): Promise<ExpeditionVisualAsse
         ExpeditionItemId,
         string,
     ][];
-    const [panelFrame, heroCardFrame, emptyHeroFrame, avatarFrame, lockFrame, portraits, items] =
+    const [
+        panelFrame,
+        heroSelectionPanelFrame,
+        mapSelectionPanelFrame,
+        panelDecorationTop,
+        panelDecorationBottom,
+        heroCardFrame,
+        emptyHeroFrame,
+        avatarFrame,
+        lockFrame,
+        partyTabDefault,
+        partyTabSelected,
+        heroRowDefault,
+        heroRowSelected,
+        stepperMinus,
+        stepperPlus,
+        portraits,
+        items,
+    ] =
         await Promise.all([
             loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.panel),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.heroSelectionPanel),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.mapSelectionPanel),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.panelDecorationTop),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.panelDecorationBottom),
             loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.cardFrame),
             loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.emptySilhouette),
             loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.avatarFrame),
             loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.lock),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.partyTabDefault),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.partyTabSelected),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.heroRowDefault),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.heroRowSelected),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.stepperMinus),
+            loadOptionalSpriteFrame(EXPEDITION_VISUAL_PATHS.stepperPlus),
             Promise.all(
                 portraitEntries.map(async ([nameKey, path]) => [
                     nameKey,
@@ -39,11 +67,22 @@ export async function loadExpeditionVisualAssets(): Promise<ExpeditionVisualAsse
         if (frame) itemFrames.set(itemId, frame);
     }
     return {
+        font: null,
         panelFrame,
+        heroSelectionPanelFrame,
+        mapSelectionPanelFrame,
+        panelDecorationTop,
+        panelDecorationBottom,
         heroCardFrame,
         emptyHeroFrame,
         avatarFrame,
         lockFrame,
+        partyTabDefault,
+        partyTabSelected,
+        heroRowDefault,
+        heroRowSelected,
+        stepperMinus,
+        stepperPlus,
         portraitFrames,
         itemFrames,
     };

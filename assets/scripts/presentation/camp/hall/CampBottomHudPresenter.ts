@@ -1,4 +1,4 @@
-import { _decorator, Component } from 'cc';
+import { _decorator, Color, Component, Sprite, Widget } from 'cc';
 import { AppRoot } from 'db://assets/scripts/AppRoot';
 import {
     CAMP_SYSTEM_ENTRY_FEEDBACK,
@@ -39,6 +39,7 @@ export class CampBottomHudPresenter extends Component {
                 }
             }),
         );
+        this.configureVisuals();
 
         // 按 id 而非下标绑定：两份平行数组一旦顺序不一致，点「成就」会打开设置。
         for (const entryId of CAMP_SYSTEM_ENTRY_IDS) {
@@ -87,9 +88,13 @@ export class CampBottomHudPresenter extends Component {
         for (const entryId of CAMP_SYSTEM_ENTRY_IDS) {
             const entryNode = campNode(this.node, campSystemEntryPath(entryId));
             if (entryNode) {
-                entryNode.active = model
-                    ? !model.systemEntries[entryId].hidden
-                    : entryId === 'settings';
+                const entry = model?.systemEntries[entryId] ?? null;
+                entryNode.active = entry ? !entry.hidden : entryId === 'settings';
+                const icon = entryNode.getChildByName('Label')?.getComponent(Sprite);
+                if (icon) {
+                    icon.type = Sprite.Type.SIMPLE;
+                    icon.grayscale = entry ? !entry.enabled : entryId !== 'settings';
+                }
             }
         }
         const label = campLabel(this.node, CAMP_BOTTOM_HUD_PATHS.immortalCoinValue);
@@ -100,7 +105,27 @@ export class CampBottomHudPresenter extends Component {
             label.string = '--';
             return;
         }
-        label.string = String(Math.trunc(model.spiritStoneBalance));
+        label.string = formatHudNumber(model.spiritStoneBalance);
+    }
+
+    private configureVisuals(): void {
+        const widget = this.node.getComponent(Widget);
+        if (widget) {
+            widget.bottom = 69.12;
+            widget.updateAlignment();
+        }
+        const currencyIcon = campNode(
+            this.node,
+            'BottomRightCurrency/ImmortalCoinIcon',
+        )?.getComponent(Sprite);
+        currencyIcon && (currencyIcon.type = Sprite.Type.SIMPLE);
+        const value = campLabel(this.node, CAMP_BOTTOM_HUD_PATHS.immortalCoinValue);
+        if (value) {
+            value.fontSize = 35;
+            value.lineHeight = 69;
+            value.isBold = true;
+            value.color = new Color(232, 220, 187, 255);
+        }
     }
 
     private requestRefresh(): void {
@@ -112,4 +137,10 @@ export class CampBottomHudPresenter extends Component {
                 console.error('[底部 HUD] 数据刷新失败', error);
             });
     }
+}
+
+const HUD_NUMBER_FORMAT = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
+function formatHudNumber(value: number): string {
+    return HUD_NUMBER_FORMAT.format(Math.trunc(value));
 }

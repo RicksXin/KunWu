@@ -1,9 +1,11 @@
 import { Button, Color, Label, Node, Sprite, SpriteFrame } from 'cc';
 import type { P1LingPuJob } from 'db://assets/scripts/domain/LingPu';
 import type { CampModalPanelFrame } from 'db://assets/scripts/presentation/camp/shared/CampModalPanelFrame';
+import { applyCampResizableButtonStyle } from 'db://assets/scripts/presentation/camp/shared/CampResizableButtonStyle';
 
-export const TEXT_SECONDARY = new Color(188, 196, 182, 255);
-export const TEXT_WARNING = new Color(230, 132, 82, 255);
+export const TEXT_PRIMARY = new Color(232, 220, 187, 255);
+export const TEXT_SECONDARY = new Color(145, 164, 158, 255);
+export const TEXT_WARNING = new Color(185, 74, 62, 255);
 
 export type LingPuResourceRowId = P1LingPuJob | 'spiritCrystal' | 'gengJing';
 
@@ -90,7 +92,7 @@ export class LingPuResourceRowComponent {
     renderActive(state: ResourceRowRenderState): void {
         const row = this.view;
         row.root.active = true;
-        row.stock.string = `${state.stock} / ${state.capacity}`;
+        row.stock.string = `储量： ${state.stock} / ${state.capacity}`;
         row.workers.string = `${state.workerCount}/${state.workerLimit}`;
         row.rate.string = `产量 ${signed(state.displayedProduction)}`;
         row.rate.color = (state.displayedProduction < 0 ? TEXT_WARNING : TEXT_SECONDARY).clone();
@@ -99,10 +101,12 @@ export class LingPuResourceRowComponent {
         if (state.isShutdown) states.push('灵粮不足·停工');
         row.status.string = states.join(' / ');
         row.status.color = states.length > 0 ? TEXT_WARNING.clone() : TEXT_SECONDARY.clone();
-        row.warningOutline.active = state.displayedProduction < 0;
+        row.warningOutline.active = false;
         row.minus.button.interactable = state.workerCount > 0;
-        row.plus.button.interactable = state.hasIdleWorker;
+        row.plus.button.interactable = state.hasIdleWorker
+            && state.workerCount < state.workerLimit;
         row.upgrade.button.interactable = !state.isMaxLevel;
+        styleInlineButton(row.upgrade, !state.isMaxLevel);
         if (row.upgrade.label) row.upgrade.label.string = state.isMaxLevel ? '已满级' : '升级';
     }
 
@@ -119,6 +123,7 @@ export class LingPuResourceRowComponent {
         row.minus.button.interactable = false;
         row.plus.button.interactable = false;
         row.upgrade.button.interactable = false;
+        styleInlineButton(row.upgrade, false);
         if (row.upgrade.label) row.upgrade.label.string = '未开放';
     }
 }
@@ -135,6 +140,11 @@ export interface LingPuView {
     readonly contentNodes: readonly Node[];
     readonly panelBackground: VisualBackground;
     modalFrame: CampModalPanelFrame | null;
+    readonly titleLabel: Label;
+    readonly idleWorkerLabel: Label;
+    panelBodyFrame: SpriteFrame | null;
+    panelDecorationTopFrame: SpriteFrame | null;
+    panelDecorationBottomFrame: SpriteFrame | null;
     readonly timerLabel: Label;
     readonly progressTrack: VisualBackground;
     readonly progressFill: Sprite;
@@ -164,4 +174,16 @@ export function formatSeconds(value: number): string {
 
 function signed(value: number): string {
     return value >= 0 ? `+${value}` : String(value);
+}
+
+function styleInlineButton(view: ButtonView, enabled: boolean): void {
+    const visual = applyCampResizableButtonStyle(
+        view.node,
+        'inline',
+        enabled ? 'default' : 'disabled',
+    );
+    view.button.target = visual;
+    view.button.transition = Button.Transition.SCALE;
+    view.button.zoomScale = 0.96;
+    view.button.duration = 0.1;
 }

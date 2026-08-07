@@ -1,4 +1,4 @@
-import { HorizontalTextAlignment, Mask, Node, UITransform } from 'cc';
+import { Color, HorizontalTextAlignment, Label, Mask, Node, UITransform } from 'cc';
 import { CAMP_EXPEDITION_PATHS } from 'db://assets/scripts/domain/CampSceneContract';
 import { membersOf } from 'db://assets/scripts/domain/Party';
 import type { HeroInstance, Profile } from 'db://assets/scripts/services/GameState';
@@ -19,10 +19,11 @@ import {
     prepareExistingScrollViewport,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionUiFactory';
 import {
-    applyPanelBackground,
+    applyFixedPanelBackground,
     createSilhouette,
     createSpriteNode,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionVisualNodes';
+import { createSpiritualRootFrame } from 'db://assets/scripts/presentation/camp/expedition/SpiritualRootFrame';
 
 export interface ExpeditionHeroSelectionActions {
     readonly toggleHero: (hero: HeroInstance) => void;
@@ -44,23 +45,73 @@ export function renderExpeditionHeroSelection(
     if (!layer || !panel || !title || !hint || !list || !close) {
         return;
     }
+    const selectedCount = membersOf(
+        currentExpeditionPreset(profile.expeditionPreparation).slots,
+    ).length;
     layer.active = true;
-    applyPanelBackground(panel, assets.panelFrame);
-    configureExistingLabel(title, '选择入山修士', 20, EXPEDITION_COLORS.text);
-    configureExistingLabel(hint, '已拥有修士 · 最多上阵 4 名', 12, EXPEDITION_COLORS.textSecondary);
+    prepareSelectionShell(
+        layer,
+        panel,
+        title.node,
+        hint,
+        list,
+        close,
+        selectedCount,
+        actions.close,
+    );
+    applyFixedPanelBackground(panel, assets.heroSelectionPanelFrame, 343, 553);
 
     const viewport = prepareExistingScrollViewport(list);
-    const contentHeight = Math.max(620, profile.roster.length * 116 + 8);
-    viewport.getComponent(UITransform)?.setContentSize(331, contentHeight);
+    const contentHeight = Math.max(292, profile.roster.length * 75 - 8);
+    viewport.getComponent(UITransform)?.setContentSize(288, contentHeight);
     profile.roster.forEach((hero, index) => {
         renderHeroSelectionRow(viewport, hero, index, profile, assets, actions.toggleHero);
     });
 
     configureExistingButton(close, {
-        text: `完成  ${membersOf(currentExpeditionPreset(profile.expeditionPreparation).slots).length}/4`,
+        text: `完成\n${selectedCount}/4`,
         primary: true,
         onClick: actions.close,
     });
+}
+
+function prepareSelectionShell(
+    layer: Node,
+    panel: Node,
+    title: Node,
+    hint: Label,
+    list: Node,
+    close: Node,
+    selectedCount: number,
+    onClose: () => void,
+): void {
+    layer.getChildByName('SelectionBackdrop')?.destroy();
+    const backdrop = createRect(layer, 'SelectionBackdrop', 0, 0, 375, 817, new Color(0, 0, 0, 255));
+    backdrop.setSiblingIndex(0);
+    panel.setPosition(0, 58, 0);
+    title.active = false;
+    configureExistingLabel(hint, '选择你的修士', 12, EXPEDITION_COLORS.textSecondary);
+    hint.node.setPosition(0.5, 276.5, 0);
+    hint.node.getComponent(UITransform)?.setContentSize(112, 16);
+    list.setPosition(-0.5, 106.5, 0);
+    list.getComponent(UITransform)?.setContentSize(288, 292);
+
+    let count = layer.getChildByName('HeroSelectionCount')?.getComponent(Label) ?? null;
+    if (!count) count = createLabel(layer, 'HeroSelectionCount', '', 119.5, 275.5, 42, 18, 14, EXPEDITION_COLORS.accent);
+    configureExistingLabel(count, `${selectedCount} / 4`, 14, EXPEDITION_COLORS.accent, HorizontalTextAlignment.CENTER, { lineHeight: 18 });
+
+    close.setPosition(-8.5, -246.5, 0);
+    close.getComponent(UITransform)?.setContentSize(132, 44);
+    let back = layer.getChildByName('HeroSelectionBackButton');
+    if (!back) {
+        back = createButton(layer, {
+            name: 'HeroSelectionBackButton', text: '返回', x: 72.5, y: -293.5,
+            width: 132, height: 44, onClick: onClose,
+        }).node;
+    }
+    back.setPosition(72.5, -293.5, 0);
+    back.getComponent(UITransform)?.setContentSize(132, 44);
+    configureExistingButton(back, { text: '返回', onClick: onClose });
 }
 
 function renderHeroSelectionRow(
@@ -78,83 +129,74 @@ function renderHeroSelectionRow(
         (candidate) => candidate.presetId !== preset.presetId && candidate.slots.includes(hero.instanceId),
     );
     const selected = selectedIndex >= 0;
-    const row = createRect(
-        parent,
-        `Hero_${hero.instanceId}`,
-        0,
-        -58 - index * 116,
-        319,
-        106,
-        selected ? EXPEDITION_COLORS.rowSelected : EXPEDITION_COLORS.row,
-        selected ? EXPEDITION_COLORS.border : EXPEDITION_COLORS.borderSoft,
-    );
+    const background = selected ? assets.heroRowSelected : assets.heroRowDefault;
+    const row = background
+        ? createSpriteNode(parent, `Hero_${hero.instanceId}`, background, 0, -33.5 - index * 75, 288, 67).node
+        : createRect(parent, `Hero_${hero.instanceId}`, 0, -33.5 - index * 75, 288, 67,
+            selected ? EXPEDITION_COLORS.rowSelected : EXPEDITION_COLORS.row);
     const avatar = createRect(
         row,
         'Avatar',
-        -127,
-        7,
-        50,
-        50,
+        -112,
+        0.5,
+        40,
+        40,
         EXPEDITION_CAREER_CARD_COLORS[hero.careerId] ?? EXPEDITION_COLORS.panelAlt,
         EXPEDITION_COLORS.borderSoft,
     );
-    const mask = avatar.addComponent(Mask);
+    const clip = new Node('AvatarClip');
+    clip.layer = avatar.layer;
+    avatar.addChild(clip);
+    clip.setPosition(0, 1, 0);
+    clip.addComponent(UITransform).setContentSize(30, 32);
+    const mask = clip.addComponent(Mask);
     mask.type = Mask.Type.RECT;
     const portrait = assets.portraitFrames.get(hero.nameKey) ?? null;
     portrait
-        ? createSpriteNode(avatar, 'Portrait', portrait, 0, -44, 50, 130)
-        : createSilhouette(avatar, 0, -7, false, 0.43);
-    assets.avatarFrame && createSpriteNode(avatar, 'AvatarFrame', assets.avatarFrame, 0, 0, 50, 50);
+        ? createSpriteNode(clip, 'Portrait', portrait, -4, -57, 64, 153)
+        : createSilhouette(clip, 0, -20, false, 0.3);
+    assets.avatarFrame && createSpriteNode(avatar, 'AvatarFrame', assets.avatarFrame, 0, 0, 40, 40);
+    createSpiritualRootFrame(avatar, hero.spiritualRootId, 0, 0, 28, 28);
     createLabel(
         row,
         'Realm',
-        `${expeditionText(`realm.${hero.realmId}`)}·${expeditionText(`spiritual_root.${hero.spiritualRootId}`)}`,
-        -127,
-        -42,
-        86,
-        18,
-        9,
-        EXPEDITION_COLORS.text,
+        expeditionText(`realm.${hero.realmId}`),
+        -112,
+        -21,
+        80,
+        16,
+        10,
+        EXPEDITION_COLORS.textSecondary,
     );
 
     const rating = Object.values(hero.attributes).reduce((sum, value) => sum + value, 0);
-    const info = [
-        `${expeditionText(hero.nameKey)} · ${expeditionText(`career.${hero.careerId}`)}`,
-        `等级 ${hero.level}    灵息 ${hero.stamina}`,
-        `战力 ${rating}`,
-    ].join('\n');
-    const infoLabel = createLabel(
-        row,
-        'Info',
-        info,
-        -30,
-        4,
-        142,
-        78,
-        12,
-        EXPEDITION_COLORS.text,
-        HorizontalTextAlignment.LEFT,
-    );
-    infoLabel.lineHeight = 24;
+    createLabel(row, 'Name', `${expeditionText(hero.nameKey)} · ${expeditionText(`career.${hero.careerId}`)}`,
+        -24, 17.5, 112, 20, 16, EXPEDITION_COLORS.text, HorizontalTextAlignment.LEFT, { lineHeight: 20 });
+    createLabel(row, 'LevelAndPower', `Lv.${hero.level} · 战力${rating}`,
+        -24, -1.5, 112, 16, 11, EXPEDITION_COLORS.textSecondary, HorizontalTextAlignment.LEFT, { lineHeight: 16 });
+    createLabel(row, 'Stamina', `灵息${hero.stamina}`,
+        -21, -19.5, 118, 14, 10, EXPEDITION_COLORS.textSecondary, HorizontalTextAlignment.LEFT, { lineHeight: 14 });
 
     const enabled = !hero.isDead && !otherParty;
     const text = hero.isDead
         ? '已阵亡'
         : otherParty
-          ? '其他队伍'
-          : selected
-            ? `取消 ${selectedIndex + 1}`
+            ? '其他队伍'
+            : selected
+            ? `取消 · ${selectedIndex + 1}`
             : '选择';
     const button = createButton(row, {
         name: 'SelectButton',
         text,
-        x: 123,
-        y: 0,
-        width: 70,
-        height: 48,
+        x: 96,
+        y: 2.5,
+        width: 72,
+        height: 28,
         enabled,
         primary: selected,
         onClick: () => toggleHero(hero),
     });
-    button.label.fontSize = 11;
+    configureExistingButton(button.node, {
+        text, enabled, primary: selected, onClick: () => toggleHero(hero),
+    });
 }

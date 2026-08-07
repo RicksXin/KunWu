@@ -1,21 +1,13 @@
-import { assetManager, Button, Component, Label, Node, Sprite, SpriteFrame, UITransform } from 'cc';
-import { CAMP_BUILDING_CHILD_NAMES } from 'db://assets/scripts/domain/CampSceneContract';
-import type { BuildingId, BuildingState } from 'db://assets/scripts/domain/HallBadges';
+import {
+    Button,
+    Color,
+    Component,
+    Graphics,
+    Label,
+    Node,
+    UITransform,
+} from 'cc';
 import { meetsTouchTarget, MIN_TOUCH_TARGET_DP } from 'db://assets/scripts/domain/ViewportLayout';
-
-const LOCKED_BUILDING_SPRITE_PATHS: Partial<Record<BuildingId, string>> = {
-    ling_pu: 'buildings/env_camp_building_ling_pu_locked/spriteFrame',
-    zhao_xian_tai: 'buildings/env_camp_building_zhao_xian_tai_locked/spriteFrame',
-    bai_bao_ku: 'buildings/env_camp_building_bai_bao_ku_locked/spriteFrame',
-    lian_qi_fang: 'buildings/env_camp_building_lian_qi_fang_locked/spriteFrame',
-    jiao_yi_hang: 'buildings/env_camp_building_jiao_yi_hang_locked/spriteFrame',
-    huan_hun_tan: 'buildings/env_camp_building_huan_hun_tan_locked/spriteFrame',
-};
-
-const normalBuildingFrames = new WeakMap<Node, SpriteFrame | null>();
-const desiredBuildingStates = new WeakMap<Node, BuildingState>();
-const lockedBuildingFrames = new Map<BuildingId, SpriteFrame>();
-const lockedBuildingFrameLoads = new Map<BuildingId, Promise<SpriteFrame | null>>();
 
 /** 在一个 Prefab 内按相对路径查找节点，避免保存跨 Prefab 引用。 */
 export function campNode(root: Node, path: string): Node | null {
@@ -39,97 +31,65 @@ export function campLabel(root: Node, path: string): Label | null {
     return label;
 }
 
-/**
- * LOCKED 使用独立封闭建筑图，其余状态恢复场景中配置的普通图。
- *
- * 普通图在节点首次渲染时缓存；异步加载完成前若状态已经变化，回调不会用旧状态
- * 覆盖新画面。AVAILABLE 代表已满足解锁条件，因此应展示普通建筑而不是 locked 图。
- */
-export function applyCampBuildingVisualState(
-    node: Node,
-    buildingId: BuildingId,
-    state: BuildingState,
-): void {
-    const nameNode = node.getChildByName(CAMP_BUILDING_CHILD_NAMES.name);
-    if (nameNode) {
-        nameNode.active = state !== 'LOCKED';
-    } else {
-        console.error(`[CampView] 建筑 ${buildingId} 缺少名称节点`);
-    }
-
-    const sprite = node.getComponent(Sprite);
-    if (!sprite) {
-        console.error(`[CampView] 建筑 ${buildingId} 缺少 Sprite`);
-        return;
-    }
-
-    if (!normalBuildingFrames.has(node)) {
-        normalBuildingFrames.set(node, sprite.spriteFrame);
-    }
-    desiredBuildingStates.set(node, state);
-
-    if (state !== 'LOCKED') {
-        sprite.spriteFrame = normalBuildingFrames.get(node) ?? null;
-        return;
-    }
-
-    const lockedFrame = lockedBuildingFrames.get(buildingId);
-    if (lockedFrame) {
-        sprite.spriteFrame = lockedFrame;
-        return;
-    }
-
-    const path = LOCKED_BUILDING_SPRITE_PATHS[buildingId];
-    if (!path) {
-        return;
-    }
-
-    void loadLockedBuildingFrame(buildingId, path).then((frame) => {
-        if (!frame || !node.isValid || desiredBuildingStates.get(node) !== 'LOCKED') {
-            return;
-        }
-        const currentSprite = node.getComponent(Sprite);
-        if (currentSprite) {
-            currentSprite.spriteFrame = frame;
-        }
-    });
+export interface CampPlateStyle {
+    readonly fill: Color;
+    readonly stroke?: Color;
+    readonly radius: number;
+    readonly lineWidth?: number;
+    readonly centerX?: number;
+    readonly centerY?: number;
+    readonly width?: number;
+    readonly height?: number;
+    readonly insetX?: number;
+    readonly insetY?: number;
 }
 
-function loadLockedBuildingFrame(
-    buildingId: BuildingId,
-    path: string,
-): Promise<SpriteFrame | null> {
-    const loaded = lockedBuildingFrames.get(buildingId);
-    if (loaded) {
-        return Promise.resolve(loaded);
-    }
+const CAMP_PLATE_NODE_NAME = '__CampPlateVisual';
 
-    const pending = lockedBuildingFrameLoads.get(buildingId);
-    if (pending) {
-        return pending;
+/**
+ * 在宿主节点的首个子节点上绘制可缩放底板，避免为纯色 HUD/名称板新增位图资源。
+ *
+ * Cocos 的一个 Node 只能可靠维护一个 UIRenderer。Sprite、Label 和 Graphics 如果挂在
+ * 同一 Node，最后启用的渲染组件会占用该节点的 UI 渲染入口，因此底板必须使用独立子节点。
+ */
+export function drawCampPlate(node: Node, style: CampPlateStyle): Graphics | null {
+    const transform = node.getComponent(UITransform);
+    if (!transform) {
+        return null;
     }
+    const plateNode = getOrCreateCampPlateNode(node, transform);
+    const graphics = plateNode.getComponent(Graphics) ?? plateNode.addComponent(Graphics);
+    plateNode.active = true;
+    graphics.enabled = true;
+    const width = style.width ?? transform.contentSize.width - (style.insetX ?? 0) * 2;
+    const height = style.height ?? transform.contentSize.height - (style.insetY ?? 0) * 2;
+    const x = (style.centerX ?? 0) - width / 2;
+    const y = (style.centerY ?? 0) - height / 2;
+    graphics.clear();
+    graphics.fillColor = style.fill;
+    graphics.roundRect(x, y, width, height, style.radius);
+    graphics.fill();
+    if (style.stroke) {
+        graphics.lineWidth = style.lineWidth ?? 1;
+        graphics.strokeColor = style.stroke;
+        graphics.roundRect(x, y, width, height, style.radius);
+        graphics.stroke();
+    }
+    return graphics;
+}
 
-    const task = new Promise<SpriteFrame | null>((resolve) => {
-        const bundle = assetManager.getBundle('camp');
-        if (!bundle) {
-            console.error('[CampView] camp Bundle 尚未加载，无法切换 locked 建筑图');
-            resolve(null);
-            return;
-        }
-        bundle.load(path, SpriteFrame, (error, frame) => {
-            if (error || !frame) {
-                console.error(`[CampView] locked 建筑图加载失败：${path}`, error);
-                resolve(null);
-                return;
-            }
-            lockedBuildingFrames.set(buildingId, frame);
-            resolve(frame);
-        });
-    }).finally(() => {
-        lockedBuildingFrameLoads.delete(buildingId);
-    });
-    lockedBuildingFrameLoads.set(buildingId, task);
-    return task;
+function getOrCreateCampPlateNode(node: Node, hostTransform: UITransform): Node {
+    const plateNode = node.getChildByName(CAMP_PLATE_NODE_NAME) ?? new Node(CAMP_PLATE_NODE_NAME);
+    plateNode.layer = node.layer;
+    if (plateNode.parent !== node) {
+        node.insertChild(plateNode, 0);
+    } else {
+        plateNode.setSiblingIndex(0);
+    }
+    plateNode.setPosition(0, 0, 0);
+    const transform = plateNode.getComponent(UITransform) ?? plateNode.addComponent(UITransform);
+    transform.setContentSize(hostTransform.contentSize);
+    return plateNode;
 }
 
 export function bindCampButton(

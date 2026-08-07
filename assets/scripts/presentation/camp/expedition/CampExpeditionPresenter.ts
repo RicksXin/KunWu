@@ -41,12 +41,11 @@ import {
     EXPEDITION_LOGICAL_WIDTH,
 } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionTheme';
 import { loadExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionVisualAssets';
+import { applyExpeditionPanelVisual } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionVisualNodes';
 import { createEmptyExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionViewTypes';
 import type { ExpeditionVisualAssets } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionViewTypes';
 import { ExpeditionSaveQueue } from 'db://assets/scripts/presentation/camp/expedition/ExpeditionState';
 const { ccclass } = _decorator;
-
-/** 营地传送阵唤起的入山整备页面协调器。 */
 @ccclass('CampExpeditionPresenter')
 export class CampExpeditionPresenter extends Component {
     private config: ExpeditionPreparationConfig | null = null;
@@ -138,7 +137,6 @@ export class CampExpeditionPresenter extends Component {
         if (this.selectionLayer) this.selectionLayer.active = false;
         if (this.mapLayer) this.mapLayer.active = false;
         void mountExpeditionPreparationShell(this.node, {
-            adventure: () => AppRoot.instance.showFeedback('历练功能暂未开放'),
             chooseMap: () => this.openMapSelection(),
             close: () => this.close(),
         }).then((shell) => {
@@ -153,6 +151,8 @@ export class CampExpeditionPresenter extends Component {
     private renderPreparation(): void {
         const app = AppRoot.instance;
         if (!this.preparationLayer || !this.config || !app.state.isLoaded) return;
+        const mainPanel = this.preparationFrame?.mainPanel;
+        if (mainPanel) applyExpeditionPanelVisual(mainPanel, this.visualAssets);
         renderExpeditionPreparation(this.preparationLayer, this.config, app.state.require(), this.visualAssets, {
             editParty: () => this.openHeroSelection(),
             switchParty: (presetId) => this.switchParty(presetId),

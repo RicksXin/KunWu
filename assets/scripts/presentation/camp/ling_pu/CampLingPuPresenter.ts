@@ -12,11 +12,14 @@ import {
     renderLingPuPanel,
     renderLingPuTimer,
 } from './LingPuRenderer';
-import { bindLingPuView, syncLingPuViewSize } from './LingPuViewBinder';
+import { bindLingPuView } from './LingPuViewBinder';
 import type { LingPuView } from './LingPuViewTypes';
 import { RESOURCE_NAMES } from './LingPuViewTypes';
 import type { ConfirmationMode } from './LingPuViewTypes';
-import { loadAndApplyLingPuVisuals } from './LingPuVisualAssets';
+import {
+    loadAndApplyLingPuVisuals,
+    syncLingPuViewSize,
+} from './LingPuVisualAssets';
 
 const { ccclass } = _decorator;
 

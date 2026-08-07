@@ -15,9 +15,12 @@ import { EntryActivationGate } from 'db://assets/scripts/domain/HallPanorama';
 import { CampPanoramaController } from './CampPanoramaController';
 import { CampExpeditionPresenter } from '../expedition/CampExpeditionPresenter';
 import {
+    applyCampBuildingBadgeState,
     applyCampBuildingVisualState,
+    applyCampExpeditionVisual,
+} from '../shared/CampBuildingVisuals';
+import {
     bindCampButton,
-    campLabel,
     campNode,
     disposeCampBindings,
     warnCampTouchTarget,
@@ -72,7 +75,10 @@ export class CampBuildingPresenter extends Component {
         const shown = new Set(computeBadges(actions, acknowledgedBatches).primaryBadges);
         for (const buildingId of BUILDING_IDS) {
             const badge = campNode(this.node, campBuildingPath(buildingId, 'Badge'));
-            badge && (badge.active = shown.has(buildingId));
+            const mode = this.buildingStates[buildingId] === 'LOCKED'
+                ? 'locked'
+                : shown.has(buildingId) ? 'attention' : 'hidden';
+            applyCampBuildingBadgeState(badge, mode);
         }
     }
 
@@ -91,9 +97,8 @@ export class CampBuildingPresenter extends Component {
             node && applyCampBuildingVisualState(node, buildingId, this.buildingStates[buildingId]);
             const button = node?.getComponent(Button);
             button && (button.interactable = true);
-            const label = campLabel(this.node, campBuildingPath(buildingId, 'State'));
-            label && (label.string = BUILDING_STATE_NAMES[this.buildingStates[buildingId]]);
         }
+        applyCampExpeditionVisual(campNode(this.node, CAMP_BUILDING_PATHS.expedition));
         const hasDeadHeroes = profile.roster.some((hero) => hero.isDead);
         this.renderBadges(hasDeadHeroes ? [{
             buildingId: 'huan_hun_tan',
@@ -151,16 +156,6 @@ const BUILDING_NAMES: Readonly<Record<BuildingId, string>> = {
     lian_qi_fang: '炼器坊',
     jiao_yi_hang: '交易行',
     huan_hun_tan: '还魂殿',
-};
-
-const BUILDING_STATE_NAMES: Readonly<Record<BuildingState, string>> = {
-    LOCKED: '未解锁',
-    AVAILABLE: '可解锁',
-    UNLOCKED: '可进入',
-    UPGRADABLE: '可升级',
-    UPGRADING: '升级中',
-    MAX_LEVEL: '已满级',
-    DISABLED: '暂不可用',
 };
 
 const BUILDING_STATE_FEEDBACK: Readonly<Record<BuildingState, string>> = {

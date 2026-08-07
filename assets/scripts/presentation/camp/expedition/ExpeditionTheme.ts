@@ -6,11 +6,21 @@ export const EXPEDITION_LOGICAL_WIDTH = 375;
 export const EXPEDITION_LOGICAL_HEIGHT = 817;
 
 export const EXPEDITION_VISUAL_PATHS = Object.freeze({
-    panel: 'ui/ling_pu/ui_ling_pu_panel_frame/spriteFrame',
+    panel: 'ui/expedition/ui_expedition_panel_body/spriteFrame',
+    heroSelectionPanel: 'ui/expedition/ui_expedition_hero_selection_panel/spriteFrame',
+    mapSelectionPanel: 'ui/expedition/ui_expedition_map_selection_panel/spriteFrame',
+    panelDecorationTop: 'ui/expedition/ui_expedition_panel_decoration_top/spriteFrame',
+    panelDecorationBottom: 'ui/expedition/ui_expedition_panel_decoration_bottom/spriteFrame',
     cardFrame: 'ui/expedition/ui_expedition_hero_card_frame/spriteFrame',
     emptySilhouette: 'ui/expedition/ui_expedition_hero_empty_silhouette/spriteFrame',
     avatarFrame: 'ui/top/ui_camp_avatar_frame/spriteFrame',
     lock: 'ui/expedition/icon_expedition_lock/spriteFrame',
+    partyTabDefault: 'ui/expedition/ui_expedition_party_tab_default/spriteFrame',
+    partyTabSelected: 'ui/expedition/ui_expedition_party_tab_selected/spriteFrame',
+    heroRowDefault: 'ui/expedition/ui_expedition_hero_selection_row_default/spriteFrame',
+    heroRowSelected: 'ui/expedition/ui_expedition_hero_selection_row_selected/spriteFrame',
+    stepperMinus: 'ui/ling_pu/icon_action_minus/spriteFrame',
+    stepperPlus: 'ui/ling_pu/icon_action_plus/spriteFrame',
     portraits: Object.freeze({
         'hero.shi_yan': 'ui/expedition/portrait_hero_shi_yan_expedition/spriteFrame',
         'hero.lu_qing': 'ui/expedition/portrait_hero_lu_qing_expedition/spriteFrame',
@@ -26,16 +36,21 @@ export const EXPEDITION_VISUAL_PATHS = Object.freeze({
 
 export const EXPEDITION_COLORS = Object.freeze({
     backdrop: new Color(0, 0, 0, 164),
-    panel: new Color(22, 30, 29, 250),
-    panelAlt: new Color(31, 42, 39, 255),
+    panel: new Color(17, 25, 23, 250),
+    panelAlt: new Color(32, 42, 39, 255),
     row: new Color(43, 52, 44, 255),
     rowSelected: new Color(88, 76, 38, 255),
-    border: new Color(154, 128, 72, 255),
-    borderSoft: new Color(79, 101, 91, 255),
-    text: new Color(236, 229, 204, 255),
-    textSecondary: new Color(176, 185, 170, 255),
+    mapRowStart: new Color(22, 37, 34, 255),
+    mapRowEnd: new Color(8, 17, 16, 255),
+    mapRowBorder: new Color(102, 91, 72, 184),
+    border: new Color(128, 98, 58, 255),
+    borderSoft: new Color(63, 95, 89, 255),
+    text: new Color(232, 220, 187, 255),
+    textSecondary: new Color(145, 164, 158, 255),
+    accent: new Color(181, 138, 66, 255),
+    info: new Color(88, 185, 180, 255),
     warning: new Color(229, 139, 82, 255),
-    disabled: new Color(64, 69, 65, 255),
+    disabled: new Color(94, 106, 102, 255),
     button: new Color(63, 78, 70, 255),
     buttonPrimary: new Color(120, 88, 42, 255),
     buttonArt: new Color(255, 255, 255, 255),
@@ -55,13 +70,14 @@ export const EXPEDITION_CAREER_CARD_COLORS: Readonly<Record<string, Color>> = {
 
 export const COMMON_ART_BUTTON_NAMES = new Set([
     'EditPartyButton',
-    'PartyTab1',
-    'PartyTab2',
-    'PartyTab3',
     'RestoreStaminaButton',
     'AdventureButton',
     'DepartButton',
     'CloseButton',
+    'MapSelectionCloseButton',
+    'HeroSelectionCloseButton',
+    'HeroSelectionBackButton',
+    'SelectButton',
 ]);
 
 /** localization 服务接入前的简中兜底；键仍以本地化表为事实源。 */
@@ -96,8 +112,8 @@ const FALLBACK_TEXT: Readonly<Record<string, string>> = {
     'map.map_01': '破禁山麓',
     'map.map_02': '白玉广场',
     'map.map_03': '灵宝遗址',
-    'map.map_04': '古殿群',
-    'map.map_05': '镇魔禁域',
+    'map.map_04': '镇魔塔外层',
+    'map.map_05': '封魔深层',
 };
 
 export function expeditionText(key: string): string {
